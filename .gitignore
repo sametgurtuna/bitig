@@ -1,0 +1,34 @@
+# Bagimliliklar
+node_modules/
+
+# Build ciktilari
+out/
+dist/
+build/
+release/
+
+# Loglar
+*.log
+npm-debug.log*
+pnpm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Isletim sistemi ve editor dosyalari
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp
+
+# Ortam degiskenleri (token, sifre vb. icerebilir)
+.env
+.env.local
+.env.*.local
+
+# Claude Code ve gelistirici-ozel dokumanlar
+# Bunlar repo icinde kalir ama GitHub'a gitmez; proje mimarisi/notlari
+# hakkindaki ic yazismalar herkese acik depoda yer almamali.
+CLAUDE.md
+.claude/
+dev-docs/

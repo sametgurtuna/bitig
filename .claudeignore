@@ -1,0 +1,19 @@
+# Bagimliliklar ve build ciktilari - context'e gereksiz yer kaplar
+node_modules/
+out/
+dist/
+release/
+build/
+
+# Kilit ve log dosyalari
+package-lock.json
+npm-debug.log*
+*.log
+
+# Versiyon kontrolu ve IDE
+.git/
+.vscode/
+
+# Native modul build artefaktlari (node-pty vb.)
+**/build/Release/
+**/prebuilds/

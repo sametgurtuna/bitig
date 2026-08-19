@@ -1,0 +1,50 @@
+<svg width="960" height="600" viewBox="0 0 960 600" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Bitig terminal preview">
+  <defs>
+    <clipPath id="win-clip">
+      <rect x="1" y="1" width="958" height="598" rx="16" ry="16" />
+    </clipPath>
+  </defs>
+
+  <g clip-path="url(#win-clip)">
+    <rect x="1" y="1" width="958" height="598" fill="#0f1117" />
+
+    <!-- title bar -->
+    <rect x="1" y="1" width="958" height="46" fill="#14161e" />
+    <line x1="1" y1="47" x2="959" y2="47" stroke="#22252f" stroke-width="1" />
+    <text x="26" y="29" font-family="Segoe UI, Consolas, sans-serif" font-size="13" fill="#8b93a7">Bitig</text>
+
+    <!-- window controls -->
+    <g stroke="#8b93a7" stroke-width="1.4" fill="none">
+      <line x1="866" y1="24" x2="880" y2="24" />
+      <rect x="908" y="17" width="14" height="14" />
+      <line x1="944" y1="17" x2="958" y2="31" />
+      <line x1="958" y1="17" x2="944" y2="31" />
+    </g>
+
+    <!-- terminal content -->
+    <g font-family="Consolas, Menlo, monospace" font-size="17">
+      <text x="26" y="90" fill="#7dd3fc">PS C:\Users\dev\Bitig&gt;</text>
+      <text x="238" y="90" fill="#d8dee9">npm run dev</text>
+
+      <text x="26" y="126" fill="#4b5263">vite v7 building ssr environment for development...</text>
+      <text x="26" y="152" fill="#7ee787">check electron main process built successfully</text>
+      <text x="26" y="178" fill="#7ee787">check electron preload scripts built successfully</text>
+      <text x="26" y="204" fill="#e3b341">dev server running at http://localhost:5173/</text>
+      <text x="26" y="230" fill="#8b93a7">starting electron app...</text>
+
+      <text x="26" y="278" fill="#7dd3fc">PS C:\Users\dev\Bitig&gt;</text>
+      <text x="238" y="278" fill="#d8dee9">Get-ChildItem</text>
+
+      <text x="26" y="314" fill="#8b93a7">Directory: C:\Users\dev\Bitig\src</text>
+      <text x="26" y="348" fill="#79c0ff">main</text>
+      <text x="26" y="374" fill="#79c0ff">preload</text>
+      <text x="26" y="400" fill="#79c0ff">renderer</text>
+      <text x="26" y="426" fill="#79c0ff">shared</text>
+
+      <text x="26" y="474" fill="#7dd3fc">PS C:\Users\dev\Bitig&gt;</text>
+      <rect x="238" y="461" width="10" height="20" fill="#7dd3fc" />
+    </g>
+  </g>
+
+  <rect x="1" y="1" width="958" height="598" rx="16" ry="16" fill="none" stroke="#22252f" stroke-width="2" />
+</svg>

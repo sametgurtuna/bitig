@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="tr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self'"
+    />
+    <title>Bitig</title>
+    <link rel="stylesheet" href="./src/style.css" />
+  </head>
+  <body>
+    <div id="app">
+      <header id="titlebar">
+        <div id="titlebar-drag">
+          <span id="titlebar-label">Bitig</span>
+        </div>
+        <div id="titlebar-controls">
+          <button id="btn-minimize" class="titlebar-btn" title="Kucult" aria-label="Kucult">
+            <svg viewBox="0 0 10 10"><path d="M0 5h10" /></svg>
+          </button>
+          <button
+            id="btn-maximize"
+            class="titlebar-btn"
+            title="Buyut/Geri yukle"
+            aria-label="Buyut"
+          >
+            <svg viewBox="0 0 10 10"><rect x="0.5" y="0.5" width="9" height="9" /></svg>
+          </button>
+          <button id="btn-close" class="titlebar-btn titlebar-btn-close" title="Kapat" aria-label="Kapat">
+            <svg viewBox="0 0 10 10"><path d="M0 0l10 10M10 0L0 10" /></svg>
+          </button>
+        </div>
+      </header>
+      <div id="terminal-shell">
+        <div id="terminal-root"></div>
+      </div>
+    </div>
+    <script type="module" src="./src/main.ts"></script>
+  </body>
+</html>

@@ -1,0 +1,125 @@
+:root {
+  color-scheme: dark;
+  --bitig-bg: #0f1117;
+  --bitig-titlebar-bg: #14161e;
+  --bitig-border: #22252f;
+  --bitig-text-dim: #8b93a7;
+  --bitig-text: #d8dee9;
+  --bitig-accent: #7dd3fc;
+  --bitig-danger: #f47067;
+  --bitig-radius: 10px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  /* Pencere transparan; gercek arkaplan #app konteynerinde cizilir (rounded corner). */
+  background: transparent;
+  overflow: hidden;
+}
+
+/* Rounded-corner + golge hissi: OS cercevesi kapali (frame:false) oldugu icin
+   pencerenin "gorsel govdesi" burada CSS ile olusturuluyor. */
+#app {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  width: 100vw;
+  background: var(--bitig-bg);
+  border: 1px solid var(--bitig-border);
+  border-radius: var(--bitig-radius);
+  overflow: hidden;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.45);
+}
+
+#titlebar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 36px;
+  flex: 0 0 auto;
+  background: var(--bitig-titlebar-bg);
+  border-bottom: 1px solid var(--bitig-border);
+  /* Pencereyi surukleyebilmek icin: frame:false pencerelerde bu CSS ozelligi gerekli. */
+  -webkit-app-region: drag;
+  user-select: none;
+}
+
+#titlebar-drag {
+  display: flex;
+  align-items: center;
+  height: 100%;
+  padding-left: 12px;
+}
+
+#titlebar-label {
+  font: 12px/1 'Segoe UI', sans-serif;
+  color: var(--bitig-text-dim);
+  letter-spacing: 0.02em;
+}
+
+#titlebar-controls {
+  display: flex;
+  height: 100%;
+  /* Butonlar tiklanabilir olmali: drag bolgesinin disina cikariyoruz. */
+  -webkit-app-region: no-drag;
+}
+
+.titlebar-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 46px;
+  height: 100%;
+  border: none;
+  background: transparent;
+  color: var(--bitig-text-dim);
+  cursor: pointer;
+}
+
+.titlebar-btn svg {
+  width: 10px;
+  height: 10px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1;
+}
+
+.titlebar-btn:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--bitig-text);
+}
+
+.titlebar-btn-close:hover {
+  background: var(--bitig-danger);
+  color: #1a0d0c;
+}
+
+#terminal-shell {
+  flex: 1 1 auto;
+  min-height: 0;
+  padding: 10px 12px;
+  background: var(--bitig-bg);
+}
+
+#terminal-root {
+  height: 100%;
+  width: 100%;
+}
+
+/* xterm.js kendi canvas'ini olusturuyor; kapsayici container tam yer kaplasin. */
+#terminal-root .xterm {
+  height: 100%;
+}
+
+#terminal-root .xterm-viewport {
+  /* xterm.js'in kendi scrollbar'i yerine ince, temayla uyumlu bir gorunum. */
+  scrollbar-width: thin;
+  scrollbar-color: var(--bitig-border) transparent;
+}
