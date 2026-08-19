@@ -1,6 +1,11 @@
 :root {
   color-scheme: dark;
   --bitig-bg: #0f1117;
+  /* Terminal alani ve ayarlar paneli scrim'i; appearance.ts opaklik
+     uygulanmis rgba ile gunceller. Buradakiler sadece ilk kare icin
+     varsayilan. */
+  --bitig-terminal-bg: #0f1117;
+  --bitig-panel-scrim: #0f1117;
   --bitig-titlebar-bg: #14161e;
   --bitig-border: #22252f;
   --bitig-text-dim: #8b93a7;
@@ -24,26 +29,37 @@ body {
   overflow: hidden;
 }
 
-/* Arkaplan gorseli katmani: #app'in arkasinda, tum pencereyi kaplar.
+/* Arkaplan gorseli katmani: #app'in en altinda, tum ic alani kaplar.
    Gorunurlugu (image opacity, fit) appearance.ts tarafindan inline style
-   olarak ayarlanir; gorsel yoksa background-image: none kalir. */
+   olarak ayarlanir; gorsel yoksa background-image: none kalir.
+   pointer-events: none - ustundeki terminale tiklamayi engellemesin. */
 #bg-image {
-  position: fixed;
+  position: absolute;
   inset: 0;
   z-index: 0;
+  pointer-events: none;
   background-color: transparent;
 }
 
 /* Rounded-corner + golge hissi: OS cercevesi kapali (frame:false) oldugu icin
-   pencerenin "gorsel govdesi" burada CSS ile olusturuluyor. */
+   pencerenin "gorsel govdesi" burada CSS ile olusturuluyor.
+
+   Katman sirasi (alttan uste) - ikisinin BIRBIRINDEN BAGIMSIZ calismasi
+   icin bu sira onemli:
+     1. #app'in kendi arkaplani: tema rengi + opaklik alfasi. Ebeveyn
+        arkaplani tum cocuklarin altina boyanir, yani masaustunun
+        gorunurlugunu (seffaflik) tek basina bu belirler.
+     2. #bg-image: arkaplan gorseli, kendi opakligiyla.
+     3. #titlebar / #terminal-shell / #settings-panel (z-index: 1).
+   Terminal alani kendi arkaplanini boyamaz, bu yuzden arkaplan gorseli
+   opaklik 1 olsa bile terminalin arkasinda gorunur. */
 #app {
   position: relative;
-  z-index: 1;
   display: flex;
   flex-direction: column;
   height: 100vh;
   width: 100vw;
-  background: var(--bitig-bg);
+  background: var(--bitig-terminal-bg);
   border: 1px solid var(--bitig-border);
   border-radius: var(--bitig-radius);
   overflow: hidden;
@@ -51,6 +67,8 @@ body {
 }
 
 #titlebar {
+  position: relative;
+  z-index: 1;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -272,14 +290,18 @@ body {
   filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.6));
 }
 
+/* Terminal alani hicbir arkaplan boyamaz: renk #app'ten, arkaplan gorseli
+   ise araya giren #bg-image katmanindan gelir (bkz. #app'teki katman
+   sirasi notu). xterm'in kendi opak arkaplani da allowTransparency +
+   alfasi sifir tema arkaplani ile devre disi birakildi (bkz. panes.ts /
+   appearance.ts) - yoksa bu alan pencerenin neredeyse tamamini kapladigi
+   icin hem seffafligi hem arkaplan gorselini tamamen orterdi. */
 #terminal-shell {
+  position: relative;
+  z-index: 1;
   flex: 1 1 auto;
   min-height: 0;
   padding: 10px 12px;
-  /* Kendi arkaplanini boyamiyor: #app'in arkaplani (opaklik ayarina gore
-     alfa kanalli olabilir) zaten altta gorunur - burada tekrar boyarsak
-     iki katman ust uste binip bu bolge diger alanlardan daha az saydam
-     gorunurdu. */
 }
 
 #terminal-shell.hidden {
@@ -290,11 +312,18 @@ body {
    butonuyla ac/kapa (bkz. settingsPanel.ts). Windows Terminal'deki
    ayarlar sekmesine benzer bir "sekme gibi" gorunum icin ayri bir pencere/
    modal degil, dogrudan terminal alaninin yerini alan bir gorunum. */
+/* Terminalden farkli olarak ayarlar paneli kendi arkaplanini boyar:
+   form kontrollerinin keyfi bir arkaplan gorseli uzerinde okunakli
+   kalmasi gerekiyor. Bu yuzden alfasi opakligi takip eder ama asla
+   --bitig-panel-scrim'deki tabanin altina inmez (bkz. appearance.ts). */
 #settings-panel {
+  position: relative;
+  z-index: 1;
   flex: 1 1 auto;
   min-height: 0;
   overflow-y: auto;
   padding: 20px 24px 32px;
+  background: var(--bitig-panel-scrim);
   color: var(--bitig-text);
 }
 
@@ -560,6 +589,12 @@ body {
 }
 
 #terminal-root .xterm-viewport {
+  /* xterm.js'in kendi stylesheet'i (@xterm/xterm/css/xterm.css) buraya
+     sabit `background-color: #000` koyuyor - macOS'ta scrollbar'in tam
+     opak gorunmesi icin. Bizde bu, terminal alanini tamamen siyaha
+     boyayip hem seffafligi hem arkaplan gorselini orten katmandi; renk
+     zaten #app'ten geldigi icin burayi saydam yapiyoruz. */
+  background-color: transparent;
   /* xterm.js'in kendi scrollbar'i yerine ince, temayla uyumlu bir gorunum. */
   scrollbar-width: thin;
   scrollbar-color: var(--bitig-border) transparent;

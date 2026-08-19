@@ -150,6 +150,24 @@ and versioning follows [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- Transparency and background image did not actually work: the terminal
+  area stayed fully opaque, hiding both. Three separate opaque layers were
+  covering them, each found and fixed by testing the running app:
+  - `xterm.js` paints its own opaque background by default. Fixed with
+    `allowTransparency: true` plus a zero-alpha theme background, so the
+    color comes from a single CSS layer instead.
+  - `@xterm/xterm`'s own stylesheet hardcodes
+    `.xterm-viewport { background-color: #000 }` (a macOS scrollbar
+    workaround). This was the subtle one - it painted the terminal area
+    solid black, leaving the background image visible only in the 12px
+    padding strip around it. Now explicitly overridden to `transparent`.
+  - `#app` and `#terminal-shell` both painted a background, stacking two
+    alpha layers. Painting is now done once, by `#app`.
+- Background image is no longer hidden when opacity is `1`: `#bg-image`
+  sits above the window's background color but below the content layers,
+  so image and window transparency are independent settings (matching
+  Windows Terminal) rather than the image only showing through a
+  semi-transparent window.
 - `fs.watch`-based hot reload (both `SettingsStore` and `ThemeStore`) is
   debounced 100ms. Caught during manual testing, not theoretical: a single
   file save can fire multiple `fs.watch` events for its intermediate write

@@ -45,6 +45,13 @@ export async function createPaneLeaf(
     fontSize: 14,
     lineHeight: 1.25,
     scrollback: 5000,
+    // Terminal alaninin arkaplanini xterm degil #terminal-shell boyuyor
+    // (bkz. appearance.ts): xterm varsayilan olarak opak bir arkaplan
+    // cizer ve terminal pencerenin neredeyse tamamini kapladigi icin bu,
+    // seffafligi ve arkaplan gorselini tamamen orter. allowTransparency
+    // + alfasi sifir bir tema arkaplani ile o katmani devre disi
+    // birakiyoruz.
+    allowTransparency: true,
     theme: terminalTheme
   });
 

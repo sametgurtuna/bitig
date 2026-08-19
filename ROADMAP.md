@@ -491,12 +491,19 @@ drop-shadow for legibility over arbitrary images, see `style.css`).
   default background image opacity; this is a manual visual check, not an
   automated one.
 
-> Verified so far: same as milestone 4 above (they share the same
-> settings/theme infrastructure and were built together) - typecheck,
-> build, and real `%APPDATA%/Bitig/settings.json` hand-edit round-trips
-> (including error paths) were exercised directly; the actual on-screen
-> appearance of transparency and a real background image was not, for the
-> same screen-capture-reliability reason noted throughout this document.
+> Verified: typecheck, build, and real `%APPDATA%/Bitig/settings.json`
+> hand-edit round-trips (including error paths). **On-screen appearance
+> was also confirmed visually after the fact** - and doing so was
+> necessary, because the first implementation of this milestone did not
+> actually work: three separate opaque layers (xterm's own background,
+> `@xterm/xterm`'s hardcoded `.xterm-viewport { background-color: #000 }`,
+> and a doubled-up `#app`/`#terminal-shell` background) were covering both
+> the transparency and the background image. All three are fixed and the
+> result was verified by screenshotting the running window at
+> `opacity: 0.55` (desktop visible through it) and with a background image
+> at `opacity: 1` (image covering the full terminal area, text on top).
+> See `CLAUDE.md`'s "Bilinen Notlar" for the layering rules this
+> established.
 
 ---
 

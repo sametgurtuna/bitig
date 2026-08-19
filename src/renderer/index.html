@@ -10,11 +10,13 @@
     <link rel="stylesheet" href="./src/style.css" />
   </head>
   <body>
-    <!-- Arkaplan gorseli (varsa) tum pencerenin arkasinda, #app'in disinda
-         durur; #app'in kendi arkaplani opaklik ayarina gore yari saydam
-         hale geldiginde bu katman altindan gorunur. -->
-    <div id="bg-image"></div>
     <div id="app">
+      <!-- Arkaplan gorseli (varsa) tum pencereyi kaplar ama #app'in
+           icindedir: boylece #app'in border-radius + overflow:hidden
+           kirpmasina uyar, yuvarlak koselerin disina tasmaz. Uzerindeki
+           katmanlar (title bar, terminal, ayarlar) opaklik ayarina gore
+           yari saydam boyandiginda bu katman altlarindan gorunur. -->
+      <div id="bg-image"></div>
       <header id="titlebar">
         <div id="titlebar-drag">
           <span id="titlebar-label">Bitig</span>

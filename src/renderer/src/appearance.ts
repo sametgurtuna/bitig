@@ -7,6 +7,10 @@ import type { TabStore } from './tabs';
 // edilmesini onlemek icin bir ust sinir (bkz. ROADMAP.md milestone 5).
 const MAX_BACKGROUND_IMAGE_DIMENSION = 1920;
 
+// Ayarlar paneli arkaplaninin inebilecegi en dusuk alfa: panel bir
+// arkaplan gorseli uzerindeyken bile form kontrolleri okunakli kalmali.
+const MIN_PANEL_SCRIM_ALPHA = 0.92;
+
 /**
  * Tema + gorunum (opaklik, arkaplan gorseli) ayarlarini tek bir yerden
  * uygular: ilk yuklemede, settings:changed/theme:list-changed olaylarinda
@@ -100,10 +104,24 @@ export class AppearanceController {
   }
 
   private applyTerminalAndUiTheme(theme: BitigTheme, opacity: number): void {
-    this.tabStore?.applyTerminalTheme(theme.terminal);
+    // Terminal arkaplanini xterm'e degil #terminal-shell'e (CSS) birakiyoruz:
+    // xterm'in kendi arkaplani opak cizilir ve terminal alani pencerenin
+    // neredeyse tamamini kapladigi icin hem seffafligi hem de arkaplan
+    // gorselini orterdi. Renk bilgisi kaybolmuyor - ayni renk asagida
+    // --bitig-terminal-bg olarak CSS'e veriliyor, sadece tek bir katmanda
+    // boyaniyor (ust uste binen iki alfa katmani olusmasin diye).
+    this.tabStore?.applyTerminalTheme({ ...theme.terminal, background: 'rgba(0, 0, 0, 0)' });
 
     const root = document.documentElement.style;
     root.setProperty('--bitig-bg', withAlpha(theme.ui.background, opacity));
+    root.setProperty('--bitig-terminal-bg', withAlpha(theme.terminal.background, opacity));
+    // Ayarlar panelinin arkaplani: form kontrolleri keyfi bir arkaplan
+    // gorseli uzerinde okunakli kalsin diye opakligi takip eder ama bir
+    // tabanin altina inmez.
+    root.setProperty(
+      '--bitig-panel-scrim',
+      withAlpha(theme.terminal.background, Math.max(opacity, MIN_PANEL_SCRIM_ALPHA))
+    );
     root.setProperty('--bitig-titlebar-bg', withAlpha(theme.ui.titlebarBackground, opacity));
     root.setProperty('--bitig-text-dim', theme.ui.titlebarText);
     root.setProperty('--bitig-border', theme.ui.border);
