@@ -164,7 +164,7 @@ processes.
 ### Install
 
 ```
-git clone https://github.com/<your-username>/bitig.git
+git clone https://github.com/sametgurtuna/bitig.git
 cd bitig
 npm install
 ```
@@ -215,8 +215,11 @@ Bitig/
 
 ## Roadmap
 
-See the [Features](#features) checklist above for the full ordered list.
-Progress and notable changes are tracked in [`CHANGELOG.md`](CHANGELOG.md).
+See the [Features](#features) checklist above for the short version. A
+detailed, milestone-by-milestone plan, including design notes, sub-tasks,
+and acceptance criteria for every upcoming feature, lives in
+[`ROADMAP.md`](ROADMAP.md). Progress and notable changes are tracked in
+[`CHANGELOG.md`](CHANGELOG.md).
 
 ## Contributing
 
@@ -384,7 +387,7 @@ kaymaz.
 ### Kurulum
 
 ```
-git clone https://github.com/<kullanici-adin>/bitig.git
+git clone https://github.com/sametgurtuna/bitig.git
 cd bitig
 npm install
 ```
@@ -435,9 +438,11 @@ Bitig/
 
 ## Yol Haritasi
 
-Tam siralı liste icin yukaridaki [Ozellikler](#ozellikler) bolumune bak.
-Ilerleme ve onemli degisiklikler [`CHANGELOG.md`](CHANGELOG.md) dosyasinda
-takip ediliyor.
+Kisa liste icin yukaridaki [Ozellikler](#ozellikler) bolumune bak. Her
+milestone icin tasarim notlari, alt gorevler ve kabul kriterleri iceren
+detayli plan (Ingilizce) [`ROADMAP.md`](ROADMAP.md) dosyasinda. Ilerleme ve
+onemli degisiklikler [`CHANGELOG.md`](CHANGELOG.md) dosyasinda takip
+ediliyor.
 
 ## Katkida Bulunma
 

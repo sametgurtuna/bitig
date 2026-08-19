@@ -1,0 +1,753 @@
+# Bitig Roadmap
+
+This document expands the short checklist in `README.md` into a detailed,
+working plan: what each milestone actually contains, why it is ordered where
+it is, the technical approach, the concrete sub-tasks, and what "done" looks
+like. It is a living document; expect sections to be rewritten as design
+decisions are made and revisited once real usage exposes wrong assumptions.
+
+Status legend: `[ ]` not started, `[~]` in progress, `[x]` done.
+
+## Guiding Principles
+
+These hold across every milestone below and should be the tie-breaker when a
+design decision is not obvious:
+
+1. **Main owns state, renderer owns pixels.** Process lifecycle, PTY
+   sessions, settings persistence, and file I/O live in the main process.
+   The renderer receives data through IPC and never reaches for Node or the
+   filesystem directly.
+2. **The IPC surface is the API.** Every new capability is added as a
+   typed channel in `src/shared/*.ts` before it is wired up anywhere else.
+   If a feature cannot be described as a small set of channels, it is
+   probably too coupled to the renderer's internal state and needs
+   rethinking.
+3. **No feature ships without a working keyboard path.** Mouse-only
+   interactions are acceptable as an addition, never as the only way to
+   perform a core action (new tab, close pane, switch focus, open
+   settings).
+4. **Settings are data, not code.** Anything user-configurable is JSON
+   under `%APPDATA%/Bitig/`, versioned with a `schemaVersion` field, never
+   a TypeScript object baked into a build.
+5. **Small, reversible steps.** Each milestone should be shippable on its
+   own; a half-built split-pane system should not block tab support from
+   being usable.
+
+## Milestone Overview
+
+| # | Milestone | Depends on | Target version |
+|---|---|---|---|
+| 1 | Minimal terminal | - | `0.1.0` (done) |
+| 2 | Tabs | 1 | `0.2.0` |
+| 3 | Split panes | 2 | `0.3.0` |
+| 4 | Theme system | 1 | `0.4.0` |
+| 5 | Transparency and background image | 4 | `0.5.0` |
+| 6 | Settings panel (GUI) | 4, 5 | `0.6.0` |
+| 7 | Nerd Font detection and font picker | 6 | `0.6.x` |
+| 8 | Customizable keyboard shortcuts | 6 | `0.7.0` |
+| 9 | Command history and fuzzy search | 2 | `0.8.0` |
+| 10 | Plugin system | 6, 8 | `0.9.0` |
+| 11 | Packaging | all of the above | `1.0.0` |
+
+Milestones 4 and 2 can technically be built in parallel since neither
+depends on the other; they are numbered in the order the project intends to
+tackle them, not in a strict dependency chain.
+
+---
+
+## 1. Minimal Terminal - done
+
+**Goal:** a single window, a single real shell process, full keyboard
+input, readable output.
+
+**Shipped:**
+
+- `PtyManager` (`src/main/pty/ptyManager.ts`) spawning PowerShell through
+  `node-pty`'s ConPTY backend.
+- `pty:*` IPC namespace (create, write, resize, dispose, data, exit).
+- A single `@xterm/xterm` instance wired end to end in
+  `src/renderer/src/main.ts`.
+- A custom frameless window with title bar and window controls
+  (`window:*` IPC namespace).
+- A hand-authored terminal color theme (`src/renderer/src/theme.ts`).
+
+**Known limitations carried into later milestones:**
+
+- Shell is hardcoded to `powershell.exe` (see milestone 6: shell choice
+  belongs in settings).
+- Exactly one PTY session can exist; the `PtyManager` map already supports
+  multiple sessions by id, but nothing in the renderer creates more than
+  one yet (see milestone 2).
+
+---
+
+## 2. Tabs
+
+**Goal:** open, close, rename, and switch between multiple independent
+terminal sessions in one window, each with its own PTY.
+
+### Why now
+
+`PtyManager` already keys sessions by id and `pty:create` already returns
+an id per call; tabs are mostly a renderer-side state and UI problem, not a
+main-process one. This makes it the cheapest big feature to build next.
+
+### Design
+
+- Introduce a `TabStore` in the renderer (a minimal hand-written observable
+  store, no framework dependency yet - matches the "small custom store"
+  decision in `CLAUDE.md`) holding:
+  ```ts
+  interface TabState {
+    id: string;        // matches the PTY session id
+    title: string;      // user-set or derived from the running process
+    terminal: Terminal;   // the xterm.js instance for this tab
+    fitAddon: FitAddon;
+  }
+  ```
+- One `xterm.js` instance per tab, created on tab open and disposed on tab
+  close (`terminal.dispose()` plus `pty:dispose`). Instances for inactive
+  tabs stay alive in memory but are not mounted to the DOM (mounting or
+  unmounting the container, not tearing down and rebuilding xterm, avoids
+  losing scrollback when switching tabs).
+- A tab bar rendered below the title bar (`#tabbar`, new element in
+  `index.html`), styled consistently with the existing title bar (same
+  background family, same hover language).
+- Tab title defaults to the shell name (`powershell.exe` for now) and can
+  later reflect the foreground process once OSC 7 / OSC 9 title-reporting
+  is parsed from PTY output (a real, common xterm.js pattern:
+  `terminal.onTitleChange`).
+
+### Sub-tasks
+
+- [ ] Add `TabStore` with `createTab`, `closeTab`, `setActiveTab`,
+      `renameTab`.
+- [ ] Render tab bar UI: tab list, active-state styling, close button per
+      tab, "+" button to open a new tab.
+- [ ] Keyboard shortcuts: new tab, close tab, next/previous tab (concrete
+      bindings decided together with milestone 8, but these three ship
+      with hardcoded defaults now rather than waiting).
+- [ ] Confirm-before-close when a tab has a running foreground process
+      other than the shell itself (nice-to-have; can ship without this and
+      add later, tracked as a follow-up rather than a blocker).
+- [ ] Handle the last-tab-closed case: closing the only remaining tab
+      closes the window (matches Windows Terminal behavior) rather than
+      leaving an empty shell.
+- [ ] Update `PtyManager.disposeAll()` call sites to also cover
+      per-tab disposal on tab close, not just on app quit.
+
+### Acceptance criteria
+
+- Opening a new tab starts a genuinely independent shell process (verified
+  by running a long-lived command in tab A and confirming tab B is
+  unaffected and immediately responsive).
+- Closing a tab terminates its PTY process (verified via Task Manager or
+  `Get-Process powershell`, process count drops by one).
+- Switching tabs preserves scrollback and cursor position exactly as left.
+- No memory growth from repeatedly opening and closing tabs (basic manual
+  check: open/close 50 tabs, watch Electron's process memory in Task
+  Manager, expect it to return close to baseline).
+
+---
+
+## 3. Split Panes
+
+**Goal:** divide a tab's content area into multiple panes, each an
+independent terminal, arranged horizontally or vertically, resizable by
+dragging the divider.
+
+### Design
+
+- A pane tree per tab, not a flat list: `type Pane = { kind: 'leaf'; termId:
+  string } | { kind: 'split'; direction: 'row' | 'column'; children: [Pane,
+  Pane]; ratio: number }`. This is the same structural approach used by
+  every terminal with split panes (Windows Terminal, tmux, WezTerm) because
+  it naturally supports nested splits (split a pane that is itself already
+  a split).
+- Rendering: a small recursive renderer that walks the pane tree and lays
+  out `<div>` containers with CSS flexbox, one xterm.js instance mounted
+  per leaf.
+- Divider dragging updates `ratio` on the relevant split node and triggers
+  `FitAddon.fit()` plus `pty:resize` on both affected leaves, debounced to
+  the animation frame so a fast drag does not flood the PTY with resize
+  calls.
+- Focus model: exactly one pane is focused at a time; keyboard input goes
+  to the focused pane's `xterm.js` instance. Clicking a pane focuses it.
+  Directional focus movement (move focus left/up/down/right across the
+  pane tree) is a real feature, not just "tab through panes" - the pane
+  tree's geometry needs to be consulted to find the nearest neighbor in the
+  requested direction.
+
+### Sub-tasks
+
+- [ ] Define the pane tree data structure and a pure function
+      `splitPane(tree, targetId, direction)` returning a new tree (favor
+      immutable updates so the renderer's diffing stays simple).
+- [ ] Recursive renderer component for the pane tree.
+- [ ] Draggable divider component with pointer capture, min-size
+      clamping (a pane should not be draggable down to zero width).
+- [ ] Resize propagation: every leaf's `FitAddon` and matching `pty:resize`
+      call fire when its container's measured size changes, not just on
+      window resize (a `ResizeObserver` per leaf container is the natural
+      fit here, replacing the current window-level `resize` listener from
+      milestone 1).
+- [ ] Close-pane behavior: closing a leaf removes it from the tree and
+      collapses its parent split node if only one child remains.
+- [ ] Directional focus movement and its keyboard shortcuts (coordinate
+      with milestone 8).
+
+### Acceptance criteria
+
+- Splitting a pane horizontally and vertically, including splitting an
+  already-split pane, produces the expected layout with no overlapping or
+  clipped terminals.
+- Resizing the outer window correctly re-fits every visible pane, not just
+  the top-level ones.
+- Dragging a divider all the way to one edge does not crash or orphan a
+  PTY process; the minimum pane size clamp holds.
+- Closing a pane cleanly disposes its `xterm.js` instance and its PTY
+  session (verified the same way as the tab-close criterion above).
+
+---
+
+## 4. Theme System
+
+**Goal:** move from the single hardcoded theme in
+`src/renderer/src/theme.ts` to a JSON-based system with a handful of
+built-in themes and support for user-authored themes, matching the
+"Windows Terminal `settings.json`-like, but our own schema" direction
+already set in `CLAUDE.md`.
+
+### Design
+
+- Theme schema (versioned, JSON):
+  ```jsonc
+  {
+    "schemaVersion": 1,
+    "name": "Bitig Dark",
+    "author": "Bitig",
+    "terminal": {
+      "background": "#0f1117",
+      "foreground": "#d8dee9",
+      "cursor": "#7dd3fc",
+      "cursorAccent": "#0f1117",
+      "selectionBackground": "#2d3444",
+      "black": "#1a1c23", "red": "#f47067", /* ...full 16-color ANSI set... */
+      "brightBlack": "#4b5263", "brightRed": "#ff9492" /* ... */
+    },
+    "ui": {
+      "titlebarBackground": "#14161e",
+      "titlebarText": "#8b93a7",
+      "border": "#22252f",
+      "accent": "#7dd3fc"
+    }
+  }
+  ```
+  Splitting `terminal` (consumed directly as an xterm.js `ITheme`, shape
+  stays close to what xterm.js already expects to minimize translation
+  code) from `ui` (consumed by the app chrome's CSS via injected custom
+  properties) keeps the two concerns independently themeable.
+- Built-in themes ship as JSON files under `resources/themes/` (bundled
+  with the app, read-only), for example `bitig-dark.json`,
+  `bitig-light.json`, plus two or three well-known community favorites
+  reimplemented under this schema (Dracula- and Nord-style palettes are
+  common, low-risk choices; exact colors would be re-derived from public
+  palette values, not copied assets).
+- User themes live in `%APPDATA%/Bitig/themes/*.json`, loaded at startup in
+  addition to the built-ins, hot-reloaded when the file changes (a
+  `fs.watch` on the themes directory in main, pushed to the renderer over a
+  new `theme:list-changed` event) so editing a theme file updates the
+  running app.
+- Applying a theme writes `activeTheme: "<name>"` into the main settings
+  file (see milestone 6) and pushes the resolved theme object to every open
+  `xterm.js` instance via `Terminal.options.theme = ...` plus updates the
+  injected CSS custom properties for the chrome.
+
+### Sub-tasks
+
+- [ ] Define and document the theme JSON schema (as a TypeScript type in
+      `src/shared/themeTypes.ts`, mirrored as a JSON Schema file for editor
+      autocompletion, matching the Windows Terminal convention of shipping
+      a `$schema` reference).
+- [ ] Main-process `ThemeStore`: loads built-ins, loads user themes, merges
+      into one list, exposes `theme:list`, `theme:get-active`,
+      `theme:set-active` IPC channels.
+- [ ] Convert the current hardcoded `BITIG_TERMINAL_THEME` into the
+      `bitig-dark.json` built-in theme; add `bitig-light.json` as the
+      second built-in.
+- [ ] Renderer: apply the active theme to every open `xterm.js` instance
+      and to the app chrome on startup and on `theme:list-changed`.
+- [ ] File-watch based hot reload for user theme files.
+- [ ] Validation: malformed user theme JSON is rejected with a clear error
+      surfaced to the user (not a silent fallback and not a crash).
+
+### Acceptance criteria
+
+- Switching the active theme updates all open tabs and panes immediately,
+  with no restart required.
+- Dropping a new, valid theme JSON file into `%APPDATA%/Bitig/themes/`
+  makes it selectable without restarting the app.
+- Editing an already-selected user theme file on disk updates the running
+  terminal's colors live.
+- A malformed theme file produces a visible, specific error, not a blank
+  terminal or an app crash.
+
+---
+
+## 5. Transparency and Background Image Support
+
+**Goal:** window background transparency (already partially in place via
+the frameless window from milestone 1) becomes a first-class, user-tunable
+setting, plus optional background image support behind the terminal
+content.
+
+### Design
+
+- Extend the theme/settings schema with:
+  ```jsonc
+  {
+    "appearance": {
+      "opacity": 0.92,               // 0.0 - 1.0, applied to the window background
+      "backgroundImage": null,         // absolute path or null
+      "backgroundImageOpacity": 0.25,
+      "backgroundImageFit": "cover"    // "cover" | "contain" | "center" | "tile"
+    }
+  }
+  ```
+- `opacity` is applied at the `BrowserWindow` compositing level where
+  possible (Windows 11 acrylic/mica materials via Electron's
+  `backgroundMaterial` option are the preferred path over manual
+  `rgba()` transparency, since they get proper OS-level blur and
+  performance); manual `rgba()` background stays as the fallback for
+  cases where a vibrancy material is not desired (fully custom color, not
+  a system material).
+- Background image rendering happens in the renderer as a layer behind the
+  xterm.js canvas (`z-index` below the terminal, `pointer-events: none`),
+  never inside the terminal's own canvas, so it does not interfere with
+  text rendering or performance.
+- Large background images are downscaled once on load (via an offscreen
+  canvas) rather than re-decoded on every repaint.
+
+### Sub-tasks
+
+- [ ] Extend settings schema and `ThemeStore`/new `AppearanceStore` with
+      the fields above.
+- [ ] Wire `opacity` to `BrowserWindow` (materials where available, `rgba`
+      fallback otherwise) with a live-updating IPC channel
+      (`window:set-opacity`) so a settings-panel slider (milestone 6) can
+      preview changes without restarting.
+- [ ] Background image picker flow: native `dialog.showOpenDialog` in main
+      (renderer cannot access the filesystem directly), copy or reference
+      the chosen file, store its path in settings.
+- [ ] Renderer background layer component with the fit/opacity options
+      above.
+- [ ] Sensible defaults and guardrails: minimum opacity floor so the app
+      never becomes fully invisible or unclickable by accident; a "reset
+      appearance" action.
+
+### Acceptance criteria
+
+- Opacity changes are visible immediately, with no visible flicker or
+  window flash during the transition.
+- A selected background image persists across app restarts and renders
+  correctly at multiple window sizes without distortion for the "cover"
+  and "contain" fit modes.
+- Text in the terminal remains readable (sufficient contrast) with the
+  default background image opacity; this is a manual visual check, not an
+  automated one.
+
+---
+
+## 6. Settings Panel (GUI)
+
+**Goal:** every setting introduced so far (shell choice, active theme,
+appearance, and everything in milestones 7-9) becomes editable through a
+GUI, with the underlying JSON file as the source of truth and manual
+editing still fully supported.
+
+### Design
+
+- Settings persist to `%APPDATA%/Bitig/settings.json`, versioned with
+  `schemaVersion`, loaded once at startup by a main-process
+  `SettingsStore` (the module referenced but not yet built, per
+  `CLAUDE.md`'s "Ayarlar / Temalar" section).
+- IPC surface: `settings:get` (invoke, returns the full settings object),
+  `settings:set` (send, accepts a partial update, deep-merged), and
+  `settings:changed` (event, pushed to all renderer windows whenever the
+  file changes, whether from the GUI, a hand-edit, or another window).
+- The settings file itself is watched (`fs.watch`) so hand-editing
+  `settings.json` in a text editor while the app is running is a
+  first-class, supported workflow, not an edge case.
+- GUI is a dedicated view inside the same renderer bundle (not a separate
+  `BrowserWindow`), reachable via a keyboard shortcut and a title-bar
+  entry point, organized into sections that map directly onto the settings
+  schema: General (shell, starting directory), Appearance (theme,
+  opacity, background image), Text (font, size, line height, cursor
+  style - ties into milestone 7), Keyboard (shortcut editor - ties into
+  milestone 8).
+- Every control writes through `settings:set` immediately (no separate
+  "Save" step, matching how Windows Terminal and VS Code settings UIs
+  behave); a "Reset to defaults" action per section and one for the whole
+  file.
+
+### Sub-tasks
+
+- [ ] Define the full settings JSON schema (`src/shared/settingsTypes.ts`)
+      covering every field introduced by milestones 1-9, even those not
+      built yet, so the schema does not need breaking changes later
+      (unused fields can be added with sensible defaults ahead of the
+      feature that consumes them).
+- [ ] `SettingsStore` in main: load, validate, deep-merge partial updates,
+      persist, file-watch, broadcast changes.
+- [ ] Settings IPC handlers (`settings:get`, `settings:set`) plus the
+      `settings:changed` broadcast.
+- [ ] Settings GUI shell: navigation between sections, generic
+      form-control components (toggle, slider, color picker, dropdown,
+      file picker) reused across sections.
+- [ ] Migration path for `schemaVersion` bumps: a small migration function
+      per version increment, run once at startup if the on-disk version is
+      older than the app's expected version.
+- [ ] "Open settings.json in default editor" escape hatch for anything the
+      GUI does not yet expose.
+
+### Acceptance criteria
+
+- Every setting changed in the GUI is reflected in `settings.json` on disk
+  immediately and takes effect in the running app without a restart.
+- Hand-editing `settings.json` while the app is open and saving the file
+  updates the GUI and the app's live behavior.
+- Deleting `settings.json` entirely and relaunching the app regenerates it
+  with defaults rather than crashing.
+- An intentionally malformed `settings.json` (invalid JSON, or a value of
+  the wrong type) falls back to defaults for the broken fields only, with a
+  visible warning, not a full crash.
+
+---
+
+## 7. Nerd Font Detection and Font Picker
+
+**Goal:** make font selection safe and informed - the user should not be
+able to pick a font that silently breaks icon/ligature rendering without
+knowing why.
+
+### Design
+
+- Font enumeration: use Electron/Chromium's
+  `queryLocalFonts()` (the Local Font Access API) where available to list
+  installed fonts without shelling out to PowerShell; a PowerShell-based
+  fallback (`Get-ChildItem` over the Fonts registry key, or the
+  `System.Drawing.Text.InstalledFontCollection` .NET type via a small
+  helper script) is the backup for environments where the API is
+  unavailable.
+- Nerd Font detection: maintain a small known-name list (Cascadia Code NF,
+  FiraCode Nerd Font, JetBrainsMono Nerd Font, Hack Nerd Font, etc. -
+  sourced from the Nerd Fonts project's own naming convention) matched
+  case-insensitively against enumerated font names, plus a live glyph
+  probe as a second signal: render a known Nerd Font private-use-area
+  codepoint offscreen with the candidate font and measure whether a glyph
+  actually painted (a zero-width or tofu/notdef box result means the font
+  does not actually contain that glyph, regardless of its name).
+- Font picker UI (part of the Text section in milestone 6's settings
+  panel) shows a live preview pane rendering sample text plus a row of
+  common Nerd Font icons in the selected font, so the icon-support gap is
+  visible immediately rather than discovered later in a broken prompt.
+- If the selected font is not detected as a Nerd Font, show a non-blocking
+  notice with a link to https://www.nerdfonts.com/ rather than silently
+  degrading icons to tofu boxes.
+
+### Sub-tasks
+
+- [ ] Font enumeration IPC channel (`fonts:list`) in main, with the
+      Local Font Access API path and the PowerShell fallback.
+- [ ] Nerd Font known-name list plus the glyph-probe verification function.
+- [ ] Font picker component with live preview and Nerd Font status badge.
+- [ ] Wire the selected font into `xterm.js`'s `fontFamily` option and
+      persist it through `settings:set`.
+
+### Acceptance criteria
+
+- The font list shown matches the fonts actually installed on the machine
+  (spot-checked against Windows' own Fonts settings page).
+- A genuine Nerd Font (for example, a locally installed "CaskaydiaCove
+  Nerd Font") is correctly flagged as Nerd-Font-capable; a plain font like
+  Consolas is correctly flagged as not.
+- Selecting a font updates every open terminal's rendering immediately.
+
+---
+
+## 8. Customizable Keyboard Shortcuts
+
+**Goal:** every default keybinding introduced in earlier milestones (new
+tab, close tab, split pane, switch focus, open settings, and so on) becomes
+remappable, with conflict detection.
+
+### Design
+
+- Shortcut schema, part of `settings.json`:
+  ```jsonc
+  {
+    "keybindings": [
+      { "action": "tab.new", "keys": "Ctrl+Shift+T" },
+      { "action": "tab.close", "keys": "Ctrl+Shift+W" },
+      { "action": "pane.splitRight", "keys": "Alt+Shift+D" },
+      { "action": "pane.splitDown", "keys": "Alt+Shift+E" }
+    ]
+  }
+  ```
+  Action identifiers are stable strings defined once in
+  `src/shared/actionTypes.ts`, so a keybinding is always "what it does",
+  never "what code path it happens to call" - this indirection is what
+  makes remapping and the future plugin system (milestone 10) able to
+  register their own actions without touching keybinding-handling code.
+- A single keyboard event listener at the renderer's top level resolves
+  `KeyboardEvent` to an action id via the current keybinding map, then
+  dispatches to a central action registry (`actionId -> handler function`).
+  Individual components (tab bar, pane manager) register their handlers
+  into that registry rather than adding their own `keydown` listeners,
+  avoiding the classic bug of two features both trying to own the same key
+  combination.
+- Conflict detection: assigning a combination already bound to another
+  action surfaces the conflict in the shortcut editor UI immediately
+  (highlight both entries, do not silently overwrite).
+- A reserved set of combinations used by the terminal itself for actual
+  shell input (`Ctrl+C`, `Ctrl+V` when not remapped, arrow keys, etc.)
+  cannot be bound to app-level actions unless the user explicitly
+  acknowledges the override, since doing so changes shell behavior the
+  user may not expect.
+
+### Sub-tasks
+
+- [ ] Define the action registry and the stable action-id list covering
+      every keyboard-triggered feature from milestones 2, 3, and 6.
+- [ ] Central keyboard event resolver replacing any ad hoc `keydown`
+      listeners added in earlier milestones.
+- [ ] Shortcut editor UI: list of actions with their current binding, a
+      "click to record a new binding" control, conflict highlighting.
+- [ ] Reserved-combination guard with an explicit override flow.
+- [ ] Ship sensible defaults matching common Windows terminal conventions
+      (close to Windows Terminal's own defaults where there is no reason
+      to diverge, so muscle memory transfers).
+
+### Acceptance criteria
+
+- Rebinding an action in the shortcut editor takes effect immediately, no
+  restart required.
+- Binding a combination already in use surfaces a visible conflict instead
+  of silently applying.
+- Deleting `settings.json`'s `keybindings` section (or the whole file)
+  falls back cleanly to the documented defaults.
+
+---
+
+## 9. Command History and Fuzzy Search
+
+**Goal:** a searchable history of commands run across sessions, plus a
+fuzzy-search overlay (a built-in equivalent of piping through `fzf`) for
+quickly finding and re-running a past command.
+
+### Design
+
+- Command boundary detection: this is the hard part. PTY output is an
+  opaque stream of bytes; Bitig does not get a clean "command started /
+  command finished" signal for free. The practical, widely-used approach
+  (also how Warp and other modern terminals do it) is **shell
+  integration**: a small snippet injected into the shell's profile (a
+  PowerShell profile addition, opt-in and clearly explained, not silently
+  modifying the user's existing profile) that emits OSC-sequence markers
+  around each prompt and command (OSC 133, the semi-standard "shell
+  integration" sequence family: `A` prompt start, `B` command start, `C`
+  command executed, `D` command finished with exit code). `xterm.js`
+  exposes a parser hook (`Terminal.parser.registerOscHandler`) for exactly
+  this.
+- Without shell integration installed, history capture degrades
+  gracefully to "log of raw input lines the user typed" (still useful for
+  search, just without exit codes or precise command boundaries).
+- Storage: an append-only local log per shell session, flushed
+  periodically, indexed for search. Given the expected data volume
+  (personal command history, not a multi-user dataset), a simple
+  JSON-lines file under `%APPDATA%/Bitig/history/` plus an in-memory index
+  loaded at startup is sufficient; a real embedded database (SQLite via a
+  native module) is a reasonable upgrade later if the flat-file approach
+  becomes a bottleneck, but is not justified as a starting point.
+- Fuzzy search overlay: a modal invoked by keybinding (default close to
+  `Ctrl+R`, matching shell reverse-search muscle memory), fuzzy-matching
+  against the history index (a small, dependency-free fuzzy match
+  implementation - subsequence matching with a scoring function that
+  favors contiguous matches and matches near the start of the string is
+  enough; no need for a heavyweight library), showing results ranked by
+  score with recency as a tiebreaker, Enter to insert the selected command
+  at the current prompt (not auto-execute, to avoid accidental destructive
+  re-runs).
+
+### Sub-tasks
+
+- [ ] PowerShell shell-integration snippet (OSC 133 markers) plus an
+      in-app, opt-in installer flow that appends it to the user's
+      `$PROFILE` with a clear diff preview before writing.
+- [ ] OSC 133 parser hook in the renderer, wired per PTY session.
+- [ ] History store: append-only writer in main, loaded index at startup,
+      basic pruning (age-based or count-based cap, configurable).
+- [ ] Fuzzy match scoring function and unit tests covering the common
+      cases (prefix match, subsequence match, no match).
+- [ ] Search overlay UI: input box, ranked result list, keyboard
+      navigation, Enter-to-insert.
+- [ ] Privacy controls: a per-project or global "do not record history"
+      toggle, and a "clear history" action.
+
+### Acceptance criteria
+
+- With shell integration installed, running several distinct commands and
+  opening the search overlay finds each one by a partial, non-contiguous
+  match of its text.
+- Without shell integration installed, the feature still degrades to
+  usable line-based search rather than being entirely broken.
+- History persists across app restarts.
+- Clearing history actually removes the on-disk log, verified by
+  re-opening the search overlay and finding it empty.
+
+---
+
+## 10. Lightweight Plugin System
+
+**Goal:** let third-party (and the author's own) code extend Bitig without
+patching core source: new actions, new settings-panel sections, new status
+bar items, custom OSC-sequence handlers, to start.
+
+### Design
+
+- Plugins are npm-style packages: a folder with a `plugin.json` manifest
+  (name, version, entry point, declared permissions) and a JS entry file,
+  installed under `%APPDATA%/Bitig/plugins/<plugin-name>/`.
+- **Plugins run in the main process, in a restricted context, never with
+  direct access to the real `require`/`fs`/`child_process` globals.** This
+  is a deliberate, non-negotiable security boundary: a terminal emulator
+  plugin ecosystem is an extremely sensitive place to get sandboxing wrong,
+  since plugins are exactly the kind of code most likely to be installed
+  from an untrusted third party. The practical mechanism is Node's `vm`
+  module with a curated context object exposing only a permission-gated
+  Bitig API (`bitig.registerAction(...)`, `bitig.onPtyData(...)`,
+  `bitig.settings.get(...)`), not the ambient Node globals.
+- A plugin manifest declares the permissions it needs (`pty:read`,
+  `settings:read`, `settings:write`, `ui:register-panel`, etc.); the app
+  shows these to the user before enabling a plugin, the same trust model
+  as a browser extension install prompt, not a silent capability grant.
+- Plugin API surface starts intentionally small (register an action,
+  register a settings-panel section, read PTY output, contribute a status
+  bar item) and grows only when a real plugin idea needs more, rather than
+  speculatively building a large API up front.
+
+### Sub-tasks
+
+- [ ] Plugin manifest schema and a `PluginLoader` in main that discovers,
+      validates, and loads plugins from the plugins directory.
+- [ ] `vm`-based sandboxed execution context with the curated `bitig` API
+      object; explicit denial of ambient Node globals.
+- [ ] Permission model: manifest-declared permissions, a user-facing
+      enable/disable/review UI (part of the settings panel from
+      milestone 6), and enforcement at the API boundary (a plugin without
+      `settings:write` gets a `bitig.settings.set` that throws, not one
+      that silently succeeds).
+- [ ] The initial small API surface: `registerAction`, `onPtyData`,
+      `settings.get`/`settings.set` (permission-gated), a status-bar
+      contribution point.
+- [ ] A reference example plugin (in-repo, under a `plugins-examples/`
+      folder, not shipped in the packaged app) demonstrating the API and
+      doubling as a manual integration test.
+- [ ] Crash isolation: an uncaught exception inside a plugin's code must
+      not take down the host app; the plugin is disabled and the user is
+      notified, the rest of the app keeps running.
+
+### Acceptance criteria
+
+- The reference example plugin loads, registers an action, and that action
+  is invokable from the shortcut system built in milestone 8.
+- A plugin without a declared permission genuinely cannot use the
+  corresponding API (verified by writing a plugin that tries and observing
+  a clean rejection, not a silent no-op and not a crash).
+- A plugin that throws inside its own code is caught, disabled, and
+  reported, without crashing the main window or killing any running PTY
+  session.
+
+---
+
+## 11. Packaging
+
+**Goal:** a distributable, installable `.exe` for end users who are not
+running the project from source.
+
+### Design
+
+- `electron-builder` (already a devDependency) targets an NSIS installer
+  for Windows, matching the ecosystem norm and giving a familiar
+  install/uninstall experience integrated with Windows' Add/Remove
+  Programs.
+- Code signing: unsigned builds trigger SmartScreen warnings on first run.
+  A proper Authenticode certificate is a real cost/process decision the
+  author needs to make (EV cert for immediate SmartScreen reputation vs.
+  standard cert that builds reputation over time vs. shipping unsigned
+  with a documented warning for early users) - tracked here as an open
+  decision, not resolved by this document.
+- Auto-update: `electron-builder`'s built-in `autoUpdater` integration
+  (NSIS + a generic or GitHub-Releases-backed update feed) is the natural
+  fit once there is a stable release cadence; not needed for the very
+  first packaged release, but the build config should be structured so it
+  is a small addition later (using `electron-builder`'s config format from
+  the start rather than a fully custom packaging script).
+- Native module handling: `node-pty`'s prebuilt binaries (already
+  confirmed working without a source rebuild, see `CLAUDE.md`'s "Bilinen
+  Notlar" section) need `asarUnpack` configuration so the native `.node`
+  files are not sealed inside the asar archive, where native `require`
+  cannot load them.
+
+### Sub-tasks
+
+- [ ] `electron-builder` configuration (`electron-builder.yml` or the
+      `build` key in `package.json`): app id, product name, NSIS target,
+      icon set (multiple resolutions), `asarUnpack` for `node-pty`'s
+      native binary and prebuilds directory.
+- [ ] App icon design (`.ico` for Windows, multiple sizes: 16, 32, 48, 256).
+- [ ] `npm run dist` (or similarly named) script producing a signed or
+      clearly-labeled-unsigned installer artifact.
+- [ ] Verify a clean-machine install: the installer works on a Windows 11
+      VM with no Node.js, no git, nothing beyond the OS itself installed
+      (this is the real test that catches "works on my machine because I
+      have the toolchain installed" bugs).
+- [ ] Decide and document the code-signing approach (see Design above).
+- [ ] Release process documentation: how to cut a version bump, tag,
+      build, and publish a GitHub Release with the installer attached.
+
+### Acceptance criteria
+
+- The installer runs and produces a working, launchable app on a clean
+  Windows 11 machine with no development tools installed.
+- The installed app's PTY functionality works identically to the
+  `npm run dev` experience (this is the real proof that native module
+  packaging is correct, since a broken `asarUnpack` config typically shows
+  up as node-pty failing to load only in the packaged build).
+- Uninstalling through Windows' standard "Apps" settings page removes the
+  application cleanly, including its Start Menu entry.
+
+---
+
+## Explicit Non-Goals (for now)
+
+Listed to avoid scope creep and to give future contributors a clear
+"not yet, and here is why" answer:
+
+- **Cross-platform support (macOS, Linux).** The project is intentionally
+  Windows-first (ConPTY, Windows paths, Windows-specific font/registry
+  APIs). Nothing here is designed to be hostile to a future port, but
+  nothing is being built speculatively for portability either.
+- **Multi-window support.** Tabs and split panes cover the vast majority
+  of real workflows; a second top-level window is a meaningfully larger
+  state-management problem (which window owns which settings, focus
+  across windows, etc.) and is not planned until the single-window
+  experience is solid.
+- **Remote/SSH session management as a first-class feature.** Bitig runs
+  local shells; SSH is just another command a user can type. A dedicated
+  SSH session manager (like some commercial terminals offer) is out of
+  scope unless a strong need emerges later.
+- **A built-in package manager for plugins.** Milestone 10 ships the
+  loading and sandboxing mechanism, not a discovery/install UI or a
+  registry; that is a substantially larger undertaking appropriate only
+  once there is an actual plugin ecosystem worth managing.
