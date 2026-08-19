@@ -26,9 +26,10 @@ and versioning follows [Semantic Versioning](https://semver.org/).
   5000-line scrollback, and a dedicated padded wrapper (`#terminal-shell`)
   around the xterm.js mount point so padding no longer interferes with
   `FitAddon` size calculations.
-- Bilingual documentation: `README.md` (English) and `README.tr.md`
-  (Turkish), cross-linked, with an architecture diagram, IPC channel
-  reference table, and a rendered SVG preview banner (`assets/banner.svg`).
+- Bilingual documentation in a single `README.md` (English and Turkish
+  sections, anchor-linked at the top), with an architecture diagram, IPC
+  channel reference table, and a rendered SVG preview banner
+  (`assets/banner.svg`).
 - Internal developer reference for Git setup and day-to-day commands
   (`dev-docs/GIT-KURULUM-VE-KOMUTLAR.md`, Turkish, intentionally excluded
   from version control).
