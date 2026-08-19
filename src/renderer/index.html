@@ -23,6 +23,16 @@
             <svg viewBox="0 0 10 10"><path d="M5 0v10M0 5h10" /></svg>
           </button>
         </div>
+        <button id="settings-btn" title="Gorunum ayarlari" aria-label="Ayarlari ac">
+          <svg viewBox="0 0 10 10" id="settings-btn-icon">
+            <line x1="0" y1="2" x2="10" y2="2" />
+            <circle cx="6.5" cy="2" r="1.1" />
+            <line x1="0" y1="5" x2="10" y2="5" />
+            <circle cx="3.5" cy="5" r="1.1" />
+            <line x1="0" y1="8" x2="10" y2="8" />
+            <circle cx="7" cy="8" r="1.1" />
+          </svg>
+        </button>
         <div id="titlebar-controls">
           <button id="btn-minimize" class="titlebar-btn" title="Kucult" aria-label="Kucult">
             <svg viewBox="0 0 10 10"><path d="M0 5h10" /></svg>
@@ -43,6 +53,7 @@
       <div id="terminal-shell">
         <div id="terminal-root"></div>
       </div>
+      <div id="settings-panel" class="hidden"></div>
     </div>
     <script type="module" src="./src/main.ts"></script>
   </body>

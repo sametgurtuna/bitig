@@ -5,7 +5,9 @@ export const SETTINGS_CHANNELS = {
   get: 'settings:get',
   set: 'settings:set',
   changed: 'settings:changed',
-  readBackgroundImage: 'settings:read-background-image'
+  reset: 'settings:reset',
+  readBackgroundImage: 'settings:read-background-image',
+  pickBackgroundImage: 'settings:pick-background-image'
 } as const;
 
 export type BackgroundImageFit = 'cover' | 'contain' | 'center' | 'tile';

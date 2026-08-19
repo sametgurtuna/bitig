@@ -55,9 +55,9 @@ This project is under active, early development. It currently supports
 multiple tabs, each of which can itself be split into multiple resizable
 panes, each a real PowerShell process running behind a custom window,
 rendered with xterm.js, themeable and optionally transparent with a
-background image. A GUI settings panel is next - for now, everything is
-driven by hand-editing a hot-reloaded `settings.json` plus a couple of
-keyboard shortcuts (see [Customization](#customization)).
+background image, all adjustable from a settings panel (a gear icon in the
+title bar) rather than only by hand-editing JSON - see
+[Customization](#customization).
 
 ## Features
 
@@ -85,6 +85,10 @@ Shipped so far:
 - Transparency (real desktop showing through the window, not a simulated
   blur) and an optional full-window background image, both driven by
   `settings.json`.
+- A settings panel (click the gear icon in the title bar): a theme picker,
+  opacity slider, and background image controls including a real native
+  file picker - no manual JSON editing required for any of it, though
+  hand-editing `settings.json` still works identically alongside it.
 - A typed, one-way-clear IPC contract between the Electron main process and
   the renderer, exposed through a narrow `contextBridge` API (no direct
   Node access from the UI).
@@ -98,7 +102,7 @@ Planned, in order:
 - [x] Split panes (horizontal and vertical, resizable, drag divider)
 - [x] Theme system (JSON based, built-in themes plus user themes)
 - [x] Transparency and background image support
-- [ ] Settings panel (GUI, no manual JSON editing required)
+- [x] Settings panel (GUI - Appearance section: theme, opacity, background image)
 - [ ] Nerd Font detection and font picker
 - [ ] Customizable keyboard shortcuts
 - [ ] Command history and fuzzy search
@@ -171,7 +175,11 @@ events to the correct leaf regardless of how deep it is nested.
 `AppearanceController` (`src/renderer/src/appearance.ts`) is the one place
 that resolves the active theme and appearance settings and applies them:
 terminal colors to every open leaf, chrome colors as CSS custom
-properties, and the background image layer.
+properties, and the background image layer. The settings panel
+(`src/renderer/src/settingsPanel.ts`) is a pure consumer of that same
+state - it reads `AppearanceController.getState()` and writes changes back
+through the ordinary `settings:set` channel, the same one a hand-edit to
+`settings.json` ultimately flows through too.
 
 ## IPC Channel Reference
 
@@ -199,6 +207,8 @@ silently drift between processes.
 | `settings:set` | renderer to main | send | Apply a partial update (deep-merged) |
 | `settings:changed` | main to renderer | event | Broadcasts the full settings object after any change, from IPC or a hand-edit |
 | `settings:read-background-image` | renderer to main | invoke | Read the configured background image file and return it as a `data:` URL |
+| `settings:pick-background-image` | renderer to main | invoke | Open a native file picker, return the chosen absolute path (or `null`) |
+| `settings:reset` | renderer to main | send | Reset all settings to defaults and persist |
 
 ## Getting Started
 
@@ -235,9 +245,9 @@ Produces production bundles under `out/`.
 
 ## Keyboard Shortcuts
 
-There is no settings panel yet (see [Roadmap](#roadmap)), so these are the
-only way to drive tabs, panes, and themes today. They are hardcoded for
-now; milestone 8 makes them remappable.
+Tabs and panes are keyboard-only for now (the settings panel only covers
+appearance, see [Customization](#customization)). These are hardcoded;
+milestone 8 makes them remappable.
 
 | Shortcut | Action |
 |---|---|
@@ -255,16 +265,25 @@ now; milestone 8 makes them remappable.
 
 ## Customization
 
-No GUI yet - both of the following are read live from disk with no
-restart required, which in practice covers most of what a settings panel
-would otherwise be for.
+### Settings panel
 
-### Settings
+Click the gear icon in the title bar (or press `Escape` to close it again)
+for a theme picker, an opacity slider, and background image controls with
+a real file picker - no JSON editing required. It currently covers
+everything under `appearance` in `settings.json`; nothing else is
+configurable yet (see [Roadmap](#roadmap)).
 
-`%APPDATA%/Bitig/settings.json` is created automatically on first launch.
-Edit it in any text editor and save; the running app picks up the change
+### Settings file
+
+Everything the panel does, it does by writing to
+`%APPDATA%/Bitig/settings.json` - the file is the actual source of truth,
+the panel is just a friendlier way to edit it. You can still edit it
+directly in any text editor and save; the running app picks up the change
 within a fraction of a second (`fs.watch`-based, debounced so a
-still-being-saved file is never read half-written).
+still-being-saved file is never read half-written), same as if you'd used
+the panel. This is also the only way to point `backgroundImage` at a file
+without going through the panel's own picker, and the only way to set
+`activeTheme` to a custom theme you've authored yourself (see below).
 
 ```jsonc
 {
@@ -283,16 +302,17 @@ still-being-saved file is never read half-written).
 - `appearance.opacity` - `0.3`-`1`, clamped on write so the window can
   never become fully invisible or unclickable by a typo.
 - `appearance.backgroundImage` - an absolute path to an image, or `null`.
-  There is no in-app file picker yet (that needs a settings panel to host
-  a "Browse..." button) - point it at a file by hand.
+  The settings panel's "Browse..." button sets this for you; editing it by
+  hand works identically.
 - `appearance.backgroundImageFit` - `"cover"`, `"contain"`, `"center"`, or
   `"tile"`.
 
 ### Themes
 
 Four themes ship built in: `bitig-dark` (default), `bitig-light`,
-`dracula`, `nord`. Cycle through them with `Alt+Shift+T`, or set
-`activeTheme` to a specific `id` directly.
+`dracula`, `nord`. Pick one from the settings panel's theme grid, cycle
+through them with `Alt+Shift+T`, or set `activeTheme` to a specific `id`
+directly in `settings.json`.
 
 Drop a custom theme JSON file into `%APPDATA%/Bitig/themes/` and it
 becomes available immediately, no restart - editing an already-selected
@@ -376,6 +396,7 @@ Bitig/
         tabs.ts                 # TabStore: tab lifecycle, tab bar, drag-to-reorder, shortcuts
         panes.ts                # Pane tree: split/close/render, divider drag, per-leaf ResizeObserver
         appearance.ts           # Applies active theme/opacity/background image, theme-cycle shortcut
+        settingsPanel.ts        # Appearance settings view (gear button, replaces #terminal-shell)
         titlebar.ts             # Custom title bar behavior
         style.css
 ```
@@ -444,10 +465,9 @@ Proje aktif ve erken gelistirme asamasinda. Su an birden fazla sekmeyi
 destekliyor; her sekme kendi icinde birden fazla boyutlandirilabilir
 pane'e bolunebiliyor, her pane ozel bir pencerenin arkasinda calisan
 gercek bir PowerShell prosesi, xterm.js ile render ediliyor, temalanabilir
-ve istege bagli olarak arkaplan gorseliyle seffaf olabiliyor. Sirada GUI
-ayarlar paneli var - simdilik her sey elle duzenlenen, hot-reload'lu bir
-`settings.json` ve birkac klavye kisayoluyla yonetiliyor (bkz.
-[Ozellestirme](#ozellestirme)).
+ve istege bagli olarak arkaplan gorseliyle seffaf olabiliyor - hepsi elle
+JSON duzenlemek yerine bir ayarlar panelinden (title bar'daki disli ikonu)
+ayarlanabiliyor. Bkz. [Ozellestirme](#ozellestirme).
 
 ## Ozellikler
 
@@ -476,6 +496,10 @@ Su ana kadar tamamlananlar:
   Seffaflik (simule edilmis bir bulaniklik degil, pencerenin arkasindaki
   gercek masaustunun gorunmesi) ve istege bagli tam pencere arkaplan
   gorseli, ikisi de `settings.json` uzerinden yonetiliyor.
+- Bir ayarlar paneli (title bar'daki disli ikonuna tikla): tema secici,
+  opaklik slider'i, gercek native dosya secicili arkaplan gorseli
+  kontrolleri - hicbiri icin elle JSON duzenlemeye gerek yok, yine de
+  `settings.json`'u elle duzenlemek de aynen calismaya devam ediyor.
 - Electron main sureci ile renderer arasinda tipli, tek yonu net bir IPC
   sozlesmesi; dar bir `contextBridge` API'siyle disari aciliyor (UI'dan
   dogrudan Node erisimi yok).
@@ -489,7 +513,7 @@ Sirasiyla planlananlar:
 - [x] Split pane (yatay ve dikey bolme, boyutlandirilabilir divider)
 - [x] Tema sistemi (JSON tabanli, hazir temalar + kullanici temalari)
 - [x] Seffaflik ve arkaplan gorseli destegi
-- [ ] Ayarlar paneli (GUI, elle JSON duzenlemeye gerek kalmadan)
+- [x] Ayarlar paneli (GUI - Gorunum bolumu: tema, opaklik, arkaplan gorseli)
 - [ ] Nerd Font tespiti ve font secici
 - [ ] Ozellestirilebilir klavye kisayollari
 - [ ] Komut gecmisi ve fuzzy arama
@@ -563,6 +587,10 @@ leaf'e yonlendirir. `AppearanceController`
 (`src/renderer/src/appearance.ts`), aktif temayi ve gorunum ayarlarini
 cozumleyip uygulayan tek yer: terminal renklerini acik her leaf'e, chrome
 renklerini CSS custom property olarak, ve arkaplan gorseli katmanini.
+Ayarlar paneli (`src/renderer/src/settingsPanel.ts`) bu ayni state'in sade
+bir tuketicisi - `AppearanceController.getState()`'i okur, degisiklikleri
+ayni `settings:set` kanalindan geri yazar; `settings.json`'a elle yapilan
+bir duzenleme de sonunda ayni kanaldan geciyor.
 
 ## IPC Kanal Referansi
 
@@ -590,6 +618,8 @@ sayede sozlesme surecler arasinda sessizce kaymaz.
 | `settings:set` | renderer -> main | send | Kismi bir guncelleme uygular (derinlemesine birlestirilir) |
 | `settings:changed` | main -> renderer | event | Herhangi bir yoldan (IPC ya da elle duzenleme) degisince tam ayarlar objesini yayinlar |
 | `settings:read-background-image` | renderer -> main | invoke | Ayarlanan arkaplan gorseli dosyasini okuyup `data:` URL olarak doner |
+| `settings:pick-background-image` | renderer -> main | invoke | Native dosya secici acar, secilen mutlak yolu doner (ya da `null`) |
+| `settings:reset` | renderer -> main | send | Tum ayarlari varsayilanlara sifirlar ve diske yazar |
 
 ## Baslarken
 
@@ -626,9 +656,9 @@ Prodüksiyon paketlerini `out/` altinda uretir.
 
 ## Klavye Kisayollari
 
-Henuz bir ayarlar paneli yok (bkz. [Yol Haritasi](#yol-haritasi)), bu
-yuzden sekmeleri, pane'leri ve temalari yonetmenin tek yolu bunlar. Simdilik
-sabit; milestone 8 bunlari yeniden atanabilir hale getirecek.
+Sekmeler ve pane'ler simdilik sadece klavye ile yonetiliyor (ayarlar
+paneli sadece gorunumu kapsiyor, bkz. [Ozellestirme](#ozellestirme)).
+Simdilik sabit; milestone 8 bunlari yeniden atanabilir hale getirecek.
 
 | Kisayol | Eylem |
 |---|---|
@@ -646,16 +676,24 @@ sabit; milestone 8 bunlari yeniden atanabilir hale getirecek.
 
 ## Ozellestirme
 
-Henuz GUI yok - asagidakilerin ikisi de restart gerekmeden, diskten canli
-okunur; pratikte bir ayarlar panelinin karsilayacagi cogu ihtiyaci zaten
-karsilar.
+### Ayarlar paneli
 
-### Ayarlar
+Title bar'daki disli ikonuna tikla (kapatmak icin tekrar tikla ya da
+`Escape`'e bas): tema secici, opaklik slider'i, gercek dosya secicili
+arkaplan gorseli kontrolleri - hicbiri icin JSON duzenlemek gerekmiyor. Su
+an `settings.json`'daki `appearance` altindaki her seyi kapsiyor; baska
+hicbir sey henuz ayarlanabilir degil (bkz. [Yol Haritasi](#yol-haritasi)).
 
-`%APPDATA%/Bitig/settings.json` ilk acilista otomatik olusturulur. Herhangi
-bir metin editorunde duzenleyip kaydet; calisan uygulama degisikligi saniye
-altinda yakalar (`fs.watch` tabanli, yarim yazilmis bir dosyayi asla
-okumamak icin debounce'lu).
+### Ayarlar dosyasi
+
+Panelin yaptigi her sey aslinda `%APPDATA%/Bitig/settings.json`'a yazarak
+oluyor - dosya gercek kaynak, panel sadece onu duzenlemenin daha kolay bir
+yolu. Dosyayi herhangi bir metin editorunde dogrudan da duzenleyebilirsin;
+calisan uygulama degisikligi saniye altinda yakalar (`fs.watch` tabanli,
+yarim yazilmis bir dosyayi asla okumamak icin debounce'lu), tipki panelden
+degistirmis gibi. `backgroundImage`'i panelin kendi secicisi disinda bir
+dosyaya yonlendirmenin ve `activeTheme`'i kendi yazdigin ozel bir temaya
+ayarlamanin (asagiya bak) da tek yolu bu.
 
 ```jsonc
 {
@@ -674,16 +712,17 @@ okumamak icin debounce'lu).
 - `appearance.opacity` - `0.3`-`1` arasi, yazilirken kelepceleniyor ki bir
   yazim hatasi pencereyi tamamen gorunmez/tiklanamaz hale getiremesin.
 - `appearance.backgroundImage` - bir gorselin mutlak yolu, ya da `null`.
-  Henuz uygulama icinde dosya secici yok (bunun icin "Browse..." butonu
-  barindiracak bir ayarlar paneli gerekir) - yolu elle yaz.
+  Ayarlar panelindeki "Gozat..." butonu bunu senin icin ayarlar; elle
+  duzenlemek de aynen calisir.
 - `appearance.backgroundImageFit` - `"cover"`, `"contain"`, `"center"` ya
   da `"tile"`.
 
 ### Temalar
 
 Dort hazir tema geliyor: `bitig-dark` (varsayilan), `bitig-light`,
-`dracula`, `nord`. `Alt+Shift+T` ile aralarinda dolas, ya da `activeTheme`'i
-dogrudan bir `id`'ye ayarla.
+`dracula`, `nord`. Ayarlar panelinin tema grid'inden birini sec, `Alt+Shift+T`
+ile aralarinda dolas, ya da `settings.json`'da `activeTheme`'i dogrudan bir
+`id`'ye ayarla.
 
 `%APPDATA%/Bitig/themes/` klasorune ozel bir tema JSON dosyasi birak, hemen
 kullanilabilir olur, restart gerekmez - zaten secili bir tema dosyasini
@@ -767,6 +806,7 @@ Bitig/
         tabs.ts                 # TabStore: sekme yasam dongusu, tab bar, surukle-sirala, kisayollar
         panes.ts                # Pane agaci: split/close/render, divider surukleme, leaf basina ResizeObserver
         appearance.ts           # Aktif tema/opaklik/arkaplan gorselini uygular, tema dongusu kisayolu
+        settingsPanel.ts        # Gorunum ayarlari view'i (disli buton, #terminal-shell yerini alir)
         titlebar.ts             # Ozel title bar davranisi
         style.css
 ```

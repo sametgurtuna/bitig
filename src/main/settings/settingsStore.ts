@@ -67,6 +67,16 @@ export class SettingsStore {
     return this.settings;
   }
 
+  /** Ayarlar panelindeki "Varsayilanlara don" butonu icin. */
+  reset(): BitigSettings {
+    // DEFAULT_SETTINGS'i dogrudan atamiyoruz: this.settings her zaman kendi
+    // objesi olmali, DEFAULT_SETTINGS sabiti hicbir yerde mutate edilmemeli.
+    this.settings = { ...DEFAULT_SETTINGS, appearance: { ...DEFAULT_SETTINGS.appearance } };
+    this.persist();
+    this.notify();
+    return this.settings;
+  }
+
   update(patch: BitigSettingsPatch): BitigSettings {
     this.settings = this.mergeAndClamp(this.settings, patch);
     this.persist();

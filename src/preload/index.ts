@@ -91,6 +91,13 @@ const settingsApi = {
   readBackgroundImage: (): Promise<string | null> =>
     ipcRenderer.invoke(SETTINGS_CHANNELS.readBackgroundImage),
 
+  pickBackgroundImage: (): Promise<string | null> =>
+    ipcRenderer.invoke(SETTINGS_CHANNELS.pickBackgroundImage),
+
+  reset: (): void => {
+    ipcRenderer.send(SETTINGS_CHANNELS.reset);
+  },
+
   onChanged: (listener: (settings: BitigSettings) => void): (() => void) => {
     const subscription = (_event: Electron.IpcRendererEvent, settings: BitigSettings): void =>
       listener(settings);

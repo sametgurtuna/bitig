@@ -2,10 +2,12 @@ import '@xterm/xterm/css/xterm.css';
 import { initTitleBar } from './titlebar';
 import { TabStore } from './tabs';
 import { AppearanceController } from './appearance';
+import { SettingsPanel } from './settingsPanel';
 
 /**
  * Uygulama girisi: title bar davranisini baglar, gorunum (tema/opaklik/
- * arkaplan) kontrolcusunu ve sekme yonetimini (TabStore) baslatir.
+ * arkaplan) kontrolcusunu, ayarlar panelini ve sekme yonetimini
+ * (TabStore) baslatir.
  */
 async function bootstrap(): Promise<void> {
   initTitleBar();
@@ -13,12 +15,16 @@ async function bootstrap(): Promise<void> {
   const rootEl = document.getElementById('terminal-root');
   const tabbarListEl = document.getElementById('tabbar-list');
   const newTabBtn = document.getElementById('new-tab-btn');
-  if (!rootEl || !tabbarListEl || !newTabBtn) {
-    throw new Error('Sekme icin gerekli DOM elemanlari bulunamadi');
+  const terminalShellEl = document.getElementById('terminal-shell');
+  const settingsPanelEl = document.getElementById('settings-panel');
+  const settingsBtn = document.getElementById('settings-btn') as HTMLButtonElement | null;
+  if (!rootEl || !tabbarListEl || !newTabBtn || !terminalShellEl || !settingsPanelEl || !settingsBtn) {
+    throw new Error('Sekme/ayarlar icin gerekli DOM elemanlari bulunamadi');
   }
 
   const appearance = new AppearanceController();
   const tabStore = new TabStore(rootEl, tabbarListEl, () => appearance.cycleTheme());
+  new SettingsPanel(settingsPanelEl, terminalShellEl, settingsBtn, appearance);
 
   // Ilk sekme acilmadan once aktif tema/opaklik/arkaplan uygulanmis olsun;
   // TabStore.createTab() zaten guncel temayla (currentTerminalTheme) acar.

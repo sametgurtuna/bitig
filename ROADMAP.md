@@ -42,7 +42,7 @@ design decision is not obvious:
 | 3 | Split panes | 2 | `0.3.0` (done) |
 | 4 | Theme system | 1 | `0.4.0` (done) |
 | 5 | Transparency and background image | 4 | `0.5.0` (done) |
-| 6 | Settings panel (GUI) | 4, 5 | `0.6.0` |
+| 6 | Settings panel (GUI) | 4, 5 | `0.6.0` (done, Appearance only) |
 | 7 | Nerd Font detection and font picker | 6 | `0.6.x` |
 | 8 | Customizable keyboard shortcuts | 6 | `0.7.0` |
 | 9 | Command history and fuzzy search | 2 | `0.8.0` |
@@ -464,21 +464,21 @@ drop-shadow for legibility over arbitrary images, see `style.css`).
 - [ ] Live `window:set-opacity`-style main-process channel. Not applicable
       given the CSS-only opacity approach above; there is nothing for main
       to do when opacity changes.
-- [ ] Background image picker flow (`dialog.showOpenDialog`). Deliberately
-      deferred, confirmed before starting this milestone: there is no
-      "Browse..." button anywhere to trigger it without a settings panel.
-      Set `appearance.backgroundImage` to an absolute path by hand in
-      `settings.json` for now; revisit when milestone 6 adds a real
-      settings UI.
+- [x] Background image picker flow (`dialog.showOpenDialog`). Deferred at
+      the time this milestone was first built (there was no "Browse..."
+      button to trigger it without a settings panel); implemented once
+      milestone 6 added one - see `settings:pick-background-image` in
+      `src/main/ipc/settingsHandlers.ts`.
 - [x] Renderer background layer (`#bg-image` in `index.html` +
       `AppearanceController.applyBackgroundImage`) with all four fit
       modes (`cover`/`contain`/`center`/`tile`) and opacity.
 - [x] Guardrails: `opacity` is clamped to `[0.3, 1]` in `SettingsStore`
       itself (not just the renderer), so no code path - hand-edited
       `settings.json` included - can make the window fully invisible or
-      unclickable. No separate "reset appearance" action exists yet
-      (deleting the relevant lines from `settings.json` and letting it
-      re-merge with defaults on next load achieves the same thing).
+      unclickable. A "Varsayılanlara dön" (reset) button was added to the
+      settings panel in milestone 6 (`SettingsStore.reset()`,
+      `settings:reset`), rather than only being achievable by manually
+      deleting lines from the file.
 
 ### Acceptance criteria
 
@@ -500,12 +500,33 @@ drop-shadow for legibility over arbitrary images, see `style.css`).
 
 ---
 
-## 6. Settings Panel (GUI)
+## 6. Settings Panel (GUI) - done (Appearance only)
 
 **Goal:** every setting introduced so far (shell choice, active theme,
 appearance, and everything in milestones 7-9) becomes editable through a
 GUI, with the underlying JSON file as the source of truth and manual
 editing still fully supported.
+
+**Implemented in:** `src/renderer/src/settingsPanel.ts` (`SettingsPanel`),
+plus the `SettingsStore`/`ThemeStore` groundwork that was actually laid
+back in milestones 4-5 (this milestone confirms that foresight paid off -
+no store changes were needed beyond adding `reset()` and the
+`dialog.showOpenDialog` picker handler). Scope was deliberately narrowed
+before starting: **Appearance only** (theme, opacity, background image).
+No General, Text, or Keyboard sections - there is nothing real to put in
+them yet (shell choice isn't configurable, font isn't configurable until
+milestone 7, shortcuts aren't remappable until milestone 8), and stub
+"coming soon" controls were explicitly rejected as extra maintenance
+weight with no payoff. **Deviation on entry point:** not a literal tab in
+the tab strip (Windows Terminal's actual model) - a gear button in the
+title bar toggles a full view that replaces `#terminal-shell` in place.
+This was a deliberate trade-off, confirmed before starting: a real
+"non-PTY tab" would have meant teaching `TabStore`'s PTY-centric data
+model (every tab = a pane tree = one or more PTY sessions) about a tab
+that isn't one, touching tab creation, closing, cycling, and drag-reorder
+throughout `tabs.ts`. The gear-button overlay delivers the same "no more
+hand-editing JSON" outcome with a much smaller, self-contained surface
+(`settingsPanel.ts` alone, zero changes to `tabs.ts`/`panes.ts`).
 
 ### Design
 
@@ -526,31 +547,45 @@ editing still fully supported.
   schema: General (shell, starting directory), Appearance (theme,
   opacity, background image), Text (font, size, line height, cursor
   style - ties into milestone 7), Keyboard (shortcut editor - ties into
-  milestone 8).
+  milestone 8). **Deviation:** no keyboard shortcut to open it, gear
+  button only - milestone 8 doesn't exist yet to make one remappable, and
+  a hardcoded one felt premature to commit to. Only the Appearance section
+  was built, for the reasons in the note above.
 - Every control writes through `settings:set` immediately (no separate
   "Save" step, matching how Windows Terminal and VS Code settings UIs
   behave); a "Reset to defaults" action per section and one for the whole
-  file.
+  file. **Deviation:** one reset action for the whole (currently
+  Appearance-only) settings object, not per-section - there's only one
+  section, so per-section reset would be the same button twice.
 
 ### Sub-tasks
 
-- [ ] Define the full settings JSON schema (`src/shared/settingsTypes.ts`)
-      covering every field introduced by milestones 1-9, even those not
-      built yet, so the schema does not need breaking changes later
-      (unused fields can be added with sensible defaults ahead of the
-      feature that consumes them).
-- [ ] `SettingsStore` in main: load, validate, deep-merge partial updates,
-      persist, file-watch, broadcast changes.
-- [ ] Settings IPC handlers (`settings:get`, `settings:set`) plus the
-      `settings:changed` broadcast.
-- [ ] Settings GUI shell: navigation between sections, generic
-      form-control components (toggle, slider, color picker, dropdown,
-      file picker) reused across sections.
-- [ ] Migration path for `schemaVersion` bumps: a small migration function
-      per version increment, run once at startup if the on-disk version is
-      older than the app's expected version.
-- [ ] "Open settings.json in default editor" escape hatch for anything the
-      GUI does not yet expose.
+- [x] Settings JSON schema (`src/shared/settingsTypes.ts`) - covers what
+      milestones 4-5 actually needed (`activeTheme`, `appearance.*`), not
+      speculatively every field milestones 7-9 might eventually want.
+      Extending it when those milestones land is an additive, backward
+      compatible change (`mergeAndClamp` already deep-merges onto
+      defaults), not a breaking one - the speculative up-front schema this
+      sub-task originally called for wasn't necessary to get that safety.
+- [x] `SettingsStore` in main: load, validate, deep-merge partial updates,
+      persist, file-watch, broadcast changes. Built in milestone 5,
+      extended here with `reset()`.
+- [x] Settings IPC handlers (`settings:get`, `settings:set`,
+      `settings:changed`), extended here with `settings:reset` and
+      `settings:pick-background-image`.
+- [x] Settings GUI shell (`SettingsPanel`): since there's only one section
+      (Appearance), there's no section navigation to build yet - generic,
+      reusable `buildSection`/`buildSlider` helpers exist and are the
+      obvious place to hang a nav once a second section is real.
+- [ ] Migration path for `schemaVersion` bumps. Not needed yet - the
+      schema has only ever had one version, and `mergeAndClamp`'s
+      deep-merge-onto-defaults already absorbs additive field changes
+      without a dedicated migration step. Revisit if a future change is
+      ever destructive (a rename or type change) rather than additive.
+- [ ] "Open settings.json in default editor" escape hatch. Not built -
+      with the panel covering every field that currently exists, there is
+      nothing left to escape to; revisit once fields the panel doesn't
+      expose exist.
 
 ### Acceptance criteria
 
@@ -563,6 +598,19 @@ editing still fully supported.
 - An intentionally malformed `settings.json` (invalid JSON, or a value of
   the wrong type) falls back to defaults for the broken fields only, with a
   visible warning, not a full crash.
+
+> Verified so far: typecheck and `electron-vite build` are clean; the app
+> launches cleanly in `npm run dev` with the settings panel fully wired
+> (no console errors from the new `dialog`-based IPC handler at
+> registration time). The malformed-file and missing-file fallback
+> behavior was already exercised directly under milestone 4/5 and is
+> unchanged here. What was **not** exercised in this environment: actually
+> clicking the gear button, picking a theme card, dragging the opacity
+> slider, or using the native "Gozat..." file dialog - the same
+> screen-capture/interaction limitation noted throughout this document
+> applies, and is more relevant here than anywhere else so far, since this
+> whole milestone's value is a GUI. This needs a real, human pass before
+> considering it solid.
 
 ---
 

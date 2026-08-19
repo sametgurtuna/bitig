@@ -9,6 +9,20 @@ and versioning follows [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- Settings panel (GUI), Appearance section: a gear button in the title bar
+  opens a view (`src/renderer/src/settingsPanel.ts`) that replaces
+  `#terminal-shell` in place - a clickable theme grid, an opacity slider,
+  and a background image picker backed by a real native
+  `dialog.showOpenDialog` (`settings:pick-background-image`), closing out
+  the file-picker item deferred back in the transparency/background-image
+  work. Sliders preview instantly via
+  `AppearanceController.previewOpacity`/`previewBackgroundImageStyle`
+  without waiting on an IPC round trip, and only persist
+  (`settings:set`) once the drag ends, so dragging a slider doesn't write
+  `settings.json` on every frame. A "Varsayilanlara don" button resets
+  everything through a new `SettingsStore.reset()` / `settings:reset`.
+  Closes with Escape (only listened for while the panel is open, so it
+  never intercepts Escape inside a terminal) or the gear button again.
 - Theme system: JSON-schema based themes (`src/shared/themeTypes.ts`)
   replace the single hardcoded terminal palette. Four built-in themes
   (`src/shared/builtinThemes/`: Bitig Dark, Bitig Light, a Dracula-style

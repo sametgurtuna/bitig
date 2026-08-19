@@ -23,6 +23,11 @@ export class AppearanceController {
   // kucultuyoruz; sadece opaklik/fit degisen bir settings:changed'de
   // gereksiz bir IPC + decode turuna girmemek icin.
   private lastBackgroundImagePath: string | null = null;
+  // Ayarlar paneli (SettingsPanel) gibi tuketicilerin state degisince
+  // yeniden cizim yapabilmesi icin; AppearanceController zaten theme/
+  // settings IPC'lerine abone oldugu icin bu abonelikleri tekrarlamak
+  // yerine buradan yayiyoruz.
+  private readonly changeListeners = new Set<() => void>();
 
   async init(tabStore: TabStore): Promise<void> {
     this.tabStore = tabStore;
@@ -52,6 +57,30 @@ export class AppearanceController {
     window.bitig.settings.set({ activeTheme: nextTheme.id });
   }
 
+  /** Ayarlar paneli icin: mevcut tema listesi ve ayarlar (henuz yuklenmediyse null). */
+  getState(): { themes: BitigTheme[]; settings: BitigSettings } | null {
+    if (!this.settings) return null;
+    return { themes: this.themes, settings: this.settings };
+  }
+
+  onChange(listener: () => void): void {
+    this.changeListeners.add(listener);
+  }
+
+  /**
+   * Slider gibi surekli degisen kontroller icin: settings:set IPC'sini
+   * beklemeden aninda gorsel geri bildirim verir. Kalici hale getirmek
+   * (diske yazmak) hala ayri bir window.bitig.settings.set cagrisi
+   * gerektirir - bu sadece onizleme.
+   */
+  previewOpacity(opacity: number): void {
+    this.applyTerminalAndUiTheme(this.resolveActiveTheme(), opacity);
+  }
+
+  previewBackgroundImageStyle(opacity: number, fit: BackgroundImageFit): void {
+    this.applyBackgroundImageStyle(opacity, fit);
+  }
+
   private async refreshThemeList(): Promise<void> {
     this.themes = await window.bitig.theme.list();
     await this.applyAll();
@@ -67,6 +96,7 @@ export class AppearanceController {
     const theme = this.resolveActiveTheme();
     this.applyTerminalAndUiTheme(theme, this.settings.appearance.opacity);
     await this.applyBackgroundImage(this.settings);
+    for (const listener of this.changeListeners) listener();
   }
 
   private applyTerminalAndUiTheme(theme: BitigTheme, opacity: number): void {

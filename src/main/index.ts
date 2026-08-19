@@ -51,7 +51,7 @@ function createMainWindow(): void {
   registerPtyHandlers(ptyManager, mainWindow.webContents);
   registerWindowHandlers(mainWindow);
   registerThemeHandlers(themeStore, mainWindow.webContents);
-  registerSettingsHandlers(settingsStore, mainWindow.webContents);
+  registerSettingsHandlers(settingsStore, mainWindow);
 
   const isDev = !app.isPackaged;
   if (isDev && process.env['ELECTRON_RENDERER_URL']) {
