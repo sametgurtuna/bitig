@@ -7,7 +7,7 @@
 **A terminal emulator for Windows, built from scratch.**  
 **Sifirdan yazilan, Windows icin bir terminal emulatoru.**
 
-[![Version](https://img.shields.io/badge/version-0.9.0-7dd3fc?style=flat-square)](#)
+[![Version](https://img.shields.io/badge/version-0.9.5-7dd3fc?style=flat-square)](#)
 [![Platform](https://img.shields.io/badge/platform-Windows%2011-0f1117?style=flat-square&logo=windows&logoColor=white)](#)
 [![Electron](https://img.shields.io/badge/Electron-43-47848F?style=flat-square&logo=electron&logoColor=white)](#)
 [![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178C6?style=flat-square&logo=typescript&logoColor=white)](#)
@@ -55,7 +55,7 @@ All of it 100% local, zero cloud, zero telemetry.
 
 ## Features
 
-### Shipped (v0.9.0)
+### Shipped (v0.9.5)
 
 - **Real shell process** (PowerShell, CMD, Git Bash, WSL distributions)
   spawned through ConPTY via `node-pty`, with full keyboard input and live
@@ -103,14 +103,17 @@ All of it 100% local, zero cloud, zero telemetry.
   and whole-word toggles.
 - **Dynamic Tab Titles & OSC 7 CWD Tracking** — tab titles follow the
   foreground process; splits and new tabs inherit the working directory.
+- **Quake / Dropdown HUD Mode** (`Win+~` / `Ctrl+~`) — instant access terminal
+  sliding from the top edge of the primary monitor via global OS shortcut.
+- **Broadcast Input Mode** (`Alt+Shift+I`) — synchronized keystroke input
+  mirrored simultaneously to all split panes in the active tab with visual red HUD banner.
 - **Frameless custom window** — draggable title bar, minimize / maximize /
   close, rounded corners, drop shadow.
 
 ### Planned
 
-- [ ] Quake / dropdown HUD mode (`Win+~`)
-- [ ] Broadcast input to all split panes (`Alt+Shift+I`)
-- [ ] Local AI assistant (Ollama / BYOK)
+- [ ] Local AI assistant ("Bitig Bilge" - Ollama / BYOK)
+- [ ] Lightweight plugin system & sandboxing
 - [ ] Packaging (`electron-builder` installer)
 
 ## Tech Stack
@@ -233,6 +236,8 @@ drift between processes.
 | `history:clear` | renderer to main | invoke | Clear all history |
 | `cockpit:open-url` | renderer to main | invoke | Open a URL in the default browser |
 | `cockpit:open-file` | renderer to main | invoke | Open a file in VS Code / default editor |
+| `quake:toggle` | renderer to main | invoke | Toggle Quake HUD dropdown window |
+| `quake:set-hotkey` | renderer to main | invoke | Rebind global Quake OS shortcut |
 
 ## Getting Started
 
@@ -470,7 +475,7 @@ yerel; sifir bulut, sifir telemetri.
 
 ## Ozellikler
 
-### Tamamlananlar (v0.9.0)
+### Tamamlananlar (v0.9.5)
 
 - **Gercek shell prosesi** (PowerShell, CMD, Git Bash, WSL) - `node-pty`
   uzerinden ConPTY ile; tam klavye girisi ve canli cikti akisi.
@@ -500,13 +505,16 @@ yerel; sifir bulut, sifir telemetri.
 - **Secret Shield** - hassas token desenlerini otomatik tanir ve gecmiste maskeler.
 - **Terminal ici Arama** (`Ctrl+F`) - glassmorphic yuzen arama paneli.
 - **Dinamik Sekme Basliklari ve OSC 7 CWD Takibi**.
+- **Quake / Dropdown HUD Modu** (`Win+~` / `Ctrl+~`) - global sistem kisayoluyla
+  ekranin ustunden kayarak inen hizli erisim terminali.
+- **Broadcast Input (Giris Yayini)** (`Alt+Shift+I`) - aktif sekmedeki tum split
+  pane'lere ayni anda karakter yayini ve kirmizi senkronizasyon cercevesi.
 - **Cercevesiz ozel pencere** - suruklenebilir title bar, rounded corners.
 
 ### Planlananlar
 
-- [ ] Quake / dropdown HUD modu (`Win+~`)
-- [ ] Tum split pane'lere eslezamanli giris yayini (`Alt+Shift+I`)
-- [ ] Yerel AI asistan (Ollama / BYOK)
+- [ ] Yerel AI asistan ("Bitig Bilge" - Ollama / BYOK)
+- [ ] Hafif eklenti sistemi ve sandbox
 - [ ] Paketleme (`electron-builder` ile installer)
 
 ## Teknik Yigin
@@ -556,6 +564,8 @@ Isimlendirme kurali: `<alan>:<eylem>`. Detaylar icin [English](#ipc-channel-refe
 | `history:clear` | renderer to main | invoke | Gecmisi temizler |
 | `cockpit:open-url` | renderer to main | invoke | URL'yi varsayilan tarayicida acar |
 | `cockpit:open-file` | renderer to main | invoke | Dosyayi VS Code'da acar |
+| `quake:toggle` | renderer to main | invoke | Quake HUD penceresini acar/kapatir |
+| `quake:set-hotkey` | renderer to main | invoke | Global Quake kisayolunu gunceller |
 
 ## Baslarken
 

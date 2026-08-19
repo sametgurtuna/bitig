@@ -1,6 +1,8 @@
 export const QUAKE_CHANNELS = {
   toggle: 'quake:toggle',
-  setHotkey: 'quake:set-hotkey'
+  setHotkey: 'quake:set-hotkey',
+  /** Main process'ten renderer'a: Quake penceresi acilinca/kapaninca gonderilir. */
+  state: 'quake:state'
 } as const;
 
 export interface QuakeSettings {

@@ -9,6 +9,7 @@ import { registerFontHandlers } from './ipc/fontHandlers';
 import { registerSnippetHandlers } from './ipc/snippetHandlers';
 import { registerHistoryHandlers } from './ipc/historyHandlers';
 import { registerCockpitHandlers } from './ipc/cockpitHandlers';
+import { registerQuakeHandlers, unregisterQuakeHandlers } from './ipc/quakeHandlers';
 import { ThemeStore } from './theme/themeStore';
 import { SettingsStore } from './settings/settingsStore';
 import { SnippetStore } from './snippets/snippetStore';
@@ -69,6 +70,14 @@ function createMainWindow(): void {
   }
 }
 
+/** Quake HUD handler'ini uygulama hazir oldugunda kaydeder. */
+function setupQuakeHud(settings: SettingsStore): void {
+  const isDev = !app.isPackaged;
+  const rendererUrl = isDev ? process.env['ELECTRON_RENDERER_URL'] : undefined;
+  const quakeSettings = settings.get().quake;
+  registerQuakeHandlers(isDev, rendererUrl, quakeSettings);
+}
+
 void app.whenReady().then(async () => {
   // Store'lar ilk pencere olusmadan once yuklenmeli: IPC handler'lari
   // (registerThemeHandlers/registerSettingsHandlers) kayit anindan itibaren
@@ -87,6 +96,7 @@ void app.whenReady().then(async () => {
   registerCockpitHandlers();
 
   createMainWindow();
+  setupQuakeHud(settingsStore);
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createMainWindow();
@@ -100,4 +110,5 @@ app.on('window-all-closed', () => {
 
 app.on('before-quit', () => {
   ptyManager.disposeAll();
+  unregisterQuakeHandlers();
 });

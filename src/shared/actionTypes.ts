@@ -27,7 +27,8 @@ export type ActionId =
   | 'profile.open6'
   | 'profile.open7'
   | 'profile.open8'
-  | 'profile.open9';
+  | 'profile.open9'
+  | 'broadcast.toggle';
 
 export type ActionCategory = 'Sekmeler' | 'Paneller' | 'Gorunum ve Arama' | 'Uygulama';
 
@@ -200,6 +201,13 @@ export const ACTION_DEFINITIONS: ActionDefinition[] = [
     category: 'Uygulama',
     defaultKeys: 'Ctrl+,',
     description: 'Ayarlar panelini goruntuler veya gizler'
+  },
+  {
+    id: 'broadcast.toggle',
+    name: 'Yayin Modunu Ac / Kapat',
+    category: 'Paneller',
+    defaultKeys: 'Alt+Shift+I',
+    description: 'Aktif sekmedeki tum panellere ayni anda giris gonderir (Broadcast Input)'
   }
 ];
 

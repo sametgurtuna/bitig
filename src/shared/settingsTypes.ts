@@ -1,5 +1,6 @@
 import type { ShellProfile } from './profileTypes';
 import type { CockpitSettings } from './cockpitTypes';
+import type { QuakeSettings } from './quakeTypes';
 
 export const SETTINGS_CHANNELS = {
   get: 'settings:get',
@@ -47,16 +48,18 @@ export interface BitigSettings {
   keybindings: Record<string, string>;
   telemetry: TelemetrySettings;
   cockpit: CockpitSettings;
+  quake: QuakeSettings;
 }
 
 /** settings:set ile gonderilen kismi guncelleme; SettingsStore mevcut
  *  ayarlarin uzerine derinlemesine (deep) birlestirir. */
-export type BitigSettingsPatch = Partial<Omit<BitigSettings, 'appearance' | 'terminal' | 'profiles' | 'keybindings' | 'telemetry' | 'cockpit'>> & {
+export type BitigSettingsPatch = Partial<Omit<BitigSettings, 'appearance' | 'terminal' | 'profiles' | 'keybindings' | 'telemetry' | 'cockpit' | 'quake'>> & {
   appearance?: Partial<AppearanceSettings>;
   terminal?: Partial<TerminalSettings>;
   profiles?: ShellProfile[];
   keybindings?: Record<string, string>;
   telemetry?: Partial<TelemetrySettings>;
   cockpit?: Partial<CockpitSettings>;
+  quake?: Partial<QuakeSettings>;
 };
 

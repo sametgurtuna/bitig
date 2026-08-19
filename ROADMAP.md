@@ -49,7 +49,7 @@ design decision is not obvious:
 | 10 | Command palette & runbooks ("Bitig Betik") | 8, 9 | `0.8.0` (done) |
 | 11 | Command history, fuzzy search & execution telemetry | 2, 8 | `0.8.5` (done) |
 | 12 | Developer cockpit, live port sniffer & secret shield | 8, 10 | `0.9.0` (done) |
-| 13 | Quake / Dropdown HUD mode & broadcast input | 3, 9 | `0.9.5` |
+| 13 | Quake / Dropdown HUD mode & broadcast input | 3, 9 | `0.9.5` (done) |
 | 14 | AI terminal companion ("Bitig Bilge" - Local & BYOK) | 8, 11 | `0.9.8` |
 | 15 | Lightweight plugin system & sandboxing | 9, 10 | `1.0.0-rc` |
 | 16 | Packaging, installer & auto-updater | all | `1.0.0` |
@@ -896,10 +896,10 @@ and simultaneous multi-pane command broadcast for cluster management.
 
 ### Sub-tasks
 
-- [ ] Global shortcut manager in main with multi-monitor positioning support.
-- [ ] Window slide animation and drop-down window mode toggle in Settings.
-- [ ] Broadcast dispatcher in `TabStore` / `panes.ts`.
-- [ ] Visual broadcast HUD banner and warning state.
+- [x] Global shortcut manager in main with multi-monitor positioning support.
+- [x] Window slide animation and drop-down window mode toggle in Settings.
+- [x] Broadcast dispatcher in `TabStore` / `panes.ts`.
+- [x] Visual broadcast HUD banner and warning state.
 
 ---
 

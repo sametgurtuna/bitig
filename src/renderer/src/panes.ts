@@ -38,6 +38,7 @@ export interface CreatePaneLeafOptions {
   args?: string[];
   cwd?: string;
   onInput?: (data: string) => void;
+  onWrite?: (leafId: string, data: string) => void;
 }
 
 export async function createPaneLeaf(
@@ -78,7 +79,11 @@ export async function createPaneLeaf(
   terminal.attachCustomKeyEventHandler((event) => !isReservedShortcut(event));
   terminal.onData((data) => {
     options?.onInput?.(data);
-    window.bitig.pty.write(id, data);
+    if (options?.onWrite) {
+      options.onWrite(id, data);
+    } else {
+      window.bitig.pty.write(id, data);
+    }
   });
 
   const leaf: PaneLeaf = {

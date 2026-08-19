@@ -53,6 +53,9 @@ export class TabStore {
   private readonly searchBar: SearchBar;
   private readonly telemetry: ExecutionTelemetry;
   private readonly portSniffer: PortSniffer;
+  /** Broadcast Input modu aktif mi? Alt+Shift+I ile togglenir. */
+  private isBroadcast = false;
+  private readonly broadcastBanner: HTMLDivElement;
 
   constructor(
     private readonly rootEl: HTMLElement,
@@ -64,6 +67,12 @@ export class TabStore {
     this.searchBar = new SearchBar(this.rootEl);
     this.telemetry = telemetry || new ExecutionTelemetry();
     this.portSniffer = new PortSniffer();
+
+    // Broadcast banner: window'un etrafina kirmizi cizgi + uyari mesaji
+    this.broadcastBanner = document.createElement('div');
+    this.broadcastBanner.id = 'broadcast-banner';
+    this.broadcastBanner.innerHTML = '<span>🔴 BROADCAST AKTİF — tüm split pane\'lere yazılıyor</span>';
+    document.body.appendChild(this.broadcastBanner);
 
     window.bitig.pty.onData((event) => {
       const entry = this.leavesByPtyId.get(event.id);
@@ -107,6 +116,7 @@ export class TabStore {
 
     this.keybindings.registerAction('terminal.search', () => this.toggleSearch());
     this.keybindings.registerAction('theme.cycle', () => this.onCycleThemeShortcut?.());
+    this.keybindings.registerAction('broadcast.toggle', () => this.toggleBroadcast());
 
     // 1..9 Profil kisayollari
     for (let i = 1; i <= 9; i++) {
@@ -148,7 +158,8 @@ export class TabStore {
       command: profile?.command,
       args: profile?.args,
       cwd: cwd || profile?.startingDirectory,
-      onInput: (data) => this.telemetry.handleTerminalInput(ptyId, data)
+      onInput: (data) => this.telemetry.handleTerminalInput(ptyId, data),
+      onWrite: (leafId, data) => this.handleLeafWrite(leafId, data)
     };
 
     const leaf = await createPaneLeaf(
@@ -254,7 +265,8 @@ export class TabStore {
       command: profile?.command,
       args: profile?.args,
       cwd: activeLeaf?.cwd || profile?.startingDirectory,
-      onInput: (data) => this.telemetry.handleTerminalInput(ptyId, data)
+      onInput: (data) => this.telemetry.handleTerminalInput(ptyId, data),
+      onWrite: (leafId, data) => this.handleLeafWrite(leafId, data)
     };
 
     const newLeaf = await createPaneLeaf(
@@ -325,16 +337,59 @@ export class TabStore {
     }
   }
 
-  /** Aktif odakli pane'in PTY oturumuna veri/komut gonderir. */
+  /** Aktif odakli pane'in PTY oturumuna veri/komut gonderir.
+   *  Broadcast modu aktifse aktif sekmedeki TUM pane'lere yazar. */
   writeToActivePane(text: string): void {
     const tab = this.getActiveTab();
     if (!tab) return;
-    const leaf = findLeaf(tab.root, tab.activeLeafId);
-    if (leaf) {
-      this.telemetry.startCommand(leaf.id, text.replace(/[\r\n]+$/, ''));
-      window.bitig.pty.write(leaf.id, text);
-      leaf.terminal.focus();
+
+    if (this.isBroadcast) {
+      // Broadcast: aktif sekmedeki tum leaf'lere ayni anda yaz
+      const leaves = collectLeaves(tab.root);
+      for (const leaf of leaves) {
+        window.bitig.pty.write(leaf.id, text);
+      }
+      // Telemetry sadece aktif leaf icin
+      const activeLeaf = findLeaf(tab.root, tab.activeLeafId);
+      if (activeLeaf) {
+        this.telemetry.startCommand(activeLeaf.id, text.replace(/[\r\n]+$/, ''));
+        activeLeaf.terminal.focus();
+      }
+    } else {
+      const leaf = findLeaf(tab.root, tab.activeLeafId);
+      if (leaf) {
+        this.telemetry.startCommand(leaf.id, text.replace(/[\r\n]+$/, ''));
+        window.bitig.pty.write(leaf.id, text);
+        leaf.terminal.focus();
+      }
     }
+  }
+
+  /** Klavye basilmasi ile gelen veriyi yonlendirir; broadcast aktifse sekmedeki tum pane'lere iletir. */
+  private handleLeafWrite(leafId: string, data: string): void {
+    if (this.isBroadcast && this.activeId) {
+      const activeTab = this.tabsById.get(this.activeId);
+      if (activeTab) {
+        const leaves = collectLeaves(activeTab.root);
+        for (const leaf of leaves) {
+          window.bitig.pty.write(leaf.id, data);
+        }
+        return;
+      }
+    }
+    window.bitig.pty.write(leafId, data);
+  }
+
+  /** Broadcast Input modunu acar veya kapatir (Alt+Shift+I). */
+  toggleBroadcast(): void {
+    this.isBroadcast = !this.isBroadcast;
+    this.broadcastBanner.classList.toggle('active', this.isBroadcast);
+    document.body.classList.toggle('broadcast-active', this.isBroadcast);
+  }
+
+  /** Broadcast modunun aktif olup olmadigini doner. */
+  isBroadcastActive(): boolean {
+    return this.isBroadcast;
   }
 
   /** Acik sekmelerin id, baslik ve aktiflik durumlarini doner. */

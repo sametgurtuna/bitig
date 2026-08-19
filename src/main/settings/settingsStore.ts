@@ -5,6 +5,7 @@ import type { BitigSettings, BitigSettingsPatch } from '../../shared/settingsTyp
 import { DEFAULT_PROFILES } from '../../shared/profileTypes';
 import { DEFAULT_KEYBINDINGS } from '../../shared/actionTypes';
 import { DEFAULT_COCKPIT_SETTINGS } from '../../shared/cockpitTypes';
+import { DEFAULT_QUAKE_SETTINGS } from '../../shared/quakeTypes';
 import { discoverProfiles } from '../pty/profileDiscovery';
 
 const DEFAULT_SETTINGS: BitigSettings = {
@@ -27,7 +28,8 @@ const DEFAULT_SETTINGS: BitigSettings = {
     enableNotifications: true,
     notificationThresholdMs: 5000
   },
-  cockpit: DEFAULT_COCKPIT_SETTINGS
+  cockpit: DEFAULT_COCKPIT_SETTINGS,
+  quake: DEFAULT_QUAKE_SETTINGS
 };
 
 const MIN_OPACITY = 0.3;
@@ -92,7 +94,8 @@ export class SettingsStore {
       profiles: [...DEFAULT_SETTINGS.profiles],
       keybindings: { ...DEFAULT_SETTINGS.keybindings },
       telemetry: { ...DEFAULT_SETTINGS.telemetry },
-      cockpit: { ...DEFAULT_SETTINGS.cockpit }
+      cockpit: { ...DEFAULT_SETTINGS.cockpit },
+      quake: { ...DEFAULT_SETTINGS.quake }
     };
     this.persist();
     this.notify();
@@ -147,7 +150,8 @@ export class SettingsStore {
       defaultProfileId: patch.defaultProfileId ?? base.defaultProfileId,
       keybindings: { ...base.keybindings, ...patch.keybindings },
       telemetry: { ...base.telemetry, ...patch.telemetry },
-      cockpit: { ...base.cockpit, ...patch.cockpit }
+      cockpit: { ...base.cockpit, ...patch.cockpit },
+      quake: { ...base.quake, ...patch.quake }
     };
     merged.appearance.opacity = clamp(
       merged.appearance.opacity,

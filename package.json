@@ -1,6 +1,6 @@
 {
   "name": "bitig",
-  "version": "0.9.0",
+  "version": "0.9.5",
   "description": "Windows Terminal'e alternatif, ozellestirilebilir masaustu terminal emulatoru",
   "main": "./out/main/index.js",
   "author": "sametgrtna@gmail.com",

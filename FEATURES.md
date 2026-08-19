@@ -1,9 +1,9 @@
 # Bitig — Özellikler & Fark Yaratan Yetenekler (FEATURES.md)
 
-> **v0.9.0** — Port Sniffer, Smart Links ve Secret Shield dahil tüm Geliştirici
-> Kokpit özellikleri tamamlandı. Bu doküman, **Bitig**'in sıradan bir terminal
-> öykünücüsünün ötesine geçerek modern bir **Geliştirici Kokpiti** haline
-> gelmesini sağlayan temel ve benzersiz yeteneklerini detaylandırır.
+> **v0.9.5** — Quake / Dropdown HUD Modu ve Broadcast Input (Giriş Yayını)
+> dahil tüm temel kokpit yetenekleri tamamlandı. Bu doküman, **Bitig**'in
+> sıradan bir terminal öykünücüsünün ötesine geçerek modern bir **Geliştirici Kokpiti**
+> haline gelmesini sağlayan yeteneklerini detaylandırır.
 
 ---
 
@@ -30,8 +30,8 @@ Mevcut Windows ekosistemindeki terminaller iki uca savrulmuştur:
 | **Canlı Port & Servis Dinleyicisi (Port Sniffer)** | ❌ Yok | ❌ Yok | ❌ Yok | 🌐 **Dahili — Shipped v0.9.0 (ANSI-stripped, buffered, tıkla-aç)** |
 | **Secret Shield (Token/Şifre Sansürü)** | ❌ Yok | ❌ Yok | ❌ Yok | 🛡️ **Dahili (Otomatik Maskeleme)** |
 | **Yerel AI Asistanı (Ollama / BYOK)** | ⚠️ (Copilot Sidebar) | ⚠️ (Warp AI / Bulut) | ❌ Yok | 💡 **Dahili (Ollama + BYOK / Sıfır İz)** |
-| **Quake / Dropdown HUD Modu** | ⚠️ (Ayrı mod/ayar) | ❌ Yok | ⚠️ (Eklentiyle) | 🪟 **Dahili (`Win+~` / `Ctrl+~`)** |
-| **Broadcast Input (Eşzamanlı Split Yayını)** | ❌ Yok | ❌ Yok | ⚠️ (Bazı sürümlerde) | 🔴 **Dahili (`Alt+Shift+I`)** |
+| **Quake / Dropdown HUD Modu** | ⚠️ (Ayrı mod/ayar) | ❌ Yok | ⚠️ (Eklentiyle) | 🪟 **Dahili — Shipped v0.9.5 (`Win+~` / `Ctrl+~`)** |
+| **Broadcast Input (Eşzamanlı Split Yayını)** | ❌ Yok | ❌ Yok | ⚠️ (Bazı sürümlerde) | 🔴 **Dahili — Shipped v0.9.5 (`Alt+Shift+I`)** |
 | **IDE Akıllı Linkleri (Dosya:Satır Açma)** | ❌ (Sadece URL) | ⚠️ (Kısmi) | ❌ (Sadece URL) | 🔗 **Dahili (`vscode://`, Cursor, vb.)** |
 | **Nerd Font Glyph Canlı Ölçüm & Tespiti** | ❌ Yok | ❌ Yok | ❌ Yok | ✨ **Dahili (Canvas PUA Probe)** |
 
@@ -154,27 +154,27 @@ Komut satırında bilinmeyen bir hata alındığında (`exit code != 0`), termin
 
 ---
 
-### 6. Quake / Dropdown HUD Modu (`Win+~` / `Ctrl+~`)
+### 6. Quake / Dropdown HUD Modu (`Win+~` / `Ctrl+~`) ✅ Shipped v0.9.5
 
 #### 🔴 Problem
 Hızlı bir Git komutu çalıştırmak, bir paketi derlemek veya curl isteği atmak için açık olan onlarca pencere arasından terminali bulup öne getirmek zaman kaybıdır.
 
-#### 🟢 Bitig Çözümü
-* `Win+~` (veya ayarlanabilir `Ctrl+~`) tuşuna basıldığı an Bitig, ekranın üst kenarından yumuşak bir animasyonla kayarak inen yarı saydam bir HUD penceresi olarak belirir.
-* İş bittiğinde aynı tuşla veya terminal dışına tıklandığında (odak kaybında) sessizce yukarı kayarak gizlenir.
-* Arka planda çalışan işlemler kesintisiz devam eder.
+#### 🟢 Bitig Çözümü (v0.9.5'te tamamlandı)
+* `Win+~` (veya ayarlanabilir `Ctrl+~`) tuşuna basıldığı an Bitig, ekranın üst kenarından yarı saydam, her zaman üstte bir HUD penceresi olarak belirir.
+* `quake:toggle` ve `quake:set-hotkey` kanalları ile dinamik kontrol edilir.
+* `autoHideOnBlur` ile odak kaybedildiğinde otomatik gizlenebilir.
 
 ---
 
-### 7. Broadcast Input — Eşzamanlı Komut Yayını (`Alt+Shift+I`)
+### 7. Broadcast Input — Eşzamanlı Komut Yayını (`Alt+Shift+I`) ✅ Shipped v0.9.5
 
 #### 🔴 Problem
 Bir sekme içinde 4 split pane açıp farklı sunuculara veya mikroservislere bağlandığınızda, `git pull`, `systemctl restart service` veya `docker ps` gibi aynı komutu tüm pane'lere tek tek yazmak gerekir.
 
-#### 🟢 Bitig Çözümü
+#### 🟢 Bitig Çözümü (v0.9.5'te tamamlandı)
 * `Alt+Shift+I` kısayoluyla **Broadcast Modu** aktif edilir.
-* Pencere etrafında dikkat çekici kırmızı bir senkronizasyon çerçevesi (`🔴 BROADCAST AKTİF`) belirir.
-* Odaklı pane'de klavyeden bastığınız her karakter, aynı sekmedeki tüm split pane'lere milisaniyesinde eşzamanlı olarak iletilir.
+* Pencere etrafında dikkat çekici kırmızı bir senkronizasyon çerçevesi (`🔴 BROADCAST AKTİF`) ve kayan uyarı banner'ı belirir.
+* Odaklı pane'de klavyeden yazılan her komut, aynı sekmedeki tüm split pane'lerin PTY oturumlarına eşzamanlı olarak iletilir.
 * Mod kapatıldığında paneller tekrar bağımsız çalışmaya döner.
 
 ---

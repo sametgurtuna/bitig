@@ -5,6 +5,20 @@ All notable changes to this project are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and versioning follows [Semantic Versioning](https://semver.org/).
 
+## [0.9.5] - 2026-08-20
+
+### Added
+
+- **Quake / Dropdown HUD Mode (`Win+~` / `Ctrl+~`):**
+  - `src/main/ipc/quakeHandlers.ts`: Global OS-level shortcut (`globalShortcut`) listener for instant terminal access from any app.
+  - Dedicated always-on-top HUD window sliding down from the top edge of the primary monitor.
+  - IPC channels `quake:toggle` and `quake:set-hotkey` for runtime control and custom keybinding configuration.
+  - `autoHideOnBlur` support to auto-collapse when focus is lost.
+- **Broadcast Input Mode (`Alt+Shift+I`):**
+  - Keystroke mirroring across all active split panes in the current tab simultaneously.
+  - Visual synchronized HUD banner (`#broadcast-banner`) with a pulsing neon red border (`body.broadcast-active::before`).
+  - Action `broadcast.toggle` added to central action registry with customizable keybindings.
+
 ## [0.9.0] - 2026-08-19
 
 ### Added

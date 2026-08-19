@@ -1805,3 +1805,70 @@ body {
 
 
 
+
+/* ============================================================
+   BROADCAST INPUT MODE - v0.9.5
+   ============================================================ */
+
+/* Pencere etrafindaki kirmizi kayan senkronizasyon cercevesi */
+body.broadcast-active::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  border: 3px solid hsl(0, 90%, 55%);
+  border-radius: 10px;
+  pointer-events: none;
+  z-index: 9999;
+  animation: broadcast-pulse 1.4s ease-in-out infinite;
+  box-shadow:
+    0 0 18px hsl(0, 90%, 55%),
+    inset 0 0 18px hsla(0, 90%, 55%, 0.15);
+}
+
+@keyframes broadcast-pulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.55; }
+}
+
+/* Broadcast banner - ekranin ustunde kayar */
+#broadcast-banner {
+  position: fixed;
+  top: -48px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 18px;
+  border-radius: 0 0 10px 10px;
+  background: hsl(0, 85%, 38%);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  box-shadow: 0 4px 20px hsla(0, 90%, 40%, 0.6);
+  transition: top 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+  pointer-events: none;
+  white-space: nowrap;
+}
+
+#broadcast-banner.active {
+  top: 0;
+}
+
+/* ============================================================
+   QUAKE / DROPDOWN HUD MODE - v0.9.5
+   quakeMode=1 parametresiyle yuklenen pencere icin.
+   ============================================================ */
+
+/* Quake modunda title bar ve pencere gorunumunu duzelt */
+body.quake-mode #app {
+  border-radius: 0 0 10px 10px;
+  box-shadow: 0 8px 32px hsla(0, 0%, 0%, 0.55);
+}
+
+body.quake-mode .titlebar {
+  -webkit-app-region: drag;
+  border-radius: 0;
+}

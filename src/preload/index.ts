@@ -15,6 +15,7 @@ import { FONT_CHANNELS } from '../shared/fontTypes';
 import { SNIPPET_CHANNELS, type BitigSnippet } from '../shared/snippetTypes';
 import { HISTORY_CHANNELS, type HistoryEntry } from '../shared/historyTypes';
 import { COCKPIT_CHANNELS } from '../shared/cockpitTypes';
+import { QUAKE_CHANNELS } from '../shared/quakeTypes';
 
 // nodeIntegration kapali, contextIsolation acik: renderer'a sadece bu daralmis
 // API yuzeyi contextBridge ile sunulur, dogrudan Node/Electron erisimi verilmez.
@@ -139,6 +140,14 @@ const cockpitApi = {
     ipcRenderer.invoke(COCKPIT_CHANNELS.openFile, payload)
 };
 
+const quakeApi = {
+  /** Quake HUD penceresini goster/gizle. Yeni gorünürlük durumunu (boolean) doner. */
+  toggle: (): Promise<boolean> => ipcRenderer.invoke(QUAKE_CHANNELS.toggle),
+  /** Global kisayolu guncelle. Kayit basarili ise true doner. */
+  setHotkey: (hotkey: string): Promise<boolean> =>
+    ipcRenderer.invoke(QUAKE_CHANNELS.setHotkey, hotkey)
+};
+
 export type BitigApi = {
   pty: typeof ptyApi;
   windowControls: typeof windowApi;
@@ -148,6 +157,7 @@ export type BitigApi = {
   snippets: typeof snippetsApi;
   history: typeof historyApi;
   cockpit: typeof cockpitApi;
+  quake: typeof quakeApi;
 };
 
 const bitigApi: BitigApi = {
@@ -158,7 +168,8 @@ const bitigApi: BitigApi = {
   fonts: fontsApi,
   snippets: snippetsApi,
   history: historyApi,
-  cockpit: cockpitApi
+  cockpit: cockpitApi,
+  quake: quakeApi
 };
 
 contextBridge.exposeInMainWorld('bitig', bitigApi);
