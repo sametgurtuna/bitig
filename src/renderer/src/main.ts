@@ -1,61 +1,27 @@
-import { Terminal } from '@xterm/xterm';
-import { FitAddon } from '@xterm/addon-fit';
-import { WebLinksAddon } from '@xterm/addon-web-links';
 import '@xterm/xterm/css/xterm.css';
 import { initTitleBar } from './titlebar';
-import { BITIG_TERMINAL_THEME } from './theme';
+import { TabStore } from './tabs';
 
 /**
- * Minimal prototip: tek xterm.js instance'i, tek PTY oturumuna baglanir.
- * Sekme/pane cogullugu ileride bir store (zustand vb.) ile eklenecek.
+ * Uygulama girisi: title bar davranisini baglar ve sekme yonetimini
+ * (TabStore) baslatir. Terminal/PTY kurulumunun tamami artik tabs.ts'te.
  */
-async function bootstrap(): Promise<void> {
+function bootstrap(): void {
   initTitleBar();
 
-  const container = document.getElementById('terminal-root');
-  if (!container) throw new Error('terminal-root bulunamadi');
+  const rootEl = document.getElementById('terminal-root');
+  const tabbarListEl = document.getElementById('tabbar-list');
+  const newTabBtn = document.getElementById('new-tab-btn');
+  if (!rootEl || !tabbarListEl || !newTabBtn) {
+    throw new Error('Sekme icin gerekli DOM elemanlari bulunamadi');
+  }
 
-  const terminal = new Terminal({
-    cursorBlink: true,
-    cursorStyle: 'bar',
-    fontFamily: "'Cascadia Code', 'Cascadia Mono', Consolas, monospace",
-    fontSize: 14,
-    lineHeight: 1.25,
-    scrollback: 5000,
-    theme: BITIG_TERMINAL_THEME
-  });
+  const tabStore = new TabStore(rootEl, tabbarListEl);
+  newTabBtn.addEventListener('click', () => void tabStore.createTab());
 
-  const fitAddon = new FitAddon();
-  terminal.loadAddon(fitAddon);
-  terminal.loadAddon(new WebLinksAddon());
+  window.addEventListener('beforeunload', () => tabStore.disposeAll());
 
-  terminal.open(container);
-  fitAddon.fit();
-
-  const { id } = await window.bitig.pty.create({ cols: terminal.cols, rows: terminal.rows });
-
-  terminal.onData((data) => window.bitig.pty.write(id, data));
-
-  window.bitig.pty.onData((event) => {
-    if (event.id === id) terminal.write(event.data);
-  });
-
-  window.bitig.pty.onExit((event) => {
-    if (event.id === id) {
-      terminal.write(`\r\n[proses sonlandi, exit code: ${event.exitCode}]\r\n`);
-    }
-  });
-
-  window.addEventListener('resize', () => {
-    fitAddon.fit();
-    window.bitig.pty.resize(id, terminal.cols, terminal.rows);
-  });
-
-  window.addEventListener('beforeunload', () => {
-    window.bitig.pty.dispose(id);
-  });
-
-  terminal.focus();
+  void tabStore.createTab();
 }
 
-void bootstrap();
+bootstrap();

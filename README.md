@@ -49,9 +49,9 @@ custom title bar), fast to extend (a small, typed IPC surface between the
 main and renderer processes), and eventually pluggable (a lightweight
 extension system once the core is solid).
 
-This project is under active, early development. The current milestone is a
-working single-pane terminal: a real PowerShell process running behind a
-custom window, rendered with xterm.js.
+This project is under active, early development. It currently supports
+multiple independent tabs, each a real PowerShell process running behind a
+custom window, rendered with xterm.js. Split panes are next.
 
 ## Features
 
@@ -61,6 +61,9 @@ Shipped so far:
   `node-pty`, with full keyboard input and live output streaming.
 - xterm.js rendering with a hand-tuned color theme, block cursor bar, and
   scrollback buffer.
+- Multiple independent tabs, each with its own shell process: open, close,
+  switch, and drag to reorder, with Windows Terminal-style keyboard
+  shortcuts (`Ctrl+Shift+T`, `Ctrl+Shift+W`, `Ctrl+Tab`).
 - A fully custom, frameless window: draggable title bar, minimize/maximize/
   close controls, rounded corners, and drop shadow, none of it borrowed from
   the OS chrome.
@@ -73,7 +76,7 @@ Shipped so far:
 Planned, in order:
 
 - [x] Working minimal terminal (window, PTY, rendering, keyboard input)
-- [ ] Tabs (open, close, switch)
+- [x] Tabs (open, close, switch, drag-to-reorder)
 - [ ] Split panes (horizontal and vertical)
 - [ ] Theme system (JSON based, built-in themes plus user themes)
 - [ ] Transparency and background image support
@@ -129,8 +132,9 @@ flowchart LR
     API -- ipcRenderer --> WH
 ```
 
-Every tab or pane will eventually map to one `PtyManager` session and one
-`xterm.js` instance; the current prototype wires exactly one of each.
+Every tab maps to one `PtyManager` session and one `xterm.js` instance,
+managed renderer-side by `TabStore` (`src/renderer/src/tabs.ts`); split
+panes will extend this same one-session-per-terminal model.
 
 ## IPC Channel Reference
 
@@ -207,7 +211,8 @@ Bitig/
     renderer/
       index.html
       src/
-        main.ts                # xterm.js + FitAddon bootstrap
+        main.ts                # Thin bootstrap: title bar + TabStore
+        tabs.ts                 # TabStore: tab lifecycle, tab bar, drag-to-reorder, shortcuts
         titlebar.ts             # Custom title bar behavior
         theme.ts                # Terminal color theme
         style.css
@@ -271,9 +276,10 @@ genisletmesi kolay (main ve renderer surecleri arasinda kucuk ve tipli bir
 IPC yuzeyi) ve zamanla eklenti destekli (cekirdek saglamlastiktan sonra
 hafif bir eklenti sistemi) bir terminal.
 
-Proje aktif ve erken gelistirme asamasinda. Su anki hedef: tek panelli,
-calisan bir terminal - ozel bir pencerenin arkasinda calisan gercek bir
-PowerShell prosesi, xterm.js ile render ediliyor.
+Proje aktif ve erken gelistirme asamasinda. Su an birden fazla bagimsiz
+sekmeyi destekliyor; her sekme, ozel bir pencerenin arkasinda calisan
+gercek bir PowerShell prosesi, xterm.js ile render ediliyor. Sirada split
+pane var.
 
 ## Ozellikler
 
@@ -283,6 +289,9 @@ Su ana kadar tamamlananlar:
   prosesi (PowerShell); tam klavye girisi ve canli cikti akisi.
 - Elle ayarlanmis renk temasi, blok imlec ve scrollback tamponuyla xterm.js
   render motoru.
+- Her biri kendi shell prosesine sahip, birbirinden bagimsiz sekmeler: ac,
+  kapat, gecis yap, surukleyerek sirala; Windows Terminal tarzi klavye
+  kisayollari (`Ctrl+Shift+T`, `Ctrl+Shift+W`, `Ctrl+Tab`).
 - Tamamen ozel, cercevesiz (frameless) bir pencere: suruklenebilir title
   bar, minimize/maximize/close kontrolleri, yuvarlak koseler ve golge - hicbiri
   OS'nin varsayilan pencere govdesinden gelmiyor.
@@ -295,7 +304,7 @@ Su ana kadar tamamlananlar:
 Sirasiyla planlananlar:
 
 - [x] Calisan minimal terminal (pencere, PTY, render, klavye girisi)
-- [ ] Sekmeler (ac, kapat, gecis yap)
+- [x] Sekmeler (ac, kapat, gecis yap, surukle-sirala)
 - [ ] Split pane (yatay ve dikey bolme)
 - [ ] Tema sistemi (JSON tabanli, hazir temalar + kullanici temalari)
 - [ ] Seffaflik ve arkaplan gorseli destegi
@@ -351,9 +360,10 @@ flowchart LR
     API -- ipcRenderer --> WH
 ```
 
-Her sekme ya da pane, zamanla bir `PtyManager` oturumuna ve bir `xterm.js`
-instance'ina karsilik gelecek; su anki prototip tam olarak bir tanesini
-baglıyor.
+Her sekme, renderer tarafinda `TabStore` (`src/renderer/src/tabs.ts`)
+tarafindan yonetilen bir `PtyManager` oturumuna ve bir `xterm.js`
+instance'ina karsilik gelir; split pane de ayni bir-terminal-bir-oturum
+modelini genisletecek.
 
 ## IPC Kanal Referansi
 
@@ -430,7 +440,8 @@ Bitig/
     renderer/
       index.html
       src/
-        main.ts                # xterm.js + FitAddon kurulumu
+        main.ts                # Ince bootstrap: title bar + TabStore
+        tabs.ts                 # TabStore: sekme yasam dongusu, tab bar, surukle-sirala, kisayollar
         titlebar.ts             # Ozel title bar davranisi
         theme.ts                # Terminal renk temasi
         style.css

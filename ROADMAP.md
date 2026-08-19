@@ -38,7 +38,7 @@ design decision is not obvious:
 | # | Milestone | Depends on | Target version |
 |---|---|---|---|
 | 1 | Minimal terminal | - | `0.1.0` (done) |
-| 2 | Tabs | 1 | `0.2.0` |
+| 2 | Tabs | 1 | `0.2.0` (done) |
 | 3 | Split panes | 2 | `0.3.0` |
 | 4 | Theme system | 1 | `0.4.0` |
 | 5 | Transparency and background image | 4 | `0.5.0` |
@@ -81,10 +81,16 @@ input, readable output.
 
 ---
 
-## 2. Tabs
+## 2. Tabs - done
 
 **Goal:** open, close, rename, and switch between multiple independent
 terminal sessions in one window, each with its own PTY.
+
+**Implemented in:** `src/renderer/src/tabs.ts` (`TabStore`), wired from
+`src/renderer/src/main.ts`. No main-process or IPC changes were needed, as
+anticipated below. Rename-on-double-click and the close confirmation dialog
+were intentionally left out of this pass (see Sub-tasks); drag-to-reorder
+was pulled in from a later idea and shipped now instead.
 
 ### Why now
 
@@ -120,21 +126,30 @@ main-process one. This makes it the cheapest big feature to build next.
 
 ### Sub-tasks
 
-- [ ] Add `TabStore` with `createTab`, `closeTab`, `setActiveTab`,
-      `renameTab`.
-- [ ] Render tab bar UI: tab list, active-state styling, close button per
+- [x] Add `TabStore` with `createTab`, `closeTab`, `setActiveTab`. Renaming
+      a tab (`renameTab`) was not built in this pass; tab titles are
+      currently a static "PowerShell" label. Revisit once OSC title
+      reporting (see Design note above) or a double-click-to-rename
+      interaction is worth adding.
+- [x] Render tab bar UI: tab list, active-state styling, close button per
       tab, "+" button to open a new tab.
-- [ ] Keyboard shortcuts: new tab, close tab, next/previous tab (concrete
-      bindings decided together with milestone 8, but these three ship
-      with hardcoded defaults now rather than waiting).
+- [x] Keyboard shortcuts: new tab (`Ctrl+Shift+T`), close tab
+      (`Ctrl+Shift+W`), next/previous tab (`Ctrl+Tab` / `Ctrl+Shift+Tab`).
+      Hardcoded for now; milestone 8 makes them remappable.
+- [x] Drag-to-reorder tabs (native HTML5 Drag and Drop API), pulled forward
+      into this milestone rather than deferred.
 - [ ] Confirm-before-close when a tab has a running foreground process
-      other than the shell itself (nice-to-have; can ship without this and
-      add later, tracked as a follow-up rather than a blocker).
-- [ ] Handle the last-tab-closed case: closing the only remaining tab
+      other than the shell itself. Deliberately deferred: closing a tab
+      kills its PTY immediately, even mid-process. Tracked as a follow-up,
+      not a blocker for this milestone.
+- [x] Handle the last-tab-closed case: closing the only remaining tab
       closes the window (matches Windows Terminal behavior) rather than
       leaving an empty shell.
-- [ ] Update `PtyManager.disposeAll()` call sites to also cover
-      per-tab disposal on tab close, not just on app quit.
+- [x] `PtyManager.disposeAll()`'s existing per-session disposal is reused
+      correctly: `TabStore.disposeAll()` (called on `beforeunload`) and
+      `TabStore.closeTab()` each dispose PTY sessions by id through the
+      existing `pty:dispose` channel; no main-process change was needed
+      since `PtyManager` already tracked sessions in an id-keyed map.
 
 ### Acceptance criteria
 
@@ -147,6 +162,14 @@ main-process one. This makes it the cheapest big feature to build next.
 - No memory growth from repeatedly opening and closing tabs (basic manual
   check: open/close 50 tabs, watch Electron's process memory in Task
   Manager, expect it to return close to baseline).
+
+> Verified so far: typecheck (`tsc --noEmit` on both configs) and
+> `electron-vite build` are clean, and the app launches in `npm run dev`
+> with its first tab correctly spawning a real `powershell.exe` child
+> process. Multi-tab interaction (opening several tabs, switching, drag
+> reorder, closing) has not yet been manually exercised end-to-end in this
+> environment and should be spot-checked per the criteria above before
+> considering this milestone fully closed out.
 
 ---
 

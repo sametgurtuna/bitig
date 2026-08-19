@@ -9,6 +9,24 @@ and versioning follows [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- Tabs: multiple independent terminal sessions in one window, each with its
+  own real PTY process. New `src/renderer/src/tabs.ts` (`TabStore`) owns
+  tab lifecycle (create/close/switch), renders the tab bar, and dispatches
+  PTY output to the correct tab via a single shared `pty:data`/`pty:exit`
+  listener rather than one listener per tab. Required no changes to
+  `src/main/**` or `src/preload/**`, since `PtyManager` already tracked
+  sessions in an id-keyed map.
+  - Drag-to-reorder tabs via the native HTML5 Drag and Drop API.
+  - Windows Terminal-style keyboard shortcuts: `Ctrl+Shift+T` (new tab),
+    `Ctrl+Shift+W` (close active tab), `Ctrl+Tab` / `Ctrl+Shift+Tab`
+    (next/previous tab), intercepted per-terminal via `xterm.js`'s
+    `attachCustomKeyEventHandler` so they never leak through as literal
+    shell input.
+  - Closing the last remaining tab closes the window, matching Windows
+    Terminal behavior.
+  - `src/renderer/src/main.ts` reduced to a thin bootstrap (title bar +
+    `TabStore` wiring); the single-terminal setup it used to contain moved
+    into `TabStore.createTab()`.
 - Custom, frameless application window: draggable title bar, minimize,
   maximize/restore (with dynamic icon), and close controls, all wired
   through a new `window:*` IPC namespace (`window:minimize`,

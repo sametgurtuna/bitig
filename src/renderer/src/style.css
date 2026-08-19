@@ -101,6 +101,125 @@ body {
   color: #1a0d0c;
 }
 
+#tabbar {
+  display: flex;
+  align-items: stretch;
+  height: 34px;
+  flex: 0 0 auto;
+  background: var(--bitig-titlebar-bg);
+  border-bottom: 1px solid var(--bitig-border);
+  padding: 0 6px;
+  gap: 4px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+#tabbar::-webkit-scrollbar {
+  display: none;
+}
+
+#tabbar-list {
+  display: flex;
+  align-items: stretch;
+  gap: 4px;
+  min-width: 0;
+}
+
+.tab {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  max-width: 180px;
+  min-width: 96px;
+  padding: 0 8px 0 12px;
+  margin: 5px 0;
+  border-radius: 6px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--bitig-text-dim);
+  font: 12px/1 'Segoe UI', sans-serif;
+  cursor: pointer;
+  user-select: none;
+}
+
+.tab:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.tab.active {
+  background: var(--bitig-bg);
+  border-color: var(--bitig-border);
+  color: var(--bitig-text);
+}
+
+.tab.drag-over {
+  border-color: var(--bitig-accent);
+}
+
+.tab-title {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tab-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  width: 18px;
+  height: 18px;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: inherit;
+  opacity: 0.7;
+  cursor: pointer;
+}
+
+.tab-close:hover {
+  background: var(--bitig-danger);
+  color: #1a0d0c;
+  opacity: 1;
+}
+
+.tab-close svg {
+  width: 8px;
+  height: 8px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.4;
+}
+
+#new-tab-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  width: 28px;
+  margin: 5px 0;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--bitig-text-dim);
+  cursor: pointer;
+}
+
+#new-tab-btn:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--bitig-text);
+}
+
+#new-tab-btn svg {
+  width: 10px;
+  height: 10px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.4;
+}
+
 #terminal-shell {
   flex: 1 1 auto;
   min-height: 0;
@@ -111,6 +230,18 @@ body {
 #terminal-root {
   height: 100%;
   width: 100%;
+}
+
+/* Her sekme kendi mount div'ine sahip; aktif olmayanlar display:none ile
+   DOM'da kalir (xterm instance'i ve scrollback korunur), sadece aktif
+   olan gorunur. */
+.tab-pane {
+  height: 100%;
+  width: 100%;
+}
+
+.tab-pane.hidden {
+  display: none;
 }
 
 /* xterm.js kendi canvas'ini olusturuyor; kapsayici container tam yer kaplasin. */
