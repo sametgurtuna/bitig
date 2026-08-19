@@ -44,14 +44,17 @@ design decision is not obvious:
 | 5 | Transparency and background image | 4 | `0.5.0` (done) |
 | 6 | Settings panel (GUI) | 4, 5 | `0.6.0` (done, Appearance only) |
 | 7 | Nerd Font detection and font picker | 6 | `0.6.x` (done) |
-| 8 | Customizable keyboard shortcuts | 6 | `0.7.0` |
-| 9 | Command history and fuzzy search | 2 | `0.8.0` |
-| 10 | Plugin system | 6, 8 | `0.9.0` |
-| 11 | Packaging | all of the above | `1.0.0` |
+| 8 | Shell profiles, auto-discovery & in-terminal search | 6 | `0.7.0` |
+| 9 | Customizable keyboard shortcuts & action registry | 6, 8 | `0.7.5` |
+| 10 | Command palette & runbooks ("Bitig Betik") | 8, 9 | `0.8.0` |
+| 11 | Command history, fuzzy search & execution telemetry | 2, 8 | `0.8.5` |
+| 12 | Developer cockpit, live port sniffer & secret shield | 8, 10 | `0.9.0` |
+| 13 | Quake / Dropdown HUD mode & broadcast input | 3, 9 | `0.9.5` |
+| 14 | AI terminal companion ("Bitig Bilge" - Local & BYOK) | 8, 11 | `0.9.8` |
+| 15 | Lightweight plugin system & sandboxing | 9, 10 | `1.0.0-rc` |
+| 16 | Packaging, installer & auto-updater | all | `1.0.0` |
 
-Milestones 4 and 2 can technically be built in parallel since neither
-depends on the other; they are numbered in the order the project intends to
-tackle them, not in a strict dependency chain.
+Milestones can be built iteratively; each milestone represents a self-contained, tested, and deliverable capability.
 
 ---
 
@@ -713,279 +716,266 @@ knowing why.
 
 ---
 
-## 8. Customizable Keyboard Shortcuts
+## 8. Shell Profiles, Auto-Discovery & In-Terminal Search
 
-**Goal:** every default keybinding introduced in earlier milestones (new
-tab, close tab, split pane, switch focus, open settings, and so on) becomes
-remappable, with conflict detection.
+**Goal:** move away from hardcoded `powershell.exe` to a first-class Profile
+Manager with automatic shell discovery (PowerShell 7, Windows PowerShell, CMD,
+Git Bash, WSL distros), plus in-terminal interactive search via `@xterm/addon-search`,
+directional pane navigation (`Alt+Arrows`/`Alt+HJKL`), focused pane zoom (`Ctrl+Shift+Z`),
+and dynamic CWD/title tracking via OSC 7.
 
 ### Design
 
-- Shortcut schema, part of `settings.json`:
+- **Profile Schema & Store:**
+  Extend `settings.json` with a `profiles` array and `defaultProfileId`:
   ```jsonc
   {
-    "keybindings": [
-      { "action": "tab.new", "keys": "Ctrl+Shift+T" },
-      { "action": "tab.close", "keys": "Ctrl+Shift+W" },
-      { "action": "pane.splitRight", "keys": "Alt+Shift+D" },
-      { "action": "pane.splitDown", "keys": "Alt+Shift+E" }
-    ]
+    "profiles": [
+      {
+        "id": "pwsh",
+        "name": "PowerShell 7",
+        "command": "pwsh.exe",
+        "args": [],
+        "icon": "powershell",
+        "startingDirectory": "%USERPROFILE%",
+        "color": "#7dd3fc"
+      },
+      {
+        "id": "wsl-ubuntu",
+        "name": "Ubuntu (WSL)",
+        "command": "wsl.exe",
+        "args": ["-d", "Ubuntu"],
+        "icon": "linux",
+        "startingDirectory": "~",
+        "color": "#e95420"
+      }
+    ],
+    "defaultProfileId": "pwsh"
   }
   ```
-  Action identifiers are stable strings defined once in
-  `src/shared/actionTypes.ts`, so a keybinding is always "what it does",
-  never "what code path it happens to call" - this indirection is what
-  makes remapping and the future plugin system (milestone 10) able to
-  register their own actions without touching keybinding-handling code.
-- A single keyboard event listener at the renderer's top level resolves
-  `KeyboardEvent` to an action id via the current keybinding map, then
-  dispatches to a central action registry (`actionId -> handler function`).
-  Individual components (tab bar, pane manager) register their handlers
-  into that registry rather than adding their own `keydown` listeners,
-  avoiding the classic bug of two features both trying to own the same key
-  combination.
-- Conflict detection: assigning a combination already bound to another
-  action surfaces the conflict in the shortcut editor UI immediately
-  (highlight both entries, do not silently overwrite).
-- A reserved set of combinations used by the terminal itself for actual
-  shell input (`Ctrl+C`, `Ctrl+V` when not remapped, arrow keys, etc.)
-  cannot be bound to app-level actions unless the user explicitly
-  acknowledges the override, since doing so changes shell behavior the
-  user may not expect.
+- **Auto-Discovery:** At startup, the main process probes common executable paths
+  (`pwsh.exe` via PATH/Program Files, `cmd.exe`, `git-bash.exe`, and installed WSL
+  distros via `wsl.exe -l -q`). Discovered profiles populate defaults if not already set.
+- **Tab Bar Profile Dropdown:** Clicking `+` opens a dropdown listing available
+  profiles; clicking a profile opens a tab for it. `Ctrl+Shift+1..9` opens the Nth profile.
+- **In-Terminal Search (`Ctrl+F`):** Mounts a floating, glassmorphic search bar
+  over the focused terminal using `@xterm/addon-search` (already in `package.json`),
+  with Next/Previous match navigation, regex toggle, case-sensitivity toggle, and match counter.
+- **Directional Pane Navigation & Zoom:**
+  - `Alt+Left/Right/Up/Down` (and `Alt+H/J/K/L`) moves focus to adjacent split panes.
+  - `Ctrl+Shift+Z` toggles Zoom on the active pane (temporarily hiding sibling panes for full-screen focus).
+- **OSC 7 / OSC 9;9 Dynamic Title & CWD:**
+  Register OSC 7 / OSC 9 handlers to track the active working directory and running command,
+  updating tab labels and allowing new tabs/splits to optionally open in the same directory.
 
 ### Sub-tasks
 
-- [ ] Define the action registry and the stable action-id list covering
-      every keyboard-triggered feature from milestones 2, 3, and 6.
-- [ ] Central keyboard event resolver replacing any ad hoc `keydown`
-      listeners added in earlier milestones.
-- [ ] Shortcut editor UI: list of actions with their current binding, a
-      "click to record a new binding" control, conflict highlighting.
-- [ ] Reserved-combination guard with an explicit override flow.
-- [ ] Ship sensible defaults matching common Windows terminal conventions
-      (close to Windows Terminal's own defaults where there is no reason
-      to diverge, so muscle memory transfers).
-
-### Acceptance criteria
-
-- Rebinding an action in the shortcut editor takes effect immediately, no
-  restart required.
-- Binding a combination already in use surfaces a visible conflict instead
-  of silently applying.
-- Deleting `settings.json`'s `keybindings` section (or the whole file)
-  falls back cleanly to the documented defaults.
+- [ ] Shell discovery module in main (`src/main/pty/profileDiscovery.ts`) probing Windows PATH, Registry, and WSL.
+- [ ] Profile management IPC (`profile:list`, `profile:create-pty`) passing `command`, `args`, `cwd`, and `env` to `PtyManager`.
+- [ ] Settings panel: new **Profiles** section with add/edit/delete/clone profile capabilities.
+- [ ] Titlebar UI: Profile dropdown button next to the `+` new tab button.
+- [ ] Search overlay component (`src/renderer/src/searchBar.ts`) wired to `@xterm/addon-search`.
+- [ ] Pane directional focus and Zoom toggle in `panes.ts` and `tabs.ts`.
 
 ---
 
-## 9. Command History and Fuzzy Search
+## 9. Customizable Keyboard Shortcuts & Central Action Registry
 
-**Goal:** a searchable history of commands run across sessions, plus a
-fuzzy-search overlay (a built-in equivalent of piping through `fzf`) for
-quickly finding and re-running a past command.
+**Goal:** every default keybinding (new tab, close tab, split pane, switch focus, open settings,
+search, zoom, etc.) becomes remappable, with conflict detection and an interactive recorder.
 
 ### Design
 
-- Command boundary detection: this is the hard part. PTY output is an
-  opaque stream of bytes; Bitig does not get a clean "command started /
-  command finished" signal for free. The practical, widely-used approach
-  (also how Warp and other modern terminals do it) is **shell
-  integration**: a small snippet injected into the shell's profile (a
-  PowerShell profile addition, opt-in and clearly explained, not silently
-  modifying the user's existing profile) that emits OSC-sequence markers
-  around each prompt and command (OSC 133, the semi-standard "shell
-  integration" sequence family: `A` prompt start, `B` command start, `C`
-  command executed, `D` command finished with exit code). `xterm.js`
-  exposes a parser hook (`Terminal.parser.registerOscHandler`) for exactly
-  this.
-- Without shell integration installed, history capture degrades
-  gracefully to "log of raw input lines the user typed" (still useful for
-  search, just without exit codes or precise command boundaries).
-- Storage: an append-only local log per shell session, flushed
-  periodically, indexed for search. Given the expected data volume
-  (personal command history, not a multi-user dataset), a simple
-  JSON-lines file under `%APPDATA%/Bitig/history/` plus an in-memory index
-  loaded at startup is sufficient; a real embedded database (SQLite via a
-  native module) is a reasonable upgrade later if the flat-file approach
-  becomes a bottleneck, but is not justified as a starting point.
-- Fuzzy search overlay: a modal invoked by keybinding (default close to
-  `Ctrl+R`, matching shell reverse-search muscle memory), fuzzy-matching
-  against the history index (a small, dependency-free fuzzy match
-  implementation - subsequence matching with a scoring function that
-  favors contiguous matches and matches near the start of the string is
-  enough; no need for a heavyweight library), showing results ranked by
-  score with recency as a tiebreaker, Enter to insert the selected command
-  at the current prompt (not auto-execute, to avoid accidental destructive
-  re-runs).
+- **Action Registry:** Stable action identifiers (`tab.new`, `tab.close`, `pane.splitRight`,
+  `pane.splitDown`, `pane.zoom`, `terminal.search`, `settings.toggle`, `palette.toggle`) defined in
+  `src/shared/actionTypes.ts`.
+- **Central Keyboard Dispatcher:** A single `keydown` handler at window level resolving
+  `KeyboardEvent` through the current keybindings map, passing to registered handlers.
+- **Interactive Shortcut Editor:** Settings GUI section allowing users to click a shortcut, press
+  their desired key combination, detect conflicts instantly, and reset individual shortcuts.
 
 ### Sub-tasks
 
-- [ ] PowerShell shell-integration snippet (OSC 133 markers) plus an
-      in-app, opt-in installer flow that appends it to the user's
-      `$PROFILE` with a clear diff preview before writing.
-- [ ] OSC 133 parser hook in the renderer, wired per PTY session.
-- [ ] History store: append-only writer in main, loaded index at startup,
-      basic pruning (age-based or count-based cap, configurable).
-- [ ] Fuzzy match scoring function and unit tests covering the common
-      cases (prefix match, subsequence match, no match).
-- [ ] Search overlay UI: input box, ranked result list, keyboard
-      navigation, Enter-to-insert.
-- [ ] Privacy controls: a per-project or global "do not record history"
-      toggle, and a "clear history" action.
-
-### Acceptance criteria
-
-- With shell integration installed, running several distinct commands and
-  opening the search overlay finds each one by a partial, non-contiguous
-  match of its text.
-- Without shell integration installed, the feature still degrades to
-  usable line-based search rather than being entirely broken.
-- History persists across app restarts.
-- Clearing history actually removes the on-disk log, verified by
-  re-opening the search overlay and finding it empty.
+- [ ] Action registry and handler dispatch system.
+- [ ] `keybindings` schema in `settingsTypes.ts` with sensible defaults.
+- [ ] Interactive Key Recorder component in Settings Panel.
+- [ ] Conflict detection logic with visual warnings.
 
 ---
 
-## 10. Lightweight Plugin System
+## 10. Command Palette & Runbooks ("Bitig Betik") *(Bitig Differentiator)*
 
-**Goal:** let third-party (and the author's own) code extend Bitig without
-patching core source: new actions, new settings-panel sections, new status
-bar items, custom OSC-sequence handlers, to start.
+**Goal:** provide a universal, keyboard-driven Command Palette (`Ctrl+Shift+P`) and a built-in
+parametric Runbook / Snippets system ("Bitig Betik", `Ctrl+Shift+B`) that turns complex, multi-flag
+commands into reusable, visual forms without cloud dependencies.
 
 ### Design
 
-- Plugins are npm-style packages: a folder with a `plugin.json` manifest
-  (name, version, entry point, declared permissions) and a JS entry file,
-  installed under `%APPDATA%/Bitig/plugins/<plugin-name>/`.
-- **Plugins run in the main process, in a restricted context, never with
-  direct access to the real `require`/`fs`/`child_process` globals.** This
-  is a deliberate, non-negotiable security boundary: a terminal emulator
-  plugin ecosystem is an extremely sensitive place to get sandboxing wrong,
-  since plugins are exactly the kind of code most likely to be installed
-  from an untrusted third party. The practical mechanism is Node's `vm`
-  module with a curated context object exposing only a permission-gated
-  Bitig API (`bitig.registerAction(...)`, `bitig.onPtyData(...)`,
-  `bitig.settings.get(...)`), not the ambient Node globals.
-- A plugin manifest declares the permissions it needs (`pty:read`,
-  `settings:read`, `settings:write`, `ui:register-panel`, etc.); the app
-  shows these to the user before enabling a plugin, the same trust model
-  as a browser extension install prompt, not a silent capability grant.
-- Plugin API surface starts intentionally small (register an action,
-  register a settings-panel section, read PTY output, contribute a status
-  bar item) and grows only when a real plugin idea needs more, rather than
-  speculatively building a large API up front.
+- **Command Palette (`Ctrl+Shift+P`):**
+  - Instant fuzzy search across all Bitig actions, open tabs, themes, and shell profiles.
+  - Arrow key navigation, immediate execution on Enter.
+- **Runbooks & Snippets ("Bitig Betik"):**
+  - Developers frequently run complex CLI invocations (e.g. `docker run -d -p {{host_port}}:{{container_port}} -v {{src}}:{{dst}} {{image}}`, `ffmpeg -i {{input}} -c:v libx264 {{output}}`, `git rebase -i HEAD~{{count}}`).
+  - Stored locally in `%APPDATA%/Bitig/snippets.json`.
+  - Pressing `Ctrl+Shift+B` opens the Runbook modal: fuzzy-select a snippet -> Bitig renders a dynamic form with inputs for placeholders -> Press Enter to inject the fully composed command into the active terminal!
 
 ### Sub-tasks
 
-- [ ] Plugin manifest schema and a `PluginLoader` in main that discovers,
-      validates, and loads plugins from the plugins directory.
-- [ ] `vm`-based sandboxed execution context with the curated `bitig` API
-      object; explicit denial of ambient Node globals.
-- [ ] Permission model: manifest-declared permissions, a user-facing
-      enable/disable/review UI (part of the settings panel from
-      milestone 6), and enforcement at the API boundary (a plugin without
-      `settings:write` gets a `bitig.settings.set` that throws, not one
-      that silently succeeds).
-- [ ] The initial small API surface: `registerAction`, `onPtyData`,
-      `settings.get`/`settings.set` (permission-gated), a status-bar
-      contribution point.
-- [ ] A reference example plugin (in-repo, under a `plugins-examples/`
-      folder, not shipped in the packaged app) demonstrating the API and
-      doubling as a manual integration test.
-- [ ] Crash isolation: an uncaught exception inside a plugin's code must
-      not take down the host app; the plugin is disabled and the user is
-      notified, the rest of the app keeps running.
-
-### Acceptance criteria
-
-- The reference example plugin loads, registers an action, and that action
-  is invokable from the shortcut system built in milestone 8.
-- A plugin without a declared permission genuinely cannot use the
-  corresponding API (verified by writing a plugin that tries and observing
-  a clean rejection, not a silent no-op and not a crash).
-- A plugin that throws inside its own code is caught, disabled, and
-  reported, without crashing the main window or killing any running PTY
-  session.
+- [ ] Command Palette overlay component with high-performance fuzzy filtering.
+- [ ] Snippet schema (`name`, `description`, `template`, `tags`, `variables`).
+- [ ] Snippet modal with dynamic placeholder form generator (`src/renderer/src/snippetsModal.ts`).
+- [ ] Pre-packaged starter runbooks (Docker, Git, FFmpeg, NPM/Cargo, Kubernetes).
 
 ---
 
-## 11. Packaging
+## 11. Command History, Fuzzy Search & Execution Telemetry
 
-**Goal:** a distributable, installable `.exe` for end users who are not
-running the project from source.
+**Goal:** searchable history across sessions, a `Ctrl+R` fuzzy search popup, and execution duration
+telemetry with background task completion notifications.
 
 ### Design
 
-- `electron-builder` (already a devDependency) targets an NSIS installer
-  for Windows, matching the ecosystem norm and giving a familiar
-  install/uninstall experience integrated with Windows' Add/Remove
-  Programs.
-- Code signing: unsigned builds trigger SmartScreen warnings on first run.
-  A proper Authenticode certificate is a real cost/process decision the
-  author needs to make (EV cert for immediate SmartScreen reputation vs.
-  standard cert that builds reputation over time vs. shipping unsigned
-  with a documented warning for early users) - tracked here as an open
-  decision, not resolved by this document.
-- Auto-update: `electron-builder`'s built-in `autoUpdater` integration
-  (NSIS + a generic or GitHub-Releases-backed update feed) is the natural
-  fit once there is a stable release cadence; not needed for the very
-  first packaged release, but the build config should be structured so it
-  is a small addition later (using `electron-builder`'s config format from
-  the start rather than a fully custom packaging script).
-- Native module handling: `node-pty`'s prebuilt binaries (already
-  confirmed working without a source rebuild, see `CLAUDE.md`'s "Bilinen
-  Notlar" section) need `asarUnpack` configuration so the native `.node`
-  files are not sealed inside the asar archive, where native `require`
-  cannot load them.
+- **Shell Integration (OSC 133):**
+  - Inject OSC 133 marker sequences into PowerShell profile and bash/zsh to detect precise prompt starts, command starts, and exit codes.
+  - Fallback to raw input stream parsing if shell integration is not enabled.
+- **Fuzzy Search Overlay (`Ctrl+R`):**
+  - Instant history search modal ranking commands by frequency and recency.
+- **Execution Telemetry & Toast Notifications:**
+  - When a command runs for longer than a configurable threshold (e.g. 5 seconds) and the Bitig window is in the background, send a native Windows notification: `✅ "npm run build" finished in 14.2s (exit code 0)`.
+  - Visual execution duration pill rendered at the edge of the terminal.
 
 ### Sub-tasks
 
-- [ ] `electron-builder` configuration (`electron-builder.yml` or the
-      `build` key in `package.json`): app id, product name, NSIS target,
-      icon set (multiple resolutions), `asarUnpack` for `node-pty`'s
-      native binary and prebuilds directory.
-- [ ] App icon design (`.ico` for Windows, multiple sizes: 16, 32, 48, 256).
-- [ ] `npm run dist` (or similarly named) script producing a signed or
-      clearly-labeled-unsigned installer artifact.
-- [ ] Verify a clean-machine install: the installer works on a Windows 11
-      VM with no Node.js, no git, nothing beyond the OS itself installed
-      (this is the real test that catches "works on my machine because I
-      have the toolchain installed" bugs).
-- [ ] Decide and document the code-signing approach (see Design above).
-- [ ] Release process documentation: how to cut a version bump, tag,
-      build, and publish a GitHub Release with the installer attached.
+- [ ] Shell integration helper script generator (`OSC 133`).
+- [ ] Append-only history store in main (`%APPDATA%/Bitig/history.jsonl`).
+- [ ] Fuzzy search modal (`Ctrl+R`) with keyboard-first interaction.
+- [ ] Background command timer and Windows native notification dispatch (`Notification` API / electron `Notification`).
 
-### Acceptance criteria
+---
 
-- The installer runs and produces a working, launchable app on a clean
-  Windows 11 machine with no development tools installed.
-- The installed app's PTY functionality works identically to the
-  `npm run dev` experience (this is the real proof that native module
-  packaging is correct, since a broken `asarUnpack` config typically shows
-  up as node-pty failing to load only in the packaged build).
-- Uninstalling through Windows' standard "Apps" settings page removes the
-  application cleanly, including its Start Menu entry.
+## 12. Developer Cockpit, Live Port Sniffer & Secret Shield *(Bitig Differentiator)*
+
+**Goal:** transform Bitig from a passive text box into an active developer cockpit: live detection
+of opened network ports (`localhost:3000`), smart file/line hyperlinks that open directly in VS Code,
+and automatic masking of accidental sensitive token leaks.
+
+### Design
+
+- **Live Port Sniffer (Port & Process Sentinel):**
+  - Detect when child processes bind to TCP listening ports on Windows (e.g. Vite on `5173`, Next.js on `3000`, API on `8080`).
+  - Render an interactive badge in the titlebar / status area: `🌐 :3000 (Open)` -> 1-click open in default browser, copy URL, or kill rogue port process.
+- **Smart File Hyperlinks:**
+  - Regex match file references in terminal output (e.g., `src/renderer/src/main.ts:45:12` or `C:\project\error.log`).
+  - Clicking automatically opens the file at the exact line in VS Code / Cursor / default IDE (`vscode://file/...`).
+- **Secret Shield (Privacy Guard):**
+  - Opt-in scanner that detects accidental output of JWT tokens, AWS keys (`AKIA...`), GitHub PATs (`ghp_...`), or private keys in terminal output.
+  - Automatically offers to mask the output or warns before clipboard copy.
+
+### Sub-tasks
+
+- [ ] Network port listener inspection in main process (using Node `netstat`/PowerShell TCP probe).
+- [ ] Titlebar port badge UI with quick-action context menu.
+- [ ] Smart hyperlink link provider using `@xterm/addon-web-links` custom regex matchers.
+- [ ] Secret Shield regex pattern matcher with toggle in Settings.
+
+---
+
+## 13. Quake / Dropdown HUD Mode & Broadcast Input *(Bitig Differentiator)*
+
+**Goal:** instant access terminal from anywhere via a global system hotkey (`Win+~` / `Ctrl+~`),
+and simultaneous multi-pane command broadcast for cluster management.
+
+### Design
+
+- **Quake / Dropdown HUD Window:**
+  - Register a global OS hotkey (`globalShortcut.register('CommandOrControl+`', ...)`).
+  - Smoothly slides down from the top edge of the primary monitor over any running application.
+  - Loss of focus can automatically pin or slide back up.
+- **Broadcast Input Mode (`Alt+Shift+I`):**
+  - When enabled, keystrokes typed into the focused pane are mirrored to all active split panes in the current tab.
+  - A distinct glowing border / status indicator ("🔴 Sync Active") alerts the user to prevent accidental command execution across servers.
+
+### Sub-tasks
+
+- [ ] Global shortcut manager in main with multi-monitor positioning support.
+- [ ] Window slide animation and drop-down window mode toggle in Settings.
+- [ ] Broadcast dispatcher in `TabStore` / `panes.ts`.
+- [ ] Visual broadcast HUD banner and warning state.
+
+---
+
+## 14. AI Terminal Companion ("Bitig Bilge" - Local & BYOK) *(Bitig Differentiator)*
+
+**Goal:** an intelligent, privacy-first terminal assistant that helps debug failed commands,
+generate complex bash/powershell one-liners, and summarize long logs, using local models (Ollama)
+or personal API keys (OpenAI, Gemini, Anthropic, DeepSeek).
+
+### Design
+
+- **Privacy-First & BYOK (Bring Your Own Key):**
+  - Zero telemetry or forced cloud accounts. Keys stored securely in OS credential vault / encrypted settings.
+  - First-class support for local Ollama instances (`http://localhost:11434`).
+- **Inline Error Explainer:**
+  - When a command fails (`exit code != 0`), an optional "💡 Neden hata verdi?" icon appears.
+  - Clicking sends only the relevant error snippet and shell context to the AI model, displaying an actionable fix.
+- **Natural Language to CLI Generator (`Ctrl+I` / Inline Ghost Prompt):**
+  - Type `# find all files larger than 100MB and delete them` -> AI suggests the exact PowerShell/Bash syntax -> Press Tab to accept.
+
+### Sub-tasks
+
+- [ ] AI provider abstraction in main (`OllamaProvider`, `OpenAIProvider`, `GeminiProvider`, `AnthropicProvider`).
+- [ ] Settings Panel: **AI / Bilge** configuration section (Provider, API Key, Model name, Temperature).
+- [ ] Inline explanation drawer / tooltip component in renderer.
+- [ ] Inline ghost-text suggestion prompt.
+
+---
+
+## 15. Lightweight Plugin System & Sandboxing
+
+**Goal:** let developers extend Bitig safely without patching core source: new actions,
+status bar widgets, custom themes, custom OSC handlers, and AI prompt hooks.
+
+### Design
+
+- Plugins live in `%APPDATA%/Bitig/plugins/<plugin-name>/` with a `plugin.json` manifest.
+- **Security Sandbox:** Plugins execute inside Node's `vm` module with an explicit permission model
+  (`pty:read`, `ui:statusbar`, `settings:read`, `action:register`), completely denying access to raw
+  `fs`, `child_process`, or ambient Node globals.
+- Plugin UI contribution points: Status Bar, Command Palette actions, and Settings Panel tabs.
+
+### Sub-tasks
+
+- [ ] Plugin manifest loader and validator.
+- [ ] `vm`-based sandbox environment with scoped Bitig API.
+- [ ] Permission grant UI in Settings.
+- [ ] Reference example plugins (Git Status widget, System Resource monitor).
+
+---
+
+## 16. Packaging, Installer & Auto-Updater
+
+**Goal:** deliver a production-ready, frictionless installer (`.exe`) and auto-update mechanism for Windows.
+
+### Design
+
+- `electron-builder` NSIS configuration targeting `x64` and `arm64` Windows.
+- `asarUnpack` configured for `node-pty` native `.node` binaries and ConPTY prebuilds.
+- Multi-resolution application icon set (`.ico` containing 16, 32, 48, 256px).
+- Auto-update support via GitHub Releases (`electron-updater`).
+
+### Sub-tasks
+
+- [ ] `electron-builder.yml` configuration and build scripts.
+- [ ] Native icon design and asset generation.
+- [ ] Clean-machine VM verification matrix.
+- [ ] Automated GitHub Actions release pipeline.
 
 ---
 
 ## Explicit Non-Goals (for now)
 
-Listed to avoid scope creep and to give future contributors a clear
-"not yet, and here is why" answer:
+Listed to maintain focus and performance:
 
-- **Cross-platform support (macOS, Linux).** The project is intentionally
-  Windows-first (ConPTY, Windows paths, Windows-specific font/registry
-  APIs). Nothing here is designed to be hostile to a future port, but
-  nothing is being built speculatively for portability either.
-- **Multi-window support.** Tabs and split panes cover the vast majority
-  of real workflows; a second top-level window is a meaningfully larger
-  state-management problem (which window owns which settings, focus
-  across windows, etc.) and is not planned until the single-window
-  experience is solid.
-- **Remote/SSH session management as a first-class feature.** Bitig runs
-  local shells; SSH is just another command a user can type. A dedicated
-  SSH session manager (like some commercial terminals offer) is out of
-  scope unless a strong need emerges later.
-- **A built-in package manager for plugins.** Milestone 10 ships the
-  loading and sandboxing mechanism, not a discovery/install UI or a
-  registry; that is a substantially larger undertaking appropriate only
-  once there is an actual plugin ecosystem worth managing.
+- **Cross-platform support (macOS, Linux):** Bitig remains Windows-first (ConPTY, Windows Registry, Windows Font APIs).
+- **Heavy web browser embed inside terminal:** Bitig is a high-performance terminal emulator, not a web browser.
+- **Cloud-forced accounts / mandatory subscriptions:** Bitig is 100% local, sovereign, and privacy-respecting.

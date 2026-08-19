@@ -14,7 +14,7 @@
 [![Status](https://img.shields.io/badge/status-early%20prototype-e3b341?style=flat-square)](#)
 [![License](https://img.shields.io/badge/license-ISC-8b93a7?style=flat-square)](#license--lisans)
 
-**[English](#english)** &nbsp;|&nbsp; **[Turkce](#turkce)** &nbsp;|&nbsp; [Changelog](CHANGELOG.md)
+**[English](#english)** &nbsp;|&nbsp; **[Turkce](#turkce)** &nbsp;|&nbsp; [Changelog](CHANGELOG.md) &nbsp;|&nbsp; [Roadmap](ROADMAP.md) &nbsp;|&nbsp; [Features](FEATURES.md)
 
 </div>
 
