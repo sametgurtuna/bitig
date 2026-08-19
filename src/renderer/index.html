@@ -14,6 +14,10 @@
       <header id="titlebar">
         <div id="titlebar-drag">
           <span id="titlebar-label">Bitig</span>
+          <div id="tabbar-list" role="tablist"></div>
+          <button id="new-tab-btn" title="Yeni sekme (Ctrl+Shift+T)" aria-label="Yeni sekme">
+            <svg viewBox="0 0 10 10"><path d="M5 0v10M0 5h10" /></svg>
+          </button>
         </div>
         <div id="titlebar-controls">
           <button id="btn-minimize" class="titlebar-btn" title="Kucult" aria-label="Kucult">
@@ -32,12 +36,6 @@
           </button>
         </div>
       </header>
-      <div id="tabbar" role="tablist">
-        <div id="tabbar-list"></div>
-        <button id="new-tab-btn" title="Yeni sekme (Ctrl+Shift+T)" aria-label="Yeni sekme">
-          <svg viewBox="0 0 10 10"><path d="M5 0v10M0 5h10" /></svg>
-        </button>
-      </div>
       <div id="terminal-shell">
         <div id="terminal-root"></div>
       </div>

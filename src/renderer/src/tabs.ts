@@ -201,6 +201,19 @@ export class TabStore {
       this.closeTab(id);
     });
 
+    // Orta tus (tekerlek) tikla kapatma: tarayicilarin standart sekme
+    // davranisi. mousedown'da preventDefault olmazsa Windows'ta orta tik
+    // otomatik kaydirma (autoscroll) imlecini tetikler.
+    tabEl.addEventListener('mousedown', (event) => {
+      if (event.button === 1) event.preventDefault();
+    });
+    tabEl.addEventListener('auxclick', (event) => {
+      if (event.button === 1) {
+        event.preventDefault();
+        this.closeTab(id);
+      }
+    });
+
     tabEl.addEventListener('dragstart', (event) => {
       event.dataTransfer?.setData('text/plain', id);
       if (event.dataTransfer) event.dataTransfer.effectAllowed = 'move';

@@ -27,6 +27,8 @@ and versioning follows [Semantic Versioning](https://semver.org/).
   - `src/renderer/src/main.ts` reduced to a thin bootstrap (title bar +
     `TabStore` wiring); the single-terminal setup it used to contain moved
     into `TabStore.createTab()`.
+  - Middle-click on a tab closes it (`auxclick`), matching standard browser
+    tab behavior.
 - Custom, frameless application window: draggable title bar, minimize,
   maximize/restore (with dynamic icon), and close controls, all wired
   through a new `window:*` IPC namespace (`window:minimize`,
@@ -54,6 +56,10 @@ and versioning follows [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- Tab bar moved into the title bar itself, next to the app name, instead of
+  a separate strip underneath it: one row instead of two, less visual
+  weight. The tab list scrolls horizontally on overflow; the title bar's
+  remaining empty space stays a window drag region.
 - `.gitignore` expanded to exclude build artifacts (`build/`, `release/`),
   environment files (`.env*`), editor directories, and, notably,
   `CLAUDE.md` / `.claude/` / `dev-docs/` so that internal, developer-facing

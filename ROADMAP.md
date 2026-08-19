@@ -138,6 +138,13 @@ main-process one. This makes it the cheapest big feature to build next.
       Hardcoded for now; milestone 8 makes them remappable.
 - [x] Drag-to-reorder tabs (native HTML5 Drag and Drop API), pulled forward
       into this milestone rather than deferred.
+- [x] Middle-click on a tab closes it (`auxclick`, standard browser tab
+      convention), in addition to the explicit close button.
+- [x] Tab bar merged directly into the title bar, next to the app name,
+      instead of a separate strip below it - one row instead of two,
+      matching a request to reduce visual weight. The tab list scrolls
+      horizontally on overflow; the title bar's remaining empty space
+      stays a drag region.
 - [ ] Confirm-before-close when a tab has a running foreground process
       other than the shell itself. Deliberately deferred: closing a tab
       kills its PTY immediately, even mid-process. Tracked as a follow-up,
