@@ -24,9 +24,21 @@ body {
   overflow: hidden;
 }
 
+/* Arkaplan gorseli katmani: #app'in arkasinda, tum pencereyi kaplar.
+   Gorunurlugu (image opacity, fit) appearance.ts tarafindan inline style
+   olarak ayarlanir; gorsel yoksa background-image: none kalir. */
+#bg-image {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  background-color: transparent;
+}
+
 /* Rounded-corner + golge hissi: OS cercevesi kapali (frame:false) oldugu icin
    pencerenin "gorsel govdesi" burada CSS ile olusturuluyor. */
 #app {
+  position: relative;
+  z-index: 1;
   display: flex;
   flex-direction: column;
   height: 100vh;
@@ -69,6 +81,9 @@ body {
   font: 12px/1 'Segoe UI', sans-serif;
   color: var(--bitig-text-dim);
   letter-spacing: 0.02em;
+  /* Arkaplan gorseli acikken (milestone 5) title bar kismen saydamlasabilir;
+     golge, altinda ne olursa olsun metni okunakli tutar. */
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.6);
 }
 
 #titlebar-controls {
@@ -96,6 +111,8 @@ body {
   fill: none;
   stroke: currentColor;
   stroke-width: 1;
+  /* text-shadow'un ikon karsiligi: arkaplan gorseli uzerinde de secilebilir kalsin. */
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.6));
 }
 
 .titlebar-btn:hover {
@@ -141,6 +158,7 @@ body {
   font: 12px/1 'Segoe UI', sans-serif;
   cursor: pointer;
   user-select: none;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.6);
 }
 
 .tab:hover {
@@ -228,7 +246,10 @@ body {
   flex: 1 1 auto;
   min-height: 0;
   padding: 10px 12px;
-  background: var(--bitig-bg);
+  /* Kendi arkaplanini boyamiyor: #app'in arkaplani (opaklik ayarina gore
+     alfa kanalli olabilir) zaten altta gorunur - burada tekrar boyarsak
+     iki katman ust uste binip bu bolge diger alanlardan daha az saydam
+     gorunurdu. */
 }
 
 #terminal-root {

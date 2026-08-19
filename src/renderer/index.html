@@ -4,12 +4,16 @@
     <meta charset="UTF-8" />
     <meta
       http-equiv="Content-Security-Policy"
-      content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self'"
+      content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self'; img-src 'self' data:"
     />
     <title>Bitig</title>
     <link rel="stylesheet" href="./src/style.css" />
   </head>
   <body>
+    <!-- Arkaplan gorseli (varsa) tum pencerenin arkasinda, #app'in disinda
+         durur; #app'in kendi arkaplani opaklik ayarina gore yari saydam
+         hale geldiginde bu katman altindan gorunur. -->
+    <div id="bg-image"></div>
     <div id="app">
       <header id="titlebar">
         <div id="titlebar-drag">

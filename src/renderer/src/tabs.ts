@@ -1,3 +1,4 @@
+import type { ITheme } from '@xterm/xterm';
 import {
   closeLeafFromTree,
   collectLeaves,
@@ -10,6 +11,7 @@ import {
   type PaneNode,
   type SplitDirection
 } from './panes';
+import { bitigDark } from '../../shared/builtinThemes';
 
 interface Tab {
   id: string; // istemci tarafinda uretilir (crypto.randomUUID); artik bir
@@ -33,10 +35,18 @@ export class TabStore {
   private readonly tabsById = new Map<string, Tab>();
   private readonly leavesByPtyId = new Map<string, { tab: Tab; leaf: PaneLeaf }>();
   private activeId: string | null = null;
+  // IPC'den ilk tema yaniti gelene kadar (appearance.ts) senkron bir
+  // varsayilan gerekir; bitig-dark, tema sistemi oncesi sabit temayla ayni.
+  private currentTerminalTheme: ITheme = bitigDark.terminal;
 
   constructor(
     private readonly rootEl: HTMLElement,
-    private readonly tabbarListEl: HTMLElement
+    private readonly tabbarListEl: HTMLElement,
+    // Alt+Shift+T'nin gercek davranisini (hangi temaya gecilecegini bilmek)
+    // appearance.ts sahiplenir; TabStore sadece kisayolu yakalayip bu
+    // callback'i cagirir - boylece tek bir merkezi klavye yonlendiricisi
+    // (bkz. handleGlobalKeydown) korunur.
+    private readonly onCycleThemeShortcut?: () => void
   ) {
     window.bitig.pty.onData((event) => {
       this.leavesByPtyId.get(event.id)?.leaf.terminal.write(event.data);
@@ -51,7 +61,10 @@ export class TabStore {
   }
 
   async createTab(): Promise<void> {
-    const leaf = await createPaneLeaf((event) => this.isReservedShortcut(event));
+    const leaf = await createPaneLeaf(
+      (event) => this.isReservedShortcut(event),
+      this.currentTerminalTheme
+    );
 
     const containerEl = document.createElement('div');
     containerEl.className = 'tab-pane hidden';
@@ -133,7 +146,10 @@ export class TabStore {
     const tab = this.getActiveTab();
     if (!tab) return;
 
-    const newLeaf = await createPaneLeaf((event) => this.isReservedShortcut(event));
+    const newLeaf = await createPaneLeaf(
+      (event) => this.isReservedShortcut(event),
+      this.currentTerminalTheme
+    );
     this.leavesByPtyId.set(newLeaf.id, { tab, leaf: newLeaf });
 
     tab.root = splitLeaf(tab.root, tab.activeLeafId, direction, newLeaf);
@@ -147,6 +163,20 @@ export class TabStore {
     const tab = this.getActiveTab();
     if (!tab) return;
     this.closePaneInTab(tab, tab.activeLeafId);
+  }
+
+  /**
+   * Aktif temayi acik tum sekmelerdeki/pane'lerdeki her xterm.js instance'ina
+   * uygular ve sonraki yeni sekme/pane'lerin de bu temayla acilmasi icin
+   * saklar (bkz. appearance.ts).
+   */
+  applyTerminalTheme(theme: ITheme): void {
+    this.currentTerminalTheme = theme;
+    for (const tab of this.tabs) {
+      for (const leaf of collectLeaves(tab.root)) {
+        leaf.terminal.options.theme = theme;
+      }
+    }
   }
 
   /** beforeunload sirasinda tum sekmelerdeki tum PTY oturumlarini sonlandirir. */
@@ -325,6 +355,12 @@ export class TabStore {
     if (event.altKey && event.shiftKey && key === 'e') {
       event.preventDefault();
       void this.splitActivePane('column');
+      return;
+    }
+
+    if (event.altKey && event.shiftKey && key === 't') {
+      event.preventDefault();
+      this.onCycleThemeShortcut?.();
     }
   }
 
@@ -338,7 +374,7 @@ export class TabStore {
 
     if (event.ctrlKey && key === 'tab') return true;
     if (event.ctrlKey && event.shiftKey && (key === 't' || key === 'w' || key === 'x')) return true;
-    if (event.altKey && event.shiftKey && (key === 'd' || key === 'e')) return true;
+    if (event.altKey && event.shiftKey && (key === 'd' || key === 'e' || key === 't')) return true;
     return false;
   }
 }

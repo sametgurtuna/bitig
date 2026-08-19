@@ -3,8 +3,19 @@ import { app, BrowserWindow, shell } from 'electron';
 import { PtyManager } from './pty/ptyManager';
 import { registerPtyHandlers } from './ipc/ptyHandlers';
 import { registerWindowHandlers } from './ipc/windowHandlers';
+import { registerThemeHandlers } from './ipc/themeHandlers';
+import { registerSettingsHandlers } from './ipc/settingsHandlers';
+import { ThemeStore } from './theme/themeStore';
+import { SettingsStore } from './settings/settingsStore';
+
+// app.getPath('userData') varsayilan olarak package.json > name'e gore
+// hesaplanir; bunu acikca 'Bitig' yapiyoruz ki CLAUDE.md'de belgelenen
+// %APPDATA%/Bitig/ konumu (buyuk B ile) tam olarak eslessin.
+app.setName('Bitig');
 
 const ptyManager = new PtyManager();
+const themeStore = new ThemeStore();
+const settingsStore = new SettingsStore();
 
 function createMainWindow(): void {
   const mainWindow = new BrowserWindow({
@@ -39,6 +50,8 @@ function createMainWindow(): void {
 
   registerPtyHandlers(ptyManager, mainWindow.webContents);
   registerWindowHandlers(mainWindow);
+  registerThemeHandlers(themeStore, mainWindow.webContents);
+  registerSettingsHandlers(settingsStore, mainWindow.webContents);
 
   const isDev = !app.isPackaged;
   if (isDev && process.env['ELECTRON_RENDERER_URL']) {
@@ -49,6 +62,12 @@ function createMainWindow(): void {
 }
 
 void app.whenReady().then(() => {
+  // Store'lar ilk pencere olusmadan once yuklenmeli: IPC handler'lari
+  // (registerThemeHandlers/registerSettingsHandlers) kayit anindan itibaren
+  // gecerli veri donebilmeli.
+  settingsStore.load();
+  themeStore.load();
+
   createMainWindow();
 
   app.on('activate', () => {

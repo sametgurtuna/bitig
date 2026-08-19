@@ -1,12 +1,13 @@
 import '@xterm/xterm/css/xterm.css';
 import { initTitleBar } from './titlebar';
 import { TabStore } from './tabs';
+import { AppearanceController } from './appearance';
 
 /**
- * Uygulama girisi: title bar davranisini baglar ve sekme yonetimini
- * (TabStore) baslatir. Terminal/PTY kurulumunun tamami artik tabs.ts'te.
+ * Uygulama girisi: title bar davranisini baglar, gorunum (tema/opaklik/
+ * arkaplan) kontrolcusunu ve sekme yonetimini (TabStore) baslatir.
  */
-function bootstrap(): void {
+async function bootstrap(): Promise<void> {
   initTitleBar();
 
   const rootEl = document.getElementById('terminal-root');
@@ -16,12 +17,17 @@ function bootstrap(): void {
     throw new Error('Sekme icin gerekli DOM elemanlari bulunamadi');
   }
 
-  const tabStore = new TabStore(rootEl, tabbarListEl);
-  newTabBtn.addEventListener('click', () => void tabStore.createTab());
+  const appearance = new AppearanceController();
+  const tabStore = new TabStore(rootEl, tabbarListEl, () => appearance.cycleTheme());
 
+  // Ilk sekme acilmadan once aktif tema/opaklik/arkaplan uygulanmis olsun;
+  // TabStore.createTab() zaten guncel temayla (currentTerminalTheme) acar.
+  await appearance.init(tabStore);
+
+  newTabBtn.addEventListener('click', () => void tabStore.createTab());
   window.addEventListener('beforeunload', () => tabStore.disposeAll());
 
   void tabStore.createTab();
 }
 
-bootstrap();
+void bootstrap();

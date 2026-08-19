@@ -9,6 +9,39 @@ and versioning follows [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- Theme system: JSON-schema based themes (`src/shared/themeTypes.ts`)
+  replace the single hardcoded terminal palette. Four built-in themes
+  (`src/shared/builtinThemes/`: Bitig Dark, Bitig Light, a Dracula-style
+  palette, a Nord-style palette) plus user themes dropped into
+  `%APPDATA%/Bitig/themes/*.json`, loaded and hot-reloaded by a new
+  main-process `ThemeStore`. Malformed user theme files are skipped with a
+  logged error, never a crash. `Alt+Shift+T` cycles through all available
+  themes; new tabs and splits pick up the current theme automatically
+  (`TabStore.applyTerminalTheme`).
+- Transparency and background image support: `appearance.opacity` (CSS
+  `rgba` alpha on the app's own background, clamped to `[0.3, 1]` so the
+  window can never become fully invisible or unclickable) and
+  `appearance.backgroundImage`/`backgroundImageOpacity`/`backgroundImageFit`,
+  rendered as a `#bg-image` layer behind the entire window including the
+  title bar (which gained a `text-shadow`/icon drop-shadow so it stays
+  legible over arbitrary images). Background images are read in the main
+  process and handed to the renderer as `data:` URLs
+  (`settings:read-background-image`), then downscaled client-side (capped
+  at 1920px) before use.
+- A minimal `SettingsStore` (`src/main/settings/settingsStore.ts`),
+  foreshadowed since milestone 1's `CLAUDE.md`: persists
+  `%APPDATA%/Bitig/settings.json`, deep-merges partial updates, and
+  hot-reloads hand-edits. There is no settings-panel GUI yet (that's
+  milestone 6) - hand-editing `settings.json` plus the theme-cycle
+  shortcut are the only ways to change appearance for now, by design.
+- New IPC namespaces: `theme:list` / `theme:list-changed`, and
+  `settings:get` / `settings:set` / `settings:changed` /
+  `settings:read-background-image`, exposed via `window.bitig.theme` and
+  `window.bitig.settings`.
+- `app.setName('Bitig')` added as the first statement in
+  `src/main/index.ts` so `app.getPath('userData')` resolves to exactly
+  `%APPDATA%/Bitig/`, matching what `CLAUDE.md` had already documented.
+
 - Split panes: a tab's content area can now be divided horizontally or
   vertically into multiple independent terminals. New
   `src/renderer/src/panes.ts` introduces a `PaneNode` tree
@@ -87,10 +120,29 @@ and versioning follows [Semantic Versioning](https://semver.org/).
   a separate strip underneath it: one row instead of two, less visual
   weight. The tab list scrolls horizontally on overflow; the title bar's
   remaining empty space stays a window drag region.
+- `panes.ts`'s `createPaneLeaf` now takes the active terminal theme as a
+  parameter instead of importing a hardcoded constant, so every new tab
+  and split opens with whatever theme is currently active.
 - `.gitignore` expanded to exclude build artifacts (`build/`, `release/`),
   environment files (`.env*`), editor directories, and, notably,
   `CLAUDE.md` / `.claude/` / `dev-docs/` so that internal, developer-facing
   documentation never reaches the public GitHub repository.
+
+### Removed
+
+- `src/renderer/src/theme.ts` (the hardcoded `BITIG_TERMINAL_THEME`
+  constant added in `0.1.0`), superseded by
+  `src/shared/builtinThemes/bitigDark.ts` under the new theme system.
+
+### Fixed
+
+- `fs.watch`-based hot reload (both `SettingsStore` and `ThemeStore`) is
+  debounced 100ms. Caught during manual testing, not theoretical: a single
+  file save can fire multiple `fs.watch` events for its intermediate write
+  steps, and reading the file on the first event could catch it mid-write,
+  parse-fail, and permanently fall back to defaults in memory until the
+  next real change - even though the file on disk was correct the whole
+  time. The debounce reads only the settled state.
 
 ## [0.1.0] - 2026-08-19
 

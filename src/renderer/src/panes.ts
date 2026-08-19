@@ -1,7 +1,6 @@
-import { Terminal } from '@xterm/xterm';
+import { Terminal, type ITheme } from '@xterm/xterm';
 import { FitAddon } from '@xterm/addon-fit';
 import { WebLinksAddon } from '@xterm/addon-web-links';
-import { BITIG_TERMINAL_THEME } from './theme';
 
 export type SplitDirection = 'row' | 'column';
 
@@ -31,7 +30,8 @@ export type PaneNode = PaneLeaf | PaneSplit;
  * otomatik tetiklenir - ayri bir "resize" event zincirine gerek kalmaz.
  */
 export async function createPaneLeaf(
-  isReservedShortcut: (event: KeyboardEvent) => boolean
+  isReservedShortcut: (event: KeyboardEvent) => boolean,
+  terminalTheme: ITheme
 ): Promise<PaneLeaf> {
   const { id } = await window.bitig.pty.create({ cols: 80, rows: 24 });
 
@@ -45,7 +45,7 @@ export async function createPaneLeaf(
     fontSize: 14,
     lineHeight: 1.25,
     scrollback: 5000,
-    theme: BITIG_TERMINAL_THEME
+    theme: terminalTheme
   });
 
   const fitAddon = new FitAddon();

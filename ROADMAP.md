@@ -40,8 +40,8 @@ design decision is not obvious:
 | 1 | Minimal terminal | - | `0.1.0` (done) |
 | 2 | Tabs | 1 | `0.2.0` (done) |
 | 3 | Split panes | 2 | `0.3.0` (done) |
-| 4 | Theme system | 1 | `0.4.0` |
-| 5 | Transparency and background image | 4 | `0.5.0` |
+| 4 | Theme system | 1 | `0.4.0` (done) |
+| 5 | Transparency and background image | 4 | `0.5.0` (done) |
 | 6 | Settings panel (GUI) | 4, 5 | `0.6.0` |
 | 7 | Nerd Font detection and font picker | 6 | `0.6.x` |
 | 8 | Customizable keyboard shortcuts | 6 | `0.7.0` |
@@ -270,13 +270,23 @@ before starting this milestone.
 
 ---
 
-## 4. Theme System
+## 4. Theme System - done
 
 **Goal:** move from the single hardcoded theme in
 `src/renderer/src/theme.ts` to a JSON-based system with a handful of
 built-in themes and support for user-authored themes, matching the
 "Windows Terminal `settings.json`-like, but our own schema" direction
 already set in `CLAUDE.md`.
+
+**Implemented in:** `src/shared/themeTypes.ts` (schema),
+`src/shared/builtinThemes/` (four built-ins as typed `.ts` modules, not
+JSON - see Sub-tasks), `src/main/theme/themeStore.ts` (load + watch),
+`src/renderer/src/appearance.ts` (apply + `Alt+Shift+T` cycle). No
+settings-panel GUI exists yet (milestone 6), so `theme:set-active` as its
+own channel was dropped: selecting a theme is just
+`settings:set({ activeTheme: id })` through the general settings channel
+built alongside this milestone (see milestone 5's `SettingsStore`, brought
+forward since milestone 4 needed persistence too).
 
 ### Design
 
@@ -313,6 +323,14 @@ already set in `CLAUDE.md`.
   reimplemented under this schema (Dracula- and Nord-style palettes are
   common, low-risk choices; exact colors would be re-derived from public
   palette values, not copied assets).
+  **Deviation:** shipped as typed `.ts` modules
+  (`src/shared/builtinThemes/*.ts`) instead of bundled JSON files. Since
+  packaging (milestone 11) isn't done, resolving a `resources/` path
+  correctly in both dev and a packaged build was extra complexity with no
+  payoff yet; plain TS data modules work identically in both, need zero
+  path resolution, and are importable synchronously from the renderer
+  (used as the pre-IPC fallback) with no Node dependency. Built-in themes:
+  Bitig Dark, Bitig Light, Dracula-style, Nord-style.
 - User themes live in `%APPDATA%/Bitig/themes/*.json`, loaded at startup in
   addition to the built-ins, hot-reloaded when the file changes (a
   `fs.watch` on the themes directory in main, pushed to the renderer over a
@@ -325,21 +343,32 @@ already set in `CLAUDE.md`.
 
 ### Sub-tasks
 
-- [ ] Define and document the theme JSON schema (as a TypeScript type in
-      `src/shared/themeTypes.ts`, mirrored as a JSON Schema file for editor
-      autocompletion, matching the Windows Terminal convention of shipping
-      a `$schema` reference).
-- [ ] Main-process `ThemeStore`: loads built-ins, loads user themes, merges
-      into one list, exposes `theme:list`, `theme:get-active`,
-      `theme:set-active` IPC channels.
-- [ ] Convert the current hardcoded `BITIG_TERMINAL_THEME` into the
-      `bitig-dark.json` built-in theme; add `bitig-light.json` as the
-      second built-in.
-- [ ] Renderer: apply the active theme to every open `xterm.js` instance
-      and to the app chrome on startup and on `theme:list-changed`.
-- [ ] File-watch based hot reload for user theme files.
-- [ ] Validation: malformed user theme JSON is rejected with a clear error
-      surfaced to the user (not a silent fallback and not a crash).
+- [x] Define and document the theme JSON schema as a TypeScript type
+      (`src/shared/themeTypes.ts`). A mirrored JSON Schema file for editor
+      autocompletion was not built - there's no user-facing theme-authoring
+      workflow promoted yet beyond "copy a built-in and edit it", so the
+      autocompletion payoff didn't justify it this pass.
+- [x] Main-process `ThemeStore`: loads built-ins, loads user themes, merges
+      into one list, exposes `theme:list` and `theme:list-changed`. No
+      `theme:get-active`/`theme:set-active` channels - "active" is a
+      `settings.json` concern (`activeTheme` field), not a theme-list
+      concern; see the note above.
+- [x] Converted the hardcoded `BITIG_TERMINAL_THEME` into
+      `src/shared/builtinThemes/bitigDark.ts`; added `bitigLight.ts`,
+      `dracula.ts`, `nord.ts` alongside it.
+- [x] Renderer: `AppearanceController` (`appearance.ts`) applies the active
+      theme to every open `xterm.js` instance (via a new
+      `TabStore.applyTerminalTheme`) and to the app chrome (CSS custom
+      properties) on startup and on `theme:list-changed`/`settings:changed`.
+- [x] File-watch based hot reload for user theme files, debounced (see
+      `CLAUDE.md`'s "Bilinen Notlar" - a real bug caught during manual
+      testing, not a theoretical concern).
+- [x] Validation: malformed user theme JSON is skipped with a
+      `console.error` naming the file, not a crash and not silently merged
+      as a broken entry. Surfacing this in the UI itself is not possible
+      yet without a settings panel; for now "visible" means the terminal
+      running `npm run dev`, which is the only console available before
+      milestone 6.
 
 ### Acceptance criteria
 
@@ -352,14 +381,39 @@ already set in `CLAUDE.md`.
 - A malformed theme file produces a visible, specific error, not a blank
   terminal or an app crash.
 
+> Verified so far: typecheck and `electron-vite build` are clean;
+> `npm run dev` correctly creates `%APPDATA%/Bitig/settings.json` and
+> `%APPDATA%/Bitig/themes/` with valid defaults on first launch. Hand-editing
+> `settings.json` while the app is running was exercised directly (not just
+> theoretically) - including an accidentally-malformed edit, which
+> correctly logged an error and fell back to defaults without crashing, and
+> a nonexistent `backgroundImage` path, which correctly logged an error and
+> returned `null` without crashing. What was **not** visually confirmed in
+> this environment: that switching themes actually repaints the terminal
+> and title bar correctly on screen, and that `Alt+Shift+T` cycles as
+> expected - the same screen-capture limitation noted in milestones 2/3
+> applies here too.
+
 ---
 
-## 5. Transparency and Background Image Support
+## 5. Transparency and Background Image Support - done
 
 **Goal:** window background transparency (already partially in place via
 the frameless window from milestone 1) becomes a first-class, user-tunable
 setting, plus optional background image support behind the terminal
 content.
+
+**Implemented in:** `src/shared/settingsTypes.ts` (schema),
+`src/main/settings/settingsStore.ts` (load/merge/clamp/watch),
+`src/main/ipc/settingsHandlers.ts` (`settings:read-background-image` reads
+the image file in main and returns a `data:` URL, so the renderer never
+gets raw filesystem access and the CSP stays `img-src 'self' data:` rather
+than opening up `file:`), `src/renderer/src/appearance.ts` (applies
+opacity as CSS `rgba` alpha and manages the `#bg-image` backdrop layer).
+Per the scope agreed before starting: transparency is pure CSS (no
+`backgroundMaterial`/acrylic), and the background image covers the entire
+window including the title bar (the title bar gained a `text-shadow`/icon
+drop-shadow for legibility over arbitrary images, see `style.css`).
 
 ### Design
 
@@ -380,30 +434,51 @@ content.
   `rgba()` transparency, since they get proper OS-level blur and
   performance); manual `rgba()` background stays as the fallback for
   cases where a vibrancy material is not desired (fully custom color, not
-  a system material).
+  a system material). **Deviation:** implemented as CSS `rgba()` only, by
+  agreed scope - `backgroundMaterial` risked visual artifacts against the
+  custom CSS-clipped rounded corners already in place since milestone 1,
+  and `BrowserWindow` was already `transparent: true`, so a translucent
+  CSS background genuinely shows the real desktop through the window with
+  zero main-process wiring. No `window:set-opacity` channel exists;
+  opacity is entirely a renderer-side concern derived from
+  `settings.appearance.opacity`.
 - Background image rendering happens in the renderer as a layer behind the
   xterm.js canvas (`z-index` below the terminal, `pointer-events: none`),
   never inside the terminal's own canvas, so it does not interfere with
-  text rendering or performance.
+  text rendering or performance. **Deviation:** by agreed scope, the layer
+  sits behind the *entire window* (`#bg-image`, behind `#app`), not just
+  the terminal area - it shows through both the terminal content and,
+  where the title bar's own background is translucent, the title bar too.
 - Large background images are downscaled once on load (via an offscreen
-  canvas) rather than re-decoded on every repaint.
+  canvas) rather than re-decoded on every repaint. Implemented client-side
+  in `appearance.ts` (`downscaleImage`, capped at 1920px on the long edge)
+  rather than in main, since the resize is cheap, one-shot, and keeping it
+  in the renderer avoids adding an image-processing dependency to main.
 
 ### Sub-tasks
 
-- [ ] Extend settings schema and `ThemeStore`/new `AppearanceStore` with
-      the fields above.
-- [ ] Wire `opacity` to `BrowserWindow` (materials where available, `rgba`
-      fallback otherwise) with a live-updating IPC channel
-      (`window:set-opacity`) so a settings-panel slider (milestone 6) can
-      preview changes without restarting.
-- [ ] Background image picker flow: native `dialog.showOpenDialog` in main
-      (renderer cannot access the filesystem directly), copy or reference
-      the chosen file, store its path in settings.
-- [ ] Renderer background layer component with the fit/opacity options
-      above.
-- [ ] Sensible defaults and guardrails: minimum opacity floor so the app
-      never becomes fully invisible or unclickable by accident; a "reset
-      appearance" action.
+- [x] Extend settings schema (`src/shared/settingsTypes.ts`) with the
+      fields above; `SettingsStore` (not a `ThemeStore` extension - themes
+      and settings ended up as two separate stores, see milestone 4's
+      note) owns persistence.
+- [ ] Live `window:set-opacity`-style main-process channel. Not applicable
+      given the CSS-only opacity approach above; there is nothing for main
+      to do when opacity changes.
+- [ ] Background image picker flow (`dialog.showOpenDialog`). Deliberately
+      deferred, confirmed before starting this milestone: there is no
+      "Browse..." button anywhere to trigger it without a settings panel.
+      Set `appearance.backgroundImage` to an absolute path by hand in
+      `settings.json` for now; revisit when milestone 6 adds a real
+      settings UI.
+- [x] Renderer background layer (`#bg-image` in `index.html` +
+      `AppearanceController.applyBackgroundImage`) with all four fit
+      modes (`cover`/`contain`/`center`/`tile`) and opacity.
+- [x] Guardrails: `opacity` is clamped to `[0.3, 1]` in `SettingsStore`
+      itself (not just the renderer), so no code path - hand-edited
+      `settings.json` included - can make the window fully invisible or
+      unclickable. No separate "reset appearance" action exists yet
+      (deleting the relevant lines from `settings.json` and letting it
+      re-merge with defaults on next load achieves the same thing).
 
 ### Acceptance criteria
 
@@ -415,6 +490,13 @@ content.
 - Text in the terminal remains readable (sufficient contrast) with the
   default background image opacity; this is a manual visual check, not an
   automated one.
+
+> Verified so far: same as milestone 4 above (they share the same
+> settings/theme infrastructure and were built together) - typecheck,
+> build, and real `%APPDATA%/Bitig/settings.json` hand-edit round-trips
+> (including error paths) were exercised directly; the actual on-screen
+> appearance of transparency and a real background image was not, for the
+> same screen-capture-reliability reason noted throughout this document.
 
 ---
 
