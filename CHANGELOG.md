@@ -9,6 +9,33 @@ and versioning follows [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- Split panes: a tab's content area can now be divided horizontally or
+  vertically into multiple independent terminals. New
+  `src/renderer/src/panes.ts` introduces a `PaneNode` tree
+  (`PaneLeaf | PaneSplit`) per tab, with pure `splitLeaf` /
+  `closeLeafFromTree` tree operations and a `renderPaneTree` function that
+  rebuilds split/divider DOM on every change while moving (never
+  recreating) existing leaf containers, so `xterm.js` canvases and
+  scrollback survive re-renders. `src/renderer/src/tabs.ts`'s `TabStore`
+  was refactored accordingly: a tab now owns a pane tree instead of a
+  single terminal, and tab ids are client-generated
+  (`crypto.randomUUID()`), decoupled from PTY session ids now that one tab
+  can contain several PTY sessions.
+  - Keyboard shortcuts: `Alt+Shift+D` (split right), `Alt+Shift+E` (split
+    down), `Ctrl+Shift+X` (close the focused pane). Splitting is
+    keyboard-only in this pass, no hover UI button.
+  - Draggable dividers (plain `mousedown`/`mousemove`/`mouseup`, no Pointer
+    Events needed) resize panes live, clamped to a 10%/90% ratio so a pane
+    can never be dragged down to zero size.
+  - Every pane's size is tracked by its own `ResizeObserver`
+    (rAF-debounced), which calls `FitAddon.fit()` and `pty:resize`
+    whenever the pane's actual container size changes - covering window
+    resizes and divider drags alike with no per-interaction resize code.
+  - Closing a pane collapses its parent split and promotes the sibling up;
+    closing a tab's last pane closes the tab itself, reusing the
+    last-tab-closed-closes-the-window behavior from tabs.
+  - Directional focus movement (Alt+Arrow between panes) was intentionally
+    left out of this pass; focus currently changes via mouse click only.
 - Tabs: multiple independent terminal sessions in one window, each with its
   own real PTY process. New `src/renderer/src/tabs.ts` (`TabStore`) owns
   tab lifecycle (create/close/switch), renders the tab bar, and dispatches

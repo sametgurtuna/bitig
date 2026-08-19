@@ -50,8 +50,9 @@ main and renderer processes), and eventually pluggable (a lightweight
 extension system once the core is solid).
 
 This project is under active, early development. It currently supports
-multiple independent tabs, each a real PowerShell process running behind a
-custom window, rendered with xterm.js. Split panes are next.
+multiple tabs, each of which can itself be split into multiple resizable
+panes, each a real PowerShell process running behind a custom window,
+rendered with xterm.js. A theme system is next.
 
 ## Features
 
@@ -64,6 +65,12 @@ Shipped so far:
 - Multiple independent tabs, each with its own shell process: open, close,
   switch, and drag to reorder, with Windows Terminal-style keyboard
   shortcuts (`Ctrl+Shift+T`, `Ctrl+Shift+W`, `Ctrl+Tab`).
+- Split panes within a tab: divide horizontally or vertically
+  (`Alt+Shift+D` / `Alt+Shift+E`), nest splits arbitrarily, drag the
+  divider to resize, close a pane with `Ctrl+Shift+X`. Each pane is a real,
+  independent shell process; every pane's size tracks its container via a
+  `ResizeObserver`, so window resizing and divider dragging both keep every
+  visible terminal correctly fitted with no extra wiring per interaction.
 - A fully custom, frameless window: draggable title bar, minimize/maximize/
   close controls, rounded corners, and drop shadow, none of it borrowed from
   the OS chrome.
@@ -77,7 +84,7 @@ Planned, in order:
 
 - [x] Working minimal terminal (window, PTY, rendering, keyboard input)
 - [x] Tabs (open, close, switch, drag-to-reorder)
-- [ ] Split panes (horizontal and vertical)
+- [x] Split panes (horizontal and vertical, resizable, drag divider)
 - [ ] Theme system (JSON based, built-in themes plus user themes)
 - [ ] Transparency and background image support
 - [ ] Settings panel (GUI, no manual JSON editing required)
@@ -132,9 +139,11 @@ flowchart LR
     API -- ipcRenderer --> WH
 ```
 
-Every tab maps to one `PtyManager` session and one `xterm.js` instance,
-managed renderer-side by `TabStore` (`src/renderer/src/tabs.ts`); split
-panes will extend this same one-session-per-terminal model.
+Every tab owns a pane tree (`src/renderer/src/panes.ts`): a single leaf by
+default, or a nested tree of splits once the user divides it. Every leaf
+maps to exactly one `PtyManager` session and one `xterm.js` instance;
+`TabStore` (`src/renderer/src/tabs.ts`) manages tabs and dispatches PTY
+events to the correct leaf regardless of how deep it is nested.
 
 ## IPC Channel Reference
 
@@ -213,6 +222,7 @@ Bitig/
       src/
         main.ts                # Thin bootstrap: title bar + TabStore
         tabs.ts                 # TabStore: tab lifecycle, tab bar, drag-to-reorder, shortcuts
+        panes.ts                # Pane tree: split/close/render, divider drag, per-leaf ResizeObserver
         titlebar.ts             # Custom title bar behavior
         theme.ts                # Terminal color theme
         style.css
@@ -276,10 +286,11 @@ genisletmesi kolay (main ve renderer surecleri arasinda kucuk ve tipli bir
 IPC yuzeyi) ve zamanla eklenti destekli (cekirdek saglamlastiktan sonra
 hafif bir eklenti sistemi) bir terminal.
 
-Proje aktif ve erken gelistirme asamasinda. Su an birden fazla bagimsiz
-sekmeyi destekliyor; her sekme, ozel bir pencerenin arkasinda calisan
-gercek bir PowerShell prosesi, xterm.js ile render ediliyor. Sirada split
-pane var.
+Proje aktif ve erken gelistirme asamasinda. Su an birden fazla sekmeyi
+destekliyor; her sekme kendi icinde birden fazla boyutlandirilabilir
+pane'e bolunebiliyor, her pane ozel bir pencerenin arkasinda calisan
+gercek bir PowerShell prosesi, xterm.js ile render ediliyor. Sirada tema
+sistemi var.
 
 ## Ozellikler
 
@@ -292,6 +303,13 @@ Su ana kadar tamamlananlar:
 - Her biri kendi shell prosesine sahip, birbirinden bagimsiz sekmeler: ac,
   kapat, gecis yap, surukleyerek sirala; Windows Terminal tarzi klavye
   kisayollari (`Ctrl+Shift+T`, `Ctrl+Shift+W`, `Ctrl+Tab`).
+- Sekme icinde split pane: yatay ya da dikey bolme (`Alt+Shift+D` /
+  `Alt+Shift+E`), istenilen derinlikte ic ice bolme, divider'i suruklerek
+  yeniden boyutlandirma, `Ctrl+Shift+X` ile pane kapatma. Her pane gercek,
+  bagimsiz bir shell prosesi; her pane'in boyutu bir `ResizeObserver` ile
+  kendi container'ini takip ediyor, bu yuzden hem pencere boyutlandirma
+  hem de divider surukleme, her etkilesim icin ayri kod yazmadan tum
+  gorunur terminalleri dogru olcude tutuyor.
 - Tamamen ozel, cercevesiz (frameless) bir pencere: suruklenebilir title
   bar, minimize/maximize/close kontrolleri, yuvarlak koseler ve golge - hicbiri
   OS'nin varsayilan pencere govdesinden gelmiyor.
@@ -305,7 +323,7 @@ Sirasiyla planlananlar:
 
 - [x] Calisan minimal terminal (pencere, PTY, render, klavye girisi)
 - [x] Sekmeler (ac, kapat, gecis yap, surukle-sirala)
-- [ ] Split pane (yatay ve dikey bolme)
+- [x] Split pane (yatay ve dikey bolme, boyutlandirilabilir divider)
 - [ ] Tema sistemi (JSON tabanli, hazir temalar + kullanici temalari)
 - [ ] Seffaflik ve arkaplan gorseli destegi
 - [ ] Ayarlar paneli (GUI, elle JSON duzenlemeye gerek kalmadan)
@@ -360,10 +378,12 @@ flowchart LR
     API -- ipcRenderer --> WH
 ```
 
-Her sekme, renderer tarafinda `TabStore` (`src/renderer/src/tabs.ts`)
-tarafindan yonetilen bir `PtyManager` oturumuna ve bir `xterm.js`
-instance'ina karsilik gelir; split pane de ayni bir-terminal-bir-oturum
-modelini genisletecek.
+Her sekme bir pane agacina sahiptir (`src/renderer/src/panes.ts`):
+varsayilan olarak tek bir leaf, kullanici boldukce ic ice gecmis bir split
+agaci. Her leaf tam olarak bir `PtyManager` oturumuna ve bir `xterm.js`
+instance'ina karsilik gelir; `TabStore` (`src/renderer/src/tabs.ts`)
+sekmeleri yonetir ve PTY olaylarini, ne kadar derinde olursa olsun dogru
+leaf'e yonlendirir.
 
 ## IPC Kanal Referansi
 
@@ -442,6 +462,7 @@ Bitig/
       src/
         main.ts                # Ince bootstrap: title bar + TabStore
         tabs.ts                 # TabStore: sekme yasam dongusu, tab bar, surukle-sirala, kisayollar
+        panes.ts                # Pane agaci: split/close/render, divider surukleme, leaf basina ResizeObserver
         titlebar.ts             # Ozel title bar davranisi
         theme.ts                # Terminal renk temasi
         style.css

@@ -1,26 +1,37 @@
-import { Terminal } from '@xterm/xterm';
-import { FitAddon } from '@xterm/addon-fit';
-import { WebLinksAddon } from '@xterm/addon-web-links';
-import { BITIG_TERMINAL_THEME } from './theme';
+import {
+  closeLeafFromTree,
+  collectLeaves,
+  createPaneLeaf,
+  disposePaneLeaf,
+  findLeaf,
+  renderPaneTree,
+  splitLeaf,
+  type PaneLeaf,
+  type PaneNode,
+  type SplitDirection
+} from './panes';
 
 interface Tab {
-  id: string;
+  id: string; // istemci tarafinda uretilir (crypto.randomUUID); artik bir
+  // PTY id'si degil, cunku bir sekme birden fazla pane (ve dolayisiyla
+  // birden fazla PTY oturumu) barindirabilir.
   title: string;
-  terminal: Terminal;
-  fitAddon: FitAddon;
-  container: HTMLDivElement;
+  root: PaneNode;
+  activeLeafId: string; // sekme icinde odakli olan pane'in PTY id'si
+  containerEl: HTMLDivElement;
   tabEl: HTMLButtonElement;
 }
 
 /**
- * Birden fazla bagimsiz terminal oturumunu (sekme) yonetir: her sekme kendi
- * xterm.js instance'ina ve kendi PTY oturumuna sahiptir. PTY olaylari
- * (pty:data/pty:exit) tek bir global dinleyiciden id'ye gore ilgili sekmeye
- * yonlendirilir; sekme basina ayri dinleyici kaydedilmez.
+ * Birden fazla bagimsiz sekmeyi yonetir; her sekme kendi pane agacina
+ * (split edilebilir bir veya daha fazla terminal) sahiptir. PTY olaylari
+ * (pty:data/pty:exit) tek bir global dinleyiciden PTY id'sine gore ilgili
+ * pane'e yonlendirilir; sekme ya da pane basina ayri dinleyici kaydedilmez.
  */
 export class TabStore {
   private readonly tabs: Tab[] = [];
   private readonly tabsById = new Map<string, Tab>();
+  private readonly leavesByPtyId = new Map<string, { tab: Tab; leaf: PaneLeaf }>();
   private activeId: string | null = null;
 
   constructor(
@@ -28,65 +39,42 @@ export class TabStore {
     private readonly tabbarListEl: HTMLElement
   ) {
     window.bitig.pty.onData((event) => {
-      this.tabsById.get(event.id)?.terminal.write(event.data);
+      this.leavesByPtyId.get(event.id)?.leaf.terminal.write(event.data);
     });
 
     window.bitig.pty.onExit((event) => {
-      const tab = this.tabsById.get(event.id);
-      tab?.terminal.write(`\r\n[proses sonlandi, exit code: ${event.exitCode}]\r\n`);
+      const entry = this.leavesByPtyId.get(event.id);
+      entry?.leaf.terminal.write(`\r\n[proses sonlandi, exit code: ${event.exitCode}]\r\n`);
     });
 
-    window.addEventListener('resize', () => this.fitActiveTab());
     window.addEventListener('keydown', (event) => this.handleGlobalKeydown(event));
   }
 
   async createTab(): Promise<void> {
-    // Terminal'i olcmeden once makul bir varsayilanla PTY baslatiyoruz;
-    // DOM'a monte edip fit() cagirdiktan hemen sonra gercek boyuta resize
-    // ediyoruz. Boylece "olcum icin once gorunur olmali, gorunur olmak
-    // icin once id lazim" dongusune girmiyoruz.
-    const { id } = await window.bitig.pty.create({ cols: 80, rows: 24 });
+    const leaf = await createPaneLeaf((event) => this.isReservedShortcut(event));
 
-    const container = document.createElement('div');
-    container.className = 'tab-pane hidden';
-    this.rootEl.appendChild(container);
+    const containerEl = document.createElement('div');
+    containerEl.className = 'tab-pane hidden';
+    this.rootEl.appendChild(containerEl);
 
-    const terminal = new Terminal({
-      cursorBlink: true,
-      cursorStyle: 'bar',
-      fontFamily: "'Cascadia Code', 'Cascadia Mono', Consolas, monospace",
-      fontSize: 14,
-      lineHeight: 1.25,
-      scrollback: 5000,
-      theme: BITIG_TERMINAL_THEME
-    });
-
-    const fitAddon = new FitAddon();
-    terminal.loadAddon(fitAddon);
-    terminal.loadAddon(new WebLinksAddon());
-    terminal.open(container);
-
-    // Sekme kisayollari (Ctrl+Shift+T/W, Ctrl+Tab) shell'e karakter olarak
-    // gitmesin; xterm bu kombinasyonlari kendi islemesin diye false donuyoruz.
-    terminal.attachCustomKeyEventHandler((event) => !this.isReservedShortcut(event));
-
-    terminal.onData((data) => window.bitig.pty.write(id, data));
-
+    const id = crypto.randomUUID();
     const tab: Tab = {
       id,
       title: 'PowerShell',
-      terminal,
-      fitAddon,
-      container,
+      root: leaf,
+      activeLeafId: leaf.id,
+      containerEl,
       tabEl: this.buildTabElement(id)
     };
 
+    this.leavesByPtyId.set(leaf.id, { tab, leaf });
     this.tabs.push(tab);
-    this.tabsById.set(id, tab);
+    this.tabsById.set(tab.id, tab);
 
+    this.renderTabPanes(tab);
     // setActiveTab kendi icinde renderTabBar() cagirir; DOM'a yeni eklenen
     // tabEl bu cagri sirasinda #tabbar-list'e tasinir.
-    this.setActiveTab(id);
+    this.setActiveTab(tab.id);
   }
 
   closeTab(id: string): void {
@@ -95,9 +83,12 @@ export class TabStore {
 
     const [tab] = this.tabs.splice(index, 1);
     this.tabsById.delete(id);
-    window.bitig.pty.dispose(id);
-    tab.terminal.dispose();
-    tab.container.remove();
+
+    for (const leaf of collectLeaves(tab.root)) {
+      this.leavesByPtyId.delete(leaf.id);
+      disposePaneLeaf(leaf);
+    }
+    tab.containerEl.remove();
     tab.tabEl.remove();
 
     if (this.tabs.length === 0) {
@@ -108,9 +99,7 @@ export class TabStore {
 
     if (this.activeId === id) {
       // Kapatilan sekme aktifti; komsu sekmeye gec (setActiveTab kendi
-      // icinde renderTabBar() cagirir). Aktif olmayan bir sekme kapandiginda
-      // tab bar'in aktif-sinif durumu degismedigi icin ekstra render
-      // gerekmez, eleman zaten yukarida .remove() ile DOM'dan cikarildi.
+      // icinde renderTabBar() cagirir).
       const fallback = this.tabs[Math.min(index, this.tabs.length - 1)];
       this.setActiveTab(fallback.id);
     }
@@ -120,27 +109,101 @@ export class TabStore {
     if (id === this.activeId) return;
 
     const previous = this.activeId ? this.tabsById.get(this.activeId) : undefined;
-    previous?.container.classList.add('hidden');
+    previous?.containerEl.classList.add('hidden');
 
     const next = this.tabsById.get(id);
     if (!next) return;
 
-    next.container.classList.remove('hidden');
+    next.containerEl.classList.remove('hidden');
     this.activeId = id;
     this.renderTabBar();
 
-    // container az once gorunur oldu; fit() clientWidth/Height okurken
-    // tarayici gerekli reflow'u senkron olarak yapar.
-    next.fitAddon.fit();
-    window.bitig.pty.resize(id, next.terminal.cols, next.terminal.rows);
-    next.terminal.focus();
+    // container az once gorunur oldu. Her leaf'in kendi ResizeObserver'i
+    // bunu genelde yakalar, ama display:none -> block gecisinde tarayicilar
+    // arasi tutarlilik icin burada da acikca fit()+resize cagiriyoruz.
+    for (const leaf of collectLeaves(next.root)) {
+      leaf.fitAddon.fit();
+      window.bitig.pty.resize(leaf.id, leaf.terminal.cols, leaf.terminal.rows);
+    }
+    this.focusTerminal(next, next.activeLeafId);
   }
 
-  /** beforeunload sirasinda tum sekmelerin PTY oturumlarini sonlandirir. */
+  /** Aktif sekmenin odakli pane'ini belirtilen yonde ikiye boler. */
+  async splitActivePane(direction: SplitDirection): Promise<void> {
+    const tab = this.getActiveTab();
+    if (!tab) return;
+
+    const newLeaf = await createPaneLeaf((event) => this.isReservedShortcut(event));
+    this.leavesByPtyId.set(newLeaf.id, { tab, leaf: newLeaf });
+
+    tab.root = splitLeaf(tab.root, tab.activeLeafId, direction, newLeaf);
+    tab.activeLeafId = newLeaf.id;
+    this.renderTabPanes(tab);
+    this.focusTerminal(tab, newLeaf.id);
+  }
+
+  /** Aktif sekmenin odakli pane'ini kapatir; son pane ise sekmenin tumu kapanir. */
+  closeActivePane(): void {
+    const tab = this.getActiveTab();
+    if (!tab) return;
+    this.closePaneInTab(tab, tab.activeLeafId);
+  }
+
+  /** beforeunload sirasinda tum sekmelerdeki tum PTY oturumlarini sonlandirir. */
   disposeAll(): void {
     for (const tab of this.tabs) {
-      window.bitig.pty.dispose(tab.id);
+      for (const leaf of collectLeaves(tab.root)) {
+        window.bitig.pty.dispose(leaf.id);
+      }
     }
+  }
+
+  private closePaneInTab(tab: Tab, leafId: string): void {
+    const leaf = findLeaf(tab.root, leafId);
+    if (!leaf) return;
+
+    const newRoot = closeLeafFromTree(tab.root, leafId);
+    this.leavesByPtyId.delete(leafId);
+    disposePaneLeaf(leaf);
+
+    if (newRoot === null) {
+      // Sekmenin son pane'i kapandi; sekmenin kendisini kapat.
+      this.closeTab(tab.id);
+      return;
+    }
+
+    tab.root = newRoot;
+    if (tab.activeLeafId === leafId) {
+      tab.activeLeafId = collectLeaves(newRoot)[0].id;
+    }
+    this.renderTabPanes(tab);
+    this.focusTerminal(tab, tab.activeLeafId);
+  }
+
+  private focusLeaf(tab: Tab, leafId: string): void {
+    if (tab.activeLeafId !== leafId) {
+      tab.activeLeafId = leafId;
+      this.renderTabPanes(tab);
+    }
+    this.focusTerminal(tab, leafId);
+  }
+
+  private focusTerminal(tab: Tab, leafId: string): void {
+    findLeaf(tab.root, leafId)?.terminal.focus();
+  }
+
+  private renderTabPanes(tab: Tab): void {
+    // Birden fazla pane varken odakli olani ince bir kenarlikla belirt;
+    // tek pane varken bu vurgu gereksiz gorsel gurultu olur.
+    const highlightActive = collectLeaves(tab.root).length > 1;
+    const dom = renderPaneTree(tab.root, tab.activeLeafId, highlightActive, (leafId) =>
+      this.focusLeaf(tab, leafId)
+    );
+    tab.containerEl.replaceChildren(dom);
+  }
+
+  private getActiveTab(): Tab | undefined {
+    return this.activeId ? this.tabsById.get(this.activeId) : undefined;
   }
 
   private cycleTab(direction: 1 | -1): void {
@@ -148,13 +211,6 @@ export class TabStore {
     const currentIndex = this.tabs.findIndex((tab) => tab.id === this.activeId);
     const nextIndex = (currentIndex + direction + this.tabs.length) % this.tabs.length;
     this.setActiveTab(this.tabs[nextIndex].id);
-  }
-
-  private fitActiveTab(): void {
-    const active = this.activeId ? this.tabsById.get(this.activeId) : undefined;
-    if (!active) return;
-    active.fitAddon.fit();
-    window.bitig.pty.resize(active.id, active.terminal.cols, active.terminal.rows);
   }
 
   private reorderTabs(draggedId: string, targetId: string): void {
@@ -234,35 +290,55 @@ export class TabStore {
   }
 
   private handleGlobalKeydown(event: KeyboardEvent): void {
-    if (!event.ctrlKey) return;
     const key = event.key.toLowerCase();
 
-    if (event.shiftKey && key === 't') {
+    if (event.ctrlKey && event.shiftKey && key === 't') {
       event.preventDefault();
       void this.createTab();
       return;
     }
 
-    if (event.shiftKey && key === 'w') {
+    if (event.ctrlKey && event.shiftKey && key === 'w') {
       event.preventDefault();
       if (this.activeId) this.closeTab(this.activeId);
       return;
     }
 
-    if (key === 'tab') {
+    if (event.ctrlKey && event.shiftKey && key === 'x') {
+      event.preventDefault();
+      this.closeActivePane();
+      return;
+    }
+
+    if (event.ctrlKey && key === 'tab') {
       event.preventDefault();
       this.cycleTab(event.shiftKey ? -1 : 1);
+      return;
+    }
+
+    if (event.altKey && event.shiftKey && key === 'd') {
+      event.preventDefault();
+      void this.splitActivePane('row');
+      return;
+    }
+
+    if (event.altKey && event.shiftKey && key === 'e') {
+      event.preventDefault();
+      void this.splitActivePane('column');
     }
   }
 
   // handleGlobalKeydown ile birebir ayni kosullari kontrol eder: sadece
-  // gercekten sekme kisayolu olarak islenen kombinasyonlar burada true
-  // donmeli, yoksa ör. duz Ctrl+T gibi gercek bir shell kontrol karakteri
-  // sessizce yutulur.
+  // gercekten bir uygulama kisayolu olarak islenen kombinasyonlar burada
+  // true donmeli, yoksa ör. duz Ctrl+T gibi gercek bir shell kontrol
+  // karakteri sessizce yutulur.
   private isReservedShortcut(event: KeyboardEvent): boolean {
-    if (event.type !== 'keydown' || !event.ctrlKey) return false;
+    if (event.type !== 'keydown') return false;
     const key = event.key.toLowerCase();
-    if (key === 'tab') return true;
-    return event.shiftKey && (key === 't' || key === 'w');
+
+    if (event.ctrlKey && key === 'tab') return true;
+    if (event.ctrlKey && event.shiftKey && (key === 't' || key === 'w' || key === 'x')) return true;
+    if (event.altKey && event.shiftKey && (key === 'd' || key === 'e')) return true;
+    return false;
   }
 }

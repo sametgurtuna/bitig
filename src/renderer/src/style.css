@@ -248,6 +248,66 @@ body {
   display: none;
 }
 
+/* Split pane agaci: her split node'u bir flex satiri/sutunu, her leaf
+   (tek terminal) tam kaplayan bir kutu. */
+.pane-split {
+  height: 100%;
+  width: 100%;
+  min-height: 0;
+  min-width: 0;
+  display: flex;
+}
+
+.pane-split-row {
+  flex-direction: row;
+}
+
+.pane-split-column {
+  flex-direction: column;
+}
+
+.pane-slot {
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  overflow: hidden;
+}
+
+.pane-divider {
+  flex: 0 0 auto;
+  background: var(--bitig-border);
+}
+
+.pane-divider-row {
+  width: 4px;
+  cursor: col-resize;
+}
+
+.pane-divider-column {
+  height: 4px;
+  cursor: row-resize;
+}
+
+.pane-divider:hover,
+.pane-divider.dragging {
+  background: var(--bitig-accent);
+}
+
+.pane-leaf {
+  height: 100%;
+  width: 100%;
+  min-width: 0;
+  min-height: 0;
+}
+
+/* Birden fazla pane aciksa odakli olani ince bir kenarlikla belli et; tek
+   pane varken bu vurgu gereksiz gorsel gurultu olur (bkz. tabs.ts
+   renderTabPanes: highlightActive sadece 2+ pane'de true). */
+.pane-leaf-active {
+  outline: 1px solid var(--bitig-accent);
+  outline-offset: -1px;
+}
+
 /* xterm.js kendi canvas'ini olusturuyor; kapsayici container tam yer kaplasin. */
 #terminal-root .xterm {
   height: 100%;

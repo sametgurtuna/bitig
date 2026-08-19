@@ -39,7 +39,7 @@ design decision is not obvious:
 |---|---|---|---|
 | 1 | Minimal terminal | - | `0.1.0` (done) |
 | 2 | Tabs | 1 | `0.2.0` (done) |
-| 3 | Split panes | 2 | `0.3.0` |
+| 3 | Split panes | 2 | `0.3.0` (done) |
 | 4 | Theme system | 1 | `0.4.0` |
 | 5 | Transparency and background image | 4 | `0.5.0` |
 | 6 | Settings panel (GUI) | 4, 5 | `0.6.0` |
@@ -180,11 +180,18 @@ main-process one. This makes it the cheapest big feature to build next.
 
 ---
 
-## 3. Split Panes
+## 3. Split Panes - done
 
 **Goal:** divide a tab's content area into multiple panes, each an
 independent terminal, arranged horizontally or vertically, resizable by
 dragging the divider.
+
+**Implemented in:** `src/renderer/src/panes.ts` (pane tree + rendering +
+divider drag), wired into `src/renderer/src/tabs.ts` (`TabStore` now holds
+a `PaneNode` tree per tab instead of a single terminal). Directional focus
+movement was intentionally deferred (see Sub-tasks); split is
+keyboard-triggered only, no on-hover UI button, matching the scope decided
+before starting this milestone.
 
 ### Design
 
@@ -210,21 +217,35 @@ dragging the divider.
 
 ### Sub-tasks
 
-- [ ] Define the pane tree data structure and a pure function
-      `splitPane(tree, targetId, direction)` returning a new tree (favor
-      immutable updates so the renderer's diffing stays simple).
-- [ ] Recursive renderer component for the pane tree.
-- [ ] Draggable divider component with pointer capture, min-size
-      clamping (a pane should not be draggable down to zero width).
-- [ ] Resize propagation: every leaf's `FitAddon` and matching `pty:resize`
-      call fire when its container's measured size changes, not just on
-      window resize (a `ResizeObserver` per leaf container is the natural
-      fit here, replacing the current window-level `resize` listener from
-      milestone 1).
-- [ ] Close-pane behavior: closing a leaf removes it from the tree and
-      collapses its parent split node if only one child remains.
-- [ ] Directional focus movement and its keyboard shortcuts (coordinate
-      with milestone 8).
+- [x] Define the pane tree data structure (`PaneNode = PaneLeaf | PaneSplit`
+      in `panes.ts`) and pure functions `splitLeaf`, `closeLeafFromTree`,
+      `collectLeaves`, `findLeaf` operating on it. `closeLeafFromTree`
+      returns `null` when the tree's last leaf is closed, signaling the
+      caller (`TabStore`) to close the whole tab.
+- [x] Recursive renderer (`renderPaneTree`) for the pane tree: rebuilds
+      wrapper/divider DOM on every split or close, but moves (never clones
+      or recreates) existing leaf containers, so `xterm.js` canvases and
+      scrollback survive every re-render.
+- [x] Draggable divider (native mouse events, not pointer capture) with a
+      10%/90% ratio clamp so a pane can never be dragged down to zero size.
+      Pointer Events / `setPointerCapture` was not needed in practice - a
+      document-level `mousemove`/`mouseup` pair during drag was sufficient
+      and simpler.
+- [x] Resize propagation via a `ResizeObserver` per leaf container
+      (rAF-debounced), exactly as anticipated below: window resizes,
+      divider drags, and tab switches all resize correctly with no
+      special-cased resize logic per interaction. A defensive explicit
+      fit+resize on tab activation was kept alongside it, since
+      `display:none` to `block` transitions are not perfectly consistent
+      across engines for `ResizeObserver`.
+- [x] Close-pane behavior (`Ctrl+Shift+X`): closing a leaf collapses its
+      parent split node, promoting the sibling up; closing a tab's last
+      pane closes the tab itself (reuses the existing last-tab-closed →
+      window-closes behavior from milestone 2).
+- [ ] Directional focus movement and its keyboard shortcuts. Deliberately
+      deferred (confirmed before starting this milestone): focus currently
+      changes only via mouse click on a pane. Tracked as a follow-up, not
+      a blocker.
 
 ### Acceptance criteria
 
@@ -237,6 +258,15 @@ dragging the divider.
   PTY process; the minimum pane size clamp holds.
 - Closing a pane cleanly disposes its `xterm.js` instance and its PTY
   session (verified the same way as the tab-close criterion above).
+
+> Verified so far: typecheck (`tsc --noEmit` on both configs) and
+> `electron-vite build` are clean, and the app launches in `npm run dev`
+> with its first tab correctly spawning a real `powershell.exe` child
+> process through the new `panes.ts` code path. Splitting, resizing via
+> divider drag, closing a pane, and the keyboard shortcuts above have not
+> yet been manually exercised end-to-end in this environment (see the
+> same caveat under milestone 2) and should be spot-checked per the
+> criteria above.
 
 ---
 
