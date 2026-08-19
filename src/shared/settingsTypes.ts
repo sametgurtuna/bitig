@@ -22,15 +22,26 @@ export interface AppearanceSettings {
   backgroundImageFit: BackgroundImageFit;
 }
 
+export interface TerminalSettings {
+  /** Tek bir font ailesi adi; uygulanirken sonuna yedek zinciri eklenir
+   *  (bkz. appearance.ts buildFontStack) - boylece font kaldirilirsa
+   *  terminal okunamaz hale gelmez. */
+  fontFamily: string;
+  /** MIN_FONT_SIZE-MAX_FONT_SIZE araliginda kelepceli (settingsStore.ts). */
+  fontSize: number;
+}
+
 export interface BitigSettings {
   schemaVersion: 1;
   /** Aktif BitigTheme'in id'si (bkz. themeTypes.ts). */
   activeTheme: string;
   appearance: AppearanceSettings;
+  terminal: TerminalSettings;
 }
 
 /** settings:set ile gonderilen kismi guncelleme; SettingsStore mevcut
  *  ayarlarin uzerine derinlemesine (deep) birlestirir. */
-export type BitigSettingsPatch = Partial<Omit<BitigSettings, 'appearance'>> & {
+export type BitigSettingsPatch = Partial<Omit<BitigSettings, 'appearance' | 'terminal'>> & {
   appearance?: Partial<AppearanceSettings>;
+  terminal?: Partial<TerminalSettings>;
 };

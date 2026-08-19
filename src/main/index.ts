@@ -5,6 +5,7 @@ import { registerPtyHandlers } from './ipc/ptyHandlers';
 import { registerWindowHandlers } from './ipc/windowHandlers';
 import { registerThemeHandlers } from './ipc/themeHandlers';
 import { registerSettingsHandlers } from './ipc/settingsHandlers';
+import { registerFontHandlers } from './ipc/fontHandlers';
 import { ThemeStore } from './theme/themeStore';
 import { SettingsStore } from './settings/settingsStore';
 
@@ -67,6 +68,11 @@ void app.whenReady().then(() => {
   // gecerli veri donebilmeli.
   settingsStore.load();
   themeStore.load();
+
+  // Pencereye bagli olmayan tek handler; ipcMain.handle ayni kanal icin
+  // ikinci kez cagrilinca hata verdigi icin pencere olusturmanin degil
+  // uygulama baslangicinin parcasi.
+  registerFontHandlers();
 
   createMainWindow();
 

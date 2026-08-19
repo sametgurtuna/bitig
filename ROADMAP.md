@@ -43,7 +43,7 @@ design decision is not obvious:
 | 4 | Theme system | 1 | `0.4.0` (done) |
 | 5 | Transparency and background image | 4 | `0.5.0` (done) |
 | 6 | Settings panel (GUI) | 4, 5 | `0.6.0` (done, Appearance only) |
-| 7 | Nerd Font detection and font picker | 6 | `0.6.x` |
+| 7 | Nerd Font detection and font picker | 6 | `0.6.x` (done) |
 | 8 | Customizable keyboard shortcuts | 6 | `0.7.0` |
 | 9 | Command history and fuzzy search | 2 | `0.8.0` |
 | 10 | Plugin system | 6, 8 | `0.9.0` |
@@ -621,7 +621,12 @@ hand-editing JSON" outcome with a much smaller, self-contained surface
 
 ---
 
-## 7. Nerd Font Detection and Font Picker
+## 7. Nerd Font Detection and Font Picker - done
+
+**Implemented in:** `src/main/ipc/fontHandlers.ts` (enumeration),
+`src/renderer/src/fonts.ts` (monospace filter + glyph probe),
+`src/renderer/src/settingsPanel.ts` (Font section), wired through
+`settings.terminal.{fontFamily,fontSize}`.
 
 **Goal:** make font selection safe and informed - the user should not be
 able to pick a font that silently breaks icon/ligature rendering without
@@ -654,12 +659,30 @@ knowing why.
 
 ### Sub-tasks
 
-- [ ] Font enumeration IPC channel (`fonts:list`) in main, with the
-      Local Font Access API path and the PowerShell fallback.
-- [ ] Nerd Font known-name list plus the glyph-probe verification function.
-- [ ] Font picker component with live preview and Nerd Font status badge.
-- [ ] Wire the selected font into `xterm.js`'s `fontFamily` option and
-      persist it through `settings:set`.
+- [x] Font enumeration IPC channel (`fonts:list`) in main. **Deviation:**
+      only the PowerShell/.NET path (`InstalledFontCollection`) was built,
+      not `queryLocalFonts()`. The Local Font Access API needs a
+      permission grant that can fail silently in Electron; the .NET route
+      needs no permission and was verified working directly before any
+      code was written. Result is cached for the process lifetime, so the
+      ~1s spawn happens once.
+- [x] Glyph-probe verification function. **Deviation:** no known-name
+      list. A name list would have been both redundant (the probe is
+      strictly more accurate) and actively misleading here - it would have
+      labelled `Cascadia Code` correctly by luck while still mislabelling
+      any renamed or patched font. Detection is purely measured.
+- [x] Font picker component with live preview and Nerd Font status badge
+      (rendered as a `(Nerd Font)` suffix in the dropdown plus a
+      non-blocking notice under the preview linking to nerdfonts.com).
+- [x] Wire the selected font into `xterm.js`'s `fontFamily`/`fontSize`
+      and persist through `settings:set`. Font changes also re-fit every
+      pane and push a `pty:resize`, since unlike a theme change they alter
+      the cell grid.
+- [x] Extra, not originally listed: the font list is filtered to
+      monospace families (measured, by comparing `i` and `W` advance
+      widths). Offering all 281 installed families - most of them
+      proportional and unusable in a terminal - would have made the
+      picker worse, not more capable.
 
 ### Acceptance criteria
 
@@ -669,6 +692,24 @@ knowing why.
   Nerd Font") is correctly flagged as Nerd-Font-capable; a plain font like
   Consolas is correctly flagged as not.
 - Selecting a font updates every open terminal's rendering immediately.
+
+> Verified on-screen, and the verification mattered - the first
+> implementation had two real bugs that only running it exposed:
+> 1. The glyph probe compared the candidate font stack against a
+>    *different* (fallback-only) stack. Different stacks use different
+>    font metrics, so with `textBaseline='top'` even an identical tofu
+>    glyph landed on a different y and the signatures differed - the probe
+>    was measuring metrics, not glyph presence. It now compares against a
+>    known-missing codepoint rendered with the *same* stack.
+> 2. The PUA icon characters, written literally into the source, were
+>    silently reduced to spaces by the toolchain, so the preview's icon
+>    row rendered blank. They are now explicit `\uXXXX` escapes.
+>
+> Final measured result, read directly out of the running renderer:
+> `MesloLGS Nerd Font=true | Cascadia Code=false | Consolas=false |
+> Courier New=false` - matching the acceptance criteria above, including
+> the named Consolas case. The preview was also confirmed visually to
+> render real icons under a Nerd Font and tofu boxes under Cascadia Code.
 
 ---
 

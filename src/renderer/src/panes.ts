@@ -29,9 +29,16 @@ export type PaneNode = PaneLeaf | PaneSplit;
  * degistirme sonrasi container boyutu her degistiginde fit()+pty:resize
  * otomatik tetiklenir - ayri bir "resize" event zincirine gerek kalmaz.
  */
+export interface TerminalFontOptions {
+  /** Yedek zinciri eklenmis, hazir CSS font-family degeri. */
+  fontFamily: string;
+  fontSize: number;
+}
+
 export async function createPaneLeaf(
   isReservedShortcut: (event: KeyboardEvent) => boolean,
-  terminalTheme: ITheme
+  terminalTheme: ITheme,
+  font: TerminalFontOptions
 ): Promise<PaneLeaf> {
   const { id } = await window.bitig.pty.create({ cols: 80, rows: 24 });
 
@@ -41,8 +48,8 @@ export async function createPaneLeaf(
   const terminal = new Terminal({
     cursorBlink: true,
     cursorStyle: 'bar',
-    fontFamily: "'Cascadia Code', 'Cascadia Mono', Consolas, monospace",
-    fontSize: 14,
+    fontFamily: font.fontFamily,
+    fontSize: font.fontSize,
     lineHeight: 1.25,
     scrollback: 5000,
     // Terminal alaninin arkaplanini xterm degil #terminal-shell boyuyor

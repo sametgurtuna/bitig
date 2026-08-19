@@ -1,4 +1,5 @@
-import type { AppearanceController } from './appearance';
+import { buildFontStack, type AppearanceController } from './appearance';
+import { loadUsableFonts, type FontInfo } from './fonts';
 import type { BitigTheme } from '../../shared/themeTypes';
 import type { BackgroundImageFit, BitigSettings } from '../../shared/settingsTypes';
 
@@ -9,16 +10,23 @@ const FIT_LABELS: Record<BackgroundImageFit, string> = {
   tile: 'Dosele (tile)'
 };
 
+/** Onizlemede gosterilen ornek Nerd Font ikonlari (Powerline + Devicons). */
+const NERD_FONT_SAMPLE_ICONS = '\uE0B0  \uE706  \uF09B  \uF07B  \uE62B  \uF120';
+
 /**
- * Windows Terminal'deki ayarlar sekmesine benzer bir gorunum ayarlari
- * paneli: title bar'daki disli butonuyla acilir, #terminal-shell'in
- * yerini kaplar. Su an sadece Gorunum (tema/opaklik/arkaplan gorseli)
- * bolumunu icerir - font ve klavye kisayolu ayarlari henuz ayri
- * milestone'lar (7, 8), o ozellikler implement edilmeden burada sahte
- * kontrol gostermiyoruz.
+ * Windows Terminal'deki ayarlar sekmesine benzer bir ayarlar paneli:
+ * title bar'daki disli butonuyla acilir, #terminal-shell'in yerini
+ * kaplar. Gorunum (tema/opaklik/arkaplan gorseli) ve Font (aile/boyut,
+ * Nerd Font tespiti) bolumlerini icerir - klavye kisayolu ozellestirme
+ * henuz ayri bir milestone (8), implement edilmeden burada sahte kontrol
+ * gostermiyoruz.
  */
 export class SettingsPanel {
   private isOpen = false;
+  // Font listesi PowerShell spawn'i + yuzlerce canvas olcumu gerektiriyor;
+  // panel her acildiginda degil, ilk acilista bir kez yuklenir.
+  private fonts: FontInfo[] | null = null;
+  private fontsLoading = false;
 
   constructor(
     private readonly panelEl: HTMLElement,
@@ -44,6 +52,23 @@ export class SettingsPanel {
     this.toggleBtn.classList.add('active');
     document.addEventListener('keydown', this.handleKeydown);
     this.render();
+    void this.ensureFontsLoaded();
+  }
+
+  /** Font listesini bir kez yukler; bittiginde paneli yeniden cizer. */
+  private async ensureFontsLoaded(): Promise<void> {
+    if (this.fonts || this.fontsLoading) return;
+    this.fontsLoading = true;
+    try {
+      const selected = this.appearance.getState()?.settings.terminal.fontFamily;
+      this.fonts = await loadUsableFonts(selected);
+    } catch (error) {
+      console.error(`[Bitig] Font listesi yuklenemedi: ${String(error)}`);
+      this.fonts = [];
+    } finally {
+      this.fontsLoading = false;
+      if (this.isOpen) this.render();
+    }
   }
 
   close(): void {
@@ -69,6 +94,7 @@ export class SettingsPanel {
     this.panelEl.replaceChildren(
       this.buildHeader(),
       this.buildThemeSection(themes, settings),
+      this.buildFontSection(settings),
       this.buildOpacitySection(settings),
       this.buildBackgroundImageSection(settings),
       this.buildResetSection()
@@ -128,6 +154,109 @@ export class SettingsPanel {
 
     section.appendChild(grid);
     return section;
+  }
+
+  private buildFontSection(settings: BitigSettings): HTMLElement {
+    const section = this.buildSection('Font');
+    const { fontFamily, fontSize } = settings.terminal;
+
+    const familyRow = document.createElement('div');
+    familyRow.className = 'settings-row';
+    const familyLabel = document.createElement('label');
+    familyLabel.textContent = 'Aile';
+
+    if (!this.fonts) {
+      const loading = document.createElement('span');
+      loading.className = 'settings-path-label';
+      loading.textContent = 'Fontlar yukleniyor...';
+      familyRow.append(familyLabel, loading);
+      section.appendChild(familyRow);
+      return section;
+    }
+
+    const select = document.createElement('select');
+    select.className = 'settings-select';
+    if (this.fonts.length === 0) {
+      const option = document.createElement('option');
+      option.textContent = 'Font bulunamadi';
+      select.appendChild(option);
+      select.disabled = true;
+    }
+    for (const font of this.fonts) {
+      const option = document.createElement('option');
+      option.value = font.family;
+      // Nerd Font olanlari listede de isaretle: kullanici acmadan once
+      // hangi secenegin ikon destekledigini gorebilsin.
+      option.textContent = font.hasNerdGlyphs ? `${font.family}  (Nerd Font)` : font.family;
+      option.selected = font.family === fontFamily;
+      select.appendChild(option);
+    }
+    select.addEventListener('change', () => {
+      window.bitig.settings.set({ terminal: { fontFamily: select.value } });
+    });
+    familyRow.append(familyLabel, select);
+    section.appendChild(familyRow);
+
+    const { row: sizeRow } = this.buildSlider({
+      min: 8,
+      max: 32,
+      step: 1,
+      value: fontSize,
+      formatValue: (v) => `${v}px`,
+      // Font boyutu, opaklik gibi ucuz bir CSS degisikligi degil - her
+      // adimda tum terminalleri yeniden olcup PTY'ye resize gonderirdi.
+      // Bu yuzden anlik onizleme yok, sadece surukleme bitince uygulanir.
+      onInput: () => undefined,
+      onCommit: (value) => window.bitig.settings.set({ terminal: { fontSize: value } })
+    });
+    const sizeLabel = document.createElement('label');
+    sizeLabel.textContent = 'Boyut';
+    sizeRow.prepend(sizeLabel);
+    section.appendChild(sizeRow);
+
+    section.appendChild(this.buildFontPreview(fontFamily, fontSize));
+    return section;
+  }
+
+  /**
+   * Canli onizleme: secili fontla ornek metin + yaygin Nerd Font ikonlari.
+   * Ikonlar tofu kutusu olarak cikiyorsa kullanici bunu ayarlar
+   * ekranindayken gorur - bozuk bir prompt'ta kesfetmesi gerekmez.
+   */
+  private buildFontPreview(family: string, size: number): HTMLElement {
+    const preview = document.createElement('div');
+    preview.className = 'font-preview';
+    preview.style.fontFamily = buildFontStack(family);
+    preview.style.fontSize = `${size}px`;
+
+    const textLine = document.createElement('div');
+    textLine.textContent = 'PS C:\\Users\\dev> git status --short';
+
+    const iconLine = document.createElement('div');
+    iconLine.className = 'font-preview-icons';
+    iconLine.textContent = NERD_FONT_SAMPLE_ICONS;
+
+    preview.append(textLine, iconLine);
+
+    const selected = this.fonts?.find((font) => font.family === family);
+    if (selected && !selected.hasNerdGlyphs) {
+      const notice = document.createElement('p');
+      notice.className = 'font-notice';
+      notice.textContent =
+        'Bu font Nerd Font ikonlari icermiyor; yukaridaki ikon satiri bos kutular olarak gorunecek. Ikonlu bir prompt kullaniyorsan ';
+      const link = document.createElement('a');
+      link.href = 'https://www.nerdfonts.com/';
+      link.textContent = 'nerdfonts.com';
+      // target="_blank" olmadan tiklama renderer'i uygulamadan disari
+      // yonlendirirdi; boylece main'deki setWindowOpenHandler devreye
+      // girip linki varsayilan tarayicida aciyor (bkz. main/index.ts).
+      link.target = '_blank';
+      link.rel = 'noreferrer';
+      notice.append(link, document.createTextNode(" adresinden ikonlu bir surum kurabilirsin."));
+      preview.appendChild(notice);
+    }
+
+    return preview;
   }
 
   private buildOpacitySection(settings: BitigSettings): HTMLElement {

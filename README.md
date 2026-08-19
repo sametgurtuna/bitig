@@ -86,9 +86,14 @@ Shipped so far:
   blur) and an optional full-window background image, both driven by
   `settings.json`.
 - A settings panel (click the gear icon in the title bar): a theme picker,
-  opacity slider, and background image controls including a real native
-  file picker - no manual JSON editing required for any of it, though
-  hand-editing `settings.json` still works identically alongside it.
+  font picker, opacity slider, and background image controls including a
+  real native file picker - no manual JSON editing required for any of it,
+  though hand-editing `settings.json` still works identically alongside it.
+- Font picker with *measured* Nerd Font detection: it renders Private Use
+  Area probe glyphs offscreen to check whether a font genuinely contains
+  the icons, rather than trusting its name, and flags fonts that do not.
+  The list is filtered to monospace families, and a live preview shows
+  both sample text and icons before you commit.
 - A typed, one-way-clear IPC contract between the Electron main process and
   the renderer, exposed through a narrow `contextBridge` API (no direct
   Node access from the UI).
@@ -103,7 +108,7 @@ Planned, in order:
 - [x] Theme system (JSON based, built-in themes plus user themes)
 - [x] Transparency and background image support
 - [x] Settings panel (GUI - Appearance section: theme, opacity, background image)
-- [ ] Nerd Font detection and font picker
+- [x] Nerd Font detection and font picker
 - [ ] Customizable keyboard shortcuts
 - [ ] Command history and fuzzy search
 - [ ] Lightweight plugin system (dynamic JS loading)
@@ -209,6 +214,7 @@ silently drift between processes.
 | `settings:read-background-image` | renderer to main | invoke | Read the configured background image file and return it as a `data:` URL |
 | `settings:pick-background-image` | renderer to main | invoke | Open a native file picker, return the chosen absolute path (or `null`) |
 | `settings:reset` | renderer to main | send | Reset all settings to defaults and persist |
+| `fonts:list` | renderer to main | invoke | List installed font families (cached for the process lifetime) |
 
 ## Getting Started
 
@@ -268,9 +274,10 @@ milestone 8 makes them remappable.
 ### Settings panel
 
 Click the gear icon in the title bar (or press `Escape` to close it again)
-for a theme picker, an opacity slider, and background image controls with
-a real file picker - no JSON editing required. It currently covers
-everything under `appearance` in `settings.json`; nothing else is
+for a theme picker, a font picker (with Nerd Font detection and a live
+preview), an opacity slider, and background image controls with a real
+file picker - no JSON editing required. It covers everything under
+`appearance` and `terminal` in `settings.json`; keyboard shortcuts are not
 configurable yet (see [Roadmap](#roadmap)).
 
 ### Settings file
@@ -294,11 +301,19 @@ without going through the panel's own picker, and the only way to set
     "backgroundImage": "C:\\Users\\you\\Pictures\\bg.png",
     "backgroundImageOpacity": 0.25,
     "backgroundImageFit": "cover"
+  },
+  "terminal": {
+    "fontFamily": "MesloLGS Nerd Font",
+    "fontSize": 14
   }
 }
 ```
 
 - `activeTheme` - the `id` of a built-in or custom theme (see below).
+- `terminal.fontFamily` - a single installed family name; a fallback chain
+  is appended automatically, so a typo or an uninstalled font degrades to
+  a readable monospace face instead of breaking the terminal.
+- `terminal.fontSize` - `8`-`32`, clamped on write.
 - `appearance.opacity` - `0.3`-`1`, clamped on write so the window can
   never become fully invisible or unclickable by a typo.
 - `appearance.backgroundImage` - an absolute path to an image, or `null`.
@@ -377,6 +392,7 @@ Bitig/
       windowTypes.ts          # Window control IPC contract
       themeTypes.ts           # BitigTheme schema + theme:* IPC contract
       settingsTypes.ts        # BitigSettings schema + settings:* IPC contract
+      fontTypes.ts            # fonts:* IPC contract
       builtinThemes/          # bitigDark/bitigLight/dracula/nord.ts + index (BUILTIN_THEMES)
     main/
       index.ts                # App lifecycle, BrowserWindow creation
@@ -387,6 +403,7 @@ Bitig/
       ipc/windowHandlers.ts   # window:* channel handlers
       ipc/themeHandlers.ts    # theme:* channel handlers
       ipc/settingsHandlers.ts # settings:* channel handlers
+      ipc/fontHandlers.ts     # fonts:list - enumerates installed fonts
     preload/
       index.ts                # contextBridge surface: window.bitig
     renderer/
@@ -396,7 +413,8 @@ Bitig/
         tabs.ts                 # TabStore: tab lifecycle, tab bar, drag-to-reorder, shortcuts
         panes.ts                # Pane tree: split/close/render, divider drag, per-leaf ResizeObserver
         appearance.ts           # Applies active theme/opacity/background image, theme-cycle shortcut
-        settingsPanel.ts        # Appearance settings view (gear button, replaces #terminal-shell)
+        settingsPanel.ts        # Settings view (gear button, replaces #terminal-shell)
+        fonts.ts                # Monospace filtering + Nerd Font glyph probing
         titlebar.ts             # Custom title bar behavior
         style.css
 ```
@@ -497,9 +515,14 @@ Su ana kadar tamamlananlar:
   gercek masaustunun gorunmesi) ve istege bagli tam pencere arkaplan
   gorseli, ikisi de `settings.json` uzerinden yonetiliyor.
 - Bir ayarlar paneli (title bar'daki disli ikonuna tikla): tema secici,
-  opaklik slider'i, gercek native dosya secicili arkaplan gorseli
-  kontrolleri - hicbiri icin elle JSON duzenlemeye gerek yok, yine de
-  `settings.json`'u elle duzenlemek de aynen calismaya devam ediyor.
+  font secici, opaklik slider'i, gercek native dosya secicili arkaplan
+  gorseli kontrolleri - hicbiri icin elle JSON duzenlemeye gerek yok, yine
+  de `settings.json`'u elle duzenlemek de aynen calismaya devam ediyor.
+- *Olcerek* Nerd Font tespiti yapan font secici: fontun adina guvenmek
+  yerine, Private Use Area'daki ornek glyph'leri ekran disinda cizip
+  ikonlarin gercekten fontta olup olmadigini kontrol eder ve olmayanlari
+  isaretler. Liste monospace ailelerle sinirlanir; canli onizleme hem
+  ornek metni hem ikonlari secmeden once gosterir.
 - Electron main sureci ile renderer arasinda tipli, tek yonu net bir IPC
   sozlesmesi; dar bir `contextBridge` API'siyle disari aciliyor (UI'dan
   dogrudan Node erisimi yok).
@@ -514,7 +537,7 @@ Sirasiyla planlananlar:
 - [x] Tema sistemi (JSON tabanli, hazir temalar + kullanici temalari)
 - [x] Seffaflik ve arkaplan gorseli destegi
 - [x] Ayarlar paneli (GUI - Gorunum bolumu: tema, opaklik, arkaplan gorseli)
-- [ ] Nerd Font tespiti ve font secici
+- [x] Nerd Font tespiti ve font secici
 - [ ] Ozellestirilebilir klavye kisayollari
 - [ ] Komut gecmisi ve fuzzy arama
 - [ ] Hafif eklenti sistemi (dinamik JS yukleme)
@@ -620,6 +643,7 @@ sayede sozlesme surecler arasinda sessizce kaymaz.
 | `settings:read-background-image` | renderer -> main | invoke | Ayarlanan arkaplan gorseli dosyasini okuyup `data:` URL olarak doner |
 | `settings:pick-background-image` | renderer -> main | invoke | Native dosya secici acar, secilen mutlak yolu doner (ya da `null`) |
 | `settings:reset` | renderer -> main | send | Tum ayarlari varsayilanlara sifirlar ve diske yazar |
+| `fonts:list` | renderer -> main | invoke | Kurulu font ailelerini listeler (proses omru boyunca cache'li) |
 
 ## Baslarken
 
@@ -679,10 +703,11 @@ Simdilik sabit; milestone 8 bunlari yeniden atanabilir hale getirecek.
 ### Ayarlar paneli
 
 Title bar'daki disli ikonuna tikla (kapatmak icin tekrar tikla ya da
-`Escape`'e bas): tema secici, opaklik slider'i, gercek dosya secicili
-arkaplan gorseli kontrolleri - hicbiri icin JSON duzenlemek gerekmiyor. Su
-an `settings.json`'daki `appearance` altindaki her seyi kapsiyor; baska
-hicbir sey henuz ayarlanabilir degil (bkz. [Yol Haritasi](#yol-haritasi)).
+`Escape`'e bas): tema secici, font secici (Nerd Font tespiti ve canli
+onizlemeyle), opaklik slider'i, gercek dosya secicili arkaplan gorseli
+kontrolleri - hicbiri icin JSON duzenlemek gerekmiyor. `settings.json`'daki
+`appearance` ve `terminal` altindaki her seyi kapsiyor; klavye kisayollari
+henuz ayarlanabilir degil (bkz. [Yol Haritasi](#yol-haritasi)).
 
 ### Ayarlar dosyasi
 
@@ -704,11 +729,19 @@ ayarlamanin (asagiya bak) da tek yolu bu.
     "backgroundImage": "C:\\Users\\sen\\Pictures\\arkaplan.png",
     "backgroundImageOpacity": 0.25,
     "backgroundImageFit": "cover"
+  },
+  "terminal": {
+    "fontFamily": "MesloLGS Nerd Font",
+    "fontSize": 14
   }
 }
 ```
 
 - `activeTheme` - hazir ya da ozel bir temanin `id`'si (asagiya bak).
+- `terminal.fontFamily` - kurulu tek bir font ailesi adi; sonuna otomatik
+  olarak bir yedek zincir eklenir, boylece yazim hatasi ya da kaldirilmis
+  bir font terminali bozmak yerine okunabilir bir monospace fonta duser.
+- `terminal.fontSize` - `8`-`32`, yazilirken kelepceleniyor.
 - `appearance.opacity` - `0.3`-`1` arasi, yazilirken kelepceleniyor ki bir
   yazim hatasi pencereyi tamamen gorunmez/tiklanamaz hale getiremesin.
 - `appearance.backgroundImage` - bir gorselin mutlak yolu, ya da `null`.
@@ -787,6 +820,7 @@ Bitig/
       windowTypes.ts          # Pencere kontrol IPC sozlesmesi
       themeTypes.ts           # BitigTheme semasi + theme:* IPC sozlesmesi
       settingsTypes.ts        # BitigSettings semasi + settings:* IPC sozlesmesi
+      fontTypes.ts            # fonts:* IPC sozlesmesi
       builtinThemes/          # bitigDark/bitigLight/dracula/nord.ts + index (BUILTIN_THEMES)
     main/
       index.ts                # App lifecycle, BrowserWindow olusturma
@@ -797,6 +831,7 @@ Bitig/
       ipc/windowHandlers.ts   # window:* kanal handler'lari
       ipc/themeHandlers.ts    # theme:* kanal handler'lari
       ipc/settingsHandlers.ts # settings:* kanal handler'lari
+      ipc/fontHandlers.ts     # fonts:list - kurulu fontlari listeler
     preload/
       index.ts                # contextBridge yuzeyi: window.bitig
     renderer/
@@ -806,7 +841,8 @@ Bitig/
         tabs.ts                 # TabStore: sekme yasam dongusu, tab bar, surukle-sirala, kisayollar
         panes.ts                # Pane agaci: split/close/render, divider surukleme, leaf basina ResizeObserver
         appearance.ts           # Aktif tema/opaklik/arkaplan gorselini uygular, tema dongusu kisayolu
-        settingsPanel.ts        # Gorunum ayarlari view'i (disli buton, #terminal-shell yerini alir)
+        settingsPanel.ts        # Ayarlar view'i (disli buton, #terminal-shell yerini alir)
+        fonts.ts                # Monospace filtreleme + Nerd Font glyph olcumu
         titlebar.ts             # Ozel title bar davranisi
         style.css
 ```

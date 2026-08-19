@@ -506,6 +506,40 @@ body {
   border-top: 1px solid var(--bitig-border);
 }
 
+/* Font onizlemesi: secili font ve boyutla ornek metin + Nerd Font
+   ikonlari. Ikonlar tofu kutusu cikiyorsa kullanici burada gorur. */
+.font-preview {
+  margin-top: 12px;
+  padding: 12px;
+  border: 1px solid var(--bitig-border);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--bitig-text);
+  line-height: 1.5;
+  overflow-x: auto;
+  white-space: nowrap;
+}
+
+.font-preview-icons {
+  margin-top: 6px;
+  letter-spacing: 0.15em;
+  color: var(--bitig-accent);
+}
+
+.font-notice {
+  margin: 10px 0 0;
+  /* Onizleme kutusu secili terminal fontunu kullaniyor; uyari metni
+     arayuz fontuna donmeli, yoksa uyari da okunmasi zor bir fontla
+     cizilebilir. */
+  font: 11px/1.5 'Segoe UI', sans-serif;
+  color: var(--bitig-text-dim);
+  white-space: normal;
+}
+
+.font-notice a {
+  color: var(--bitig-accent);
+}
+
 #terminal-root {
   height: 100%;
   width: 100%;

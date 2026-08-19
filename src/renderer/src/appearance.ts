@@ -99,6 +99,10 @@ export class AppearanceController {
     if (!this.settings) return;
     const theme = this.resolveActiveTheme();
     this.applyTerminalAndUiTheme(theme, this.settings.appearance.opacity);
+    this.tabStore?.applyTerminalFont({
+      fontFamily: buildFontStack(this.settings.terminal.fontFamily),
+      fontSize: this.settings.terminal.fontSize
+    });
     await this.applyBackgroundImage(this.settings);
     for (const listener of this.changeListeners) listener();
   }
@@ -168,6 +172,15 @@ export class AppearanceController {
     this.bgImageEl.style.backgroundPosition = 'center';
     this.bgImageEl.style.backgroundSize = fit === 'center' ? 'auto' : fit;
   }
+}
+
+/**
+ * Secilen font ailesinin sonuna yedek zinciri ekler: kullanicinin sectigi
+ * font sonradan kaldirilirsa ya da adi eslesmezse terminal okunamaz bir
+ * proportional fonta dusmesin.
+ */
+export function buildFontStack(family: string): string {
+  return `"${family.replace(/"/g, '\\"')}", 'Cascadia Mono', Consolas, monospace`;
 }
 
 function withAlpha(hex: string, alpha: number): string {

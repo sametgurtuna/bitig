@@ -9,6 +9,32 @@ and versioning follows [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- Font picker with measured Nerd Font detection, in the settings panel's
+  new Font section: choose any installed monospace family, set the size,
+  and see a live preview rendering both sample terminal text and a row of
+  Nerd Font icons in that font. Fonts that actually contain the icon
+  glyphs are marked `(Nerd Font)` in the dropdown; ones that do not get a
+  non-blocking notice linking to nerdfonts.com, so a missing-icon prompt
+  is discovered here rather than in a broken shell prompt.
+  - Detection is measured, not name-matched: each candidate renders four
+    Private Use Area probe codepoints (Powerline, Devicons, two Font
+    Awesome) to an offscreen canvas and compares each against a
+    known-missing codepoint drawn with the same font stack. All four must
+    render distinctly, which correctly separates a full Nerd Font from a
+    font like Cascadia Code that ships Powerline glyphs only.
+  - The list is filtered to monospace families by comparing `i` and `W`
+    advance widths, so the picker offers usable terminal fonts rather
+    than all ~280 installed families.
+  - New `fonts:list` IPC channel enumerates installed families in main
+    via .NET's `InstalledFontCollection`, cached for the process
+    lifetime.
+  - Font and size persist as `terminal.fontFamily` / `terminal.fontSize`
+    in `settings.json` and apply to every open tab and pane immediately,
+    re-fitting each pane and pushing a `pty:resize` (a font change alters
+    the cell grid, unlike a theme change).
+  - The chosen family always gets a fallback chain appended, so removing
+    the font later cannot leave the terminal rendering in a proportional
+    face.
 - Settings panel (GUI), Appearance section: a gear button in the title bar
   opens a view (`src/renderer/src/settingsPanel.ts`) that replaces
   `#terminal-shell` in place - a clickable theme grid, an opacity slider,

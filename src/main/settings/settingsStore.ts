@@ -11,11 +11,20 @@ const DEFAULT_SETTINGS: BitigSettings = {
     backgroundImage: null,
     backgroundImageOpacity: 0.25,
     backgroundImageFit: 'cover'
+  },
+  terminal: {
+    // Windows 11'de kurulu gelir; font sistemi oncesindeki sabit
+    // fontFamily zincirinin de ilk sirasiydi, yani varsayilan gorunum
+    // degismiyor.
+    fontFamily: 'Cascadia Code',
+    fontSize: 14
   }
 };
 
 const MIN_OPACITY = 0.3;
 const MAX_OPACITY = 1;
+const MIN_FONT_SIZE = 8;
+const MAX_FONT_SIZE = 32;
 
 /**
  * `%APPDATA%/Bitig/settings.json` dosyasini yonetir: yukler, kismi
@@ -121,16 +130,30 @@ export class SettingsStore {
     const merged: BitigSettings = {
       schemaVersion: 1,
       activeTheme: patch.activeTheme ?? base.activeTheme,
-      appearance: { ...base.appearance, ...patch.appearance }
+      appearance: { ...base.appearance, ...patch.appearance },
+      terminal: { ...base.terminal, ...patch.terminal }
     };
-    merged.appearance.opacity = Math.min(
+    merged.appearance.opacity = clamp(
+      merged.appearance.opacity,
+      MIN_OPACITY,
       MAX_OPACITY,
-      Math.max(MIN_OPACITY, merged.appearance.opacity)
+      DEFAULT_SETTINGS.appearance.opacity
     );
-    merged.appearance.backgroundImageOpacity = Math.min(
+    merged.appearance.backgroundImageOpacity = clamp(
+      merged.appearance.backgroundImageOpacity,
+      0,
       1,
-      Math.max(0, merged.appearance.backgroundImageOpacity)
+      DEFAULT_SETTINGS.appearance.backgroundImageOpacity
     );
+    merged.terminal.fontSize = clamp(
+      merged.terminal.fontSize,
+      MIN_FONT_SIZE,
+      MAX_FONT_SIZE,
+      DEFAULT_SETTINGS.terminal.fontSize
+    );
+    if (typeof merged.terminal.fontFamily !== 'string' || merged.terminal.fontFamily.trim() === '') {
+      merged.terminal.fontFamily = DEFAULT_SETTINGS.terminal.fontFamily;
+    }
     return merged;
   }
 
@@ -143,4 +166,15 @@ export class SettingsStore {
   private notify(): void {
     for (const listener of this.listeners) listener(this.settings);
   }
+}
+
+/**
+ * Bozuk/elle girilmis degerleri guvenli araliga ceker. Sayi olmayan bir
+ * deger (elle duzenlenmis settings.json'da string ya da null) araligin
+ * ucuna degil varsayilana doner - yoksa ör. bozuk bir fontSize terminali
+ * sessizce 8px yapardi.
+ */
+function clamp(value: number, min: number, max: number, fallback: number): number {
+  if (typeof value !== 'number' || !Number.isFinite(value)) return fallback;
+  return Math.min(max, Math.max(min, value));
 }

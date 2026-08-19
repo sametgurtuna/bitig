@@ -9,7 +9,8 @@ import {
   splitLeaf,
   type PaneLeaf,
   type PaneNode,
-  type SplitDirection
+  type SplitDirection,
+  type TerminalFontOptions
 } from './panes';
 import { bitigDark } from '../../shared/builtinThemes';
 
@@ -35,9 +36,14 @@ export class TabStore {
   private readonly tabsById = new Map<string, Tab>();
   private readonly leavesByPtyId = new Map<string, { tab: Tab; leaf: PaneLeaf }>();
   private activeId: string | null = null;
-  // IPC'den ilk tema yaniti gelene kadar (appearance.ts) senkron bir
-  // varsayilan gerekir; bitig-dark, tema sistemi oncesi sabit temayla ayni.
+  // IPC'den ilk tema/ayar yaniti gelene kadar (appearance.ts) senkron
+  // varsayilanlar gerekir; ikisi de tema/font sistemi oncesindeki sabit
+  // degerlerle ayni, yani varsayilan gorunum degismiyor.
   private currentTerminalTheme: ITheme = bitigDark.terminal;
+  private currentFont: TerminalFontOptions = {
+    fontFamily: "'Cascadia Code', 'Cascadia Mono', Consolas, monospace",
+    fontSize: 14
+  };
 
   constructor(
     private readonly rootEl: HTMLElement,
@@ -63,7 +69,8 @@ export class TabStore {
   async createTab(): Promise<void> {
     const leaf = await createPaneLeaf(
       (event) => this.isReservedShortcut(event),
-      this.currentTerminalTheme
+      this.currentTerminalTheme,
+      this.currentFont
     );
 
     const containerEl = document.createElement('div');
@@ -148,7 +155,8 @@ export class TabStore {
 
     const newLeaf = await createPaneLeaf(
       (event) => this.isReservedShortcut(event),
-      this.currentTerminalTheme
+      this.currentTerminalTheme,
+      this.currentFont
     );
     this.leavesByPtyId.set(newLeaf.id, { tab, leaf: newLeaf });
 
@@ -175,6 +183,28 @@ export class TabStore {
     for (const tab of this.tabs) {
       for (const leaf of collectLeaves(tab.root)) {
         leaf.terminal.options.theme = theme;
+      }
+    }
+  }
+
+  /**
+   * Aktif fontu acik tum terminallere uygular ve sonraki sekme/pane'ler
+   * icin saklar. Temadan farkli olarak font degisimi hucre olculerini de
+   * degistirir; bu yuzden her leaf yeniden fit edilip PTY'ye yeni satir/
+   * sutun sayisi bildirilmeli, yoksa shell eski boyuta gore cizmeye
+   * devam eder.
+   */
+  applyTerminalFont(font: TerminalFontOptions): void {
+    this.currentFont = font;
+    for (const tab of this.tabs) {
+      for (const leaf of collectLeaves(tab.root)) {
+        leaf.terminal.options.fontFamily = font.fontFamily;
+        leaf.terminal.options.fontSize = font.fontSize;
+        // Gizli sekmelerin container'i 0x0 olur; fit() orada anlamsiz
+        // deger uretir, sekmeye donuldugunde setActiveTab zaten fit ediyor.
+        if (leaf.container.clientWidth === 0 || leaf.container.clientHeight === 0) continue;
+        leaf.fitAddon.fit();
+        window.bitig.pty.resize(leaf.id, leaf.terminal.cols, leaf.terminal.rows);
       }
     }
   }

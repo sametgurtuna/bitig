@@ -12,6 +12,7 @@ import { THEME_CHANNELS } from '../shared/themeTypes';
 import type { BitigTheme } from '../shared/themeTypes';
 import { SETTINGS_CHANNELS } from '../shared/settingsTypes';
 import type { BitigSettings, BitigSettingsPatch } from '../shared/settingsTypes';
+import { FONT_CHANNELS } from '../shared/fontTypes';
 
 // nodeIntegration kapali, contextIsolation acik: renderer'a sadece bu daralmis
 // API yuzeyi contextBridge ile sunulur, dogrudan Node/Electron erisimi verilmez.
@@ -106,18 +107,24 @@ const settingsApi = {
   }
 };
 
+const fontsApi = {
+  list: (): Promise<string[]> => ipcRenderer.invoke(FONT_CHANNELS.list)
+};
+
 export type BitigApi = {
   pty: typeof ptyApi;
   windowControls: typeof windowApi;
   theme: typeof themeApi;
   settings: typeof settingsApi;
+  fonts: typeof fontsApi;
 };
 
 const bitigApi: BitigApi = {
   pty: ptyApi,
   windowControls: windowApi,
   theme: themeApi,
-  settings: settingsApi
+  settings: settingsApi,
+  fonts: fontsApi
 };
 
 contextBridge.exposeInMainWorld('bitig', bitigApi);
