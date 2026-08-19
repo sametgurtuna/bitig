@@ -5,7 +5,96 @@ All notable changes to this project are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and versioning follows [Semantic Versioning](https://semver.org/).
 
-## [Unreleased]
+## [0.9.0] - 2026-08-19
+
+### Added
+
+- **Developer Cockpit & Live Port Sniffer:**
+  - `src/renderer/src/portSniffer.ts`: Real-time detection of dev servers and listening network ports (`localhost:3000`, `5173`, `8080`, `0.0.0.0:8000`, etc.) from PTY output streams.
+  - Interactive clickable port badges rendered directly inside tab headers (`🟢 :5173`) with pulsing animations.
+  - Clicking any port badge opens `http://localhost:[port]` directly in the default web browser via `window.bitig.cockpit.openUrl`.
+- **Smart File/Line Hyperlinks:**
+  - `src/renderer/src/smartLinks.ts`: Integrated custom link provider for xterm.js matching stack traces and compiler error patterns (`src/main.ts:42:15`, `C:\...\server.py:102`).
+  - Clicking automatically opens the file in VS Code (`vscode://file/...:line:col`) or the default editor.
+- **Secret Shield (Sensitive Token Masking):**
+  - `src/renderer/src/secretShield.ts` & `src/main/history/historyStore.ts`: Automatic pattern matching for sensitive tokens (OpenAI `sk-...`, GitHub `ghp_...`, AWS `AKIA...`, private keys, bearer tokens).
+  - Automatically sanitizes and masks credentials when saved to command history (`ghp_************`) to prevent shoulder surfing and screen share leaks.
+- **Settings Panel Developer Cockpit Section:**
+  - Toggles for Live Port Sniffer, Secret Shield token masking, and Editor link integration.
+
+## [0.8.5] - 2026-08-19
+
+### Added
+
+- **Cross-Session Command History (`history.json`):**
+  - Persistent command store in `%APPDATA%/Bitig/history.json` via `src/main/history/historyStore.ts`.
+  - Captures executed commands, timestamp, execution count, working directory (`cwd`), last duration (`lastDurationMs`), and exit code.
+  - Frecency algorithm prioritizing recently and frequently used commands.
+- **In-Terminal Interactive `Ctrl+R` Fuzzy History Search:**
+  - Fast history search modal overlay above the active terminal prompt (`src/renderer/src/historyModal.ts`).
+  - Fuzzy-filters past commands with execution count badges (`3x`), duration badges (`4.2s`), and relative timestamps.
+  - Press `Enter` to inject the selected command directly into the active terminal, `Escape` to close, or clear history with confirmation.
+- **Command Execution Telemetry & Long-Running Task Desktop Notifications:**
+  - `src/renderer/src/telemetry.ts` measures command runtimes across all panes.
+  - When commands exceed the configured threshold (default: 5 seconds) and Bitig is running in the background or unfocused, triggers native Windows notifications (`windowControls.notify`): `✅ Komut Tamamlandı ("npm run build" (14.2s))`.
+  - Clicking the notification automatically focuses and restores the Bitig window.
+- **Settings Panel Telemetry Controls:**
+  - Toggle for task completion notifications.
+  - Configurable notification threshold dropdown (3s, 5s, 10s, 30s, 1m).
+
+## [0.8.0] - 2026-08-19
+
+### Added
+
+- **Universal Command Palette (`Ctrl+Shift+P`):**
+  - Instant fuzzy search modal powered by `src/renderer/src/fuzzy.ts`.
+  - Searches across all Bitig actions, open tabs, discovered shell profiles, themes, and settings.
+  - Arrow key navigation with wrap-around, action execution on Enter, keyboard shortcuts and category badges displayed on the right.
+- **"Bitig Betik" — Parametric Runbook / Snippet Manager (`Ctrl+Shift+B`):**
+  - Local snippet manager backed by `%APPDATA%/Bitig/snippets.json` and `src/main/snippets/snippetStore.ts`.
+  - Built-in library of 10 essential multi-parameter snippets (Docker Run Port & Volume, Docker Compose Up, Git Rebase Interactive, Git Commit, FFmpeg H.264 Convert, Windows Port Kill, Find Large Files, Kubectl Pod Logs, etc.).
+  - **Dynamic Parametric Form:** Automatically extracts placeholders (`{{var_name}}`) from command templates and generates visual input fields with Tab navigation.
+  - **Live Command Preview:** Real-time highlighted preview box showing the fully composed command with variable substitutions.
+  - **Terminal Injection:** Pressing Enter injects the rendered command directly into the active PTY session (`writeToActivePane`).
+  - **Snippet Management:** Add new custom templates, categorize, and persist locally via IPC (`snippets:list`, `snippets:save`, `snippets:delete`, `snippets:reset`).
+
+## [0.7.5] - 2026-08-19
+
+### Added
+
+- **Customizable Keyboard Shortcuts & Central Action Registry:**
+  - `src/shared/actionTypes.ts`: Central action registry defining stable action IDs (`tab.new`, `tab.close`, `pane.splitRight`, `pane.zoom`, `terminal.search`, `theme.cycle`, `settings.toggle`, `profile.open1`..`9`), categories, human-readable descriptions, and default key combinations.
+  - `src/renderer/src/keybindings.ts`: Unified `KeybindingManager` handling action dispatch, dynamic key binding maps, conflict detection, and xterm reserved key resolution (`attachCustomKeyEventHandler`).
+  - Settings panel **Klavye Kısayolları (Keybindings)** section:
+    - Categorized table of all shortcuts (Sekmeler, Paneller, Görünüm ve Arama, Uygulama).
+    - Interactive key capture: click a keybinding button to enter recording mode with a pulsing animation, press any key combination to rebind.
+    - Live conflict detection: displays a warning badge (`⚠ Çakışıyor: [Action]`) when a key combination is already bound to another action.
+    - Reset to default button per shortcut (`↺`) and global settings reset.
+  - `settings.keybindings` persisted to `settings.json` and hot-reloaded across the app.
+  - Added `Ctrl+,` shortcut to toggle the Settings panel.
+
+## [0.7.0] - 2026-08-19
+
+### Added
+
+- **Shell Profiles & Auto-Discovery:**
+  - Automatic detection of installed shells on Windows (`pwsh.exe`, `powershell.exe`, `cmd.exe`, Git Bash `bash.exe`, and installed WSL distributions via `wsl.exe -l -q`).
+  - New Tab dropdown menu next to the `+` button in the titlebar listing all discovered shell profiles with their icons and shortcuts.
+  - Direct shortcut launch: `Ctrl+Shift+1..9` opens a new tab with the Nth profile immediately.
+  - Settings panel **Kabuk Profilleri (Profiles)** section: set default shell profile, view configured commands and starting directories.
+  - PTY manager extended to support launching custom commands, arguments, and working directories per session.
+- **In-Terminal Interactive Search (`Ctrl+F`):**
+  - Integrated `@xterm/addon-search` into a floating, glassmorphic search overlay mounted on the focused terminal.
+  - Search input with incremental matching, previous/next match navigation (`Enter`/`Shift+Enter`), match status, case-sensitivity toggle (`Aa`), regex toggle (`.*`), and whole-word toggle (`\b`).
+  - Escape closes the search bar and returns focus to the terminal.
+- **Directional Split Pane Navigation & Focused Pane Zoom:**
+  - Keyboard navigation between split panes: `Alt+Left/Right/Up/Down` and `Alt+H/J/K/L` move focus to adjacent panes using a geometric center-distance calculation.
+  - Pane Zoom (`Ctrl+Shift+Z`): expands the focused pane to 100% full area, temporarily hiding sibling panes, and toggles back to split layout with a visual `[🔍]` badge.
+- **Dynamic Tab Titles & CWD Tracking (OSC 7):**
+  - Tab titles automatically update to match the foreground process or shell title reported via `terminal.onTitleChange`.
+  - OSC 7 working directory parser hook tracks the active directory, allowing splits and new tabs to inherit the current directory.
+
+## [0.6.x] - 2026-08-19
 
 ### Added
 

@@ -44,11 +44,11 @@ design decision is not obvious:
 | 5 | Transparency and background image | 4 | `0.5.0` (done) |
 | 6 | Settings panel (GUI) | 4, 5 | `0.6.0` (done, Appearance only) |
 | 7 | Nerd Font detection and font picker | 6 | `0.6.x` (done) |
-| 8 | Shell profiles, auto-discovery & in-terminal search | 6 | `0.7.0` |
-| 9 | Customizable keyboard shortcuts & action registry | 6, 8 | `0.7.5` |
-| 10 | Command palette & runbooks ("Bitig Betik") | 8, 9 | `0.8.0` |
-| 11 | Command history, fuzzy search & execution telemetry | 2, 8 | `0.8.5` |
-| 12 | Developer cockpit, live port sniffer & secret shield | 8, 10 | `0.9.0` |
+| 8 | Shell profiles, auto-discovery & in-terminal search | 6 | `0.7.0` (done) |
+| 9 | Customizable keyboard shortcuts & action registry | 6, 8 | `0.7.5` (done) |
+| 10 | Command palette & runbooks ("Bitig Betik") | 8, 9 | `0.8.0` (done) |
+| 11 | Command history, fuzzy search & execution telemetry | 2, 8 | `0.8.5` (done) |
+| 12 | Developer cockpit, live port sniffer & secret shield | 8, 10 | `0.9.0` (done) |
 | 13 | Quake / Dropdown HUD mode & broadcast input | 3, 9 | `0.9.5` |
 | 14 | AI terminal companion ("Bitig Bilge" - Local & BYOK) | 8, 11 | `0.9.8` |
 | 15 | Lightweight plugin system & sandboxing | 9, 10 | `1.0.0-rc` |
@@ -716,7 +716,7 @@ knowing why.
 
 ---
 
-## 8. Shell Profiles, Auto-Discovery & In-Terminal Search
+## 8. Shell Profiles, Auto-Discovery & In-Terminal Search - done
 
 **Goal:** move away from hardcoded `powershell.exe` to a first-class Profile
 Manager with automatic shell discovery (PowerShell 7, Windows PowerShell, CMD,
@@ -770,16 +770,16 @@ and dynamic CWD/title tracking via OSC 7.
 
 ### Sub-tasks
 
-- [ ] Shell discovery module in main (`src/main/pty/profileDiscovery.ts`) probing Windows PATH, Registry, and WSL.
-- [ ] Profile management IPC (`profile:list`, `profile:create-pty`) passing `command`, `args`, `cwd`, and `env` to `PtyManager`.
-- [ ] Settings panel: new **Profiles** section with add/edit/delete/clone profile capabilities.
-- [ ] Titlebar UI: Profile dropdown button next to the `+` new tab button.
-- [ ] Search overlay component (`src/renderer/src/searchBar.ts`) wired to `@xterm/addon-search`.
-- [ ] Pane directional focus and Zoom toggle in `panes.ts` and `tabs.ts`.
+- [x] Shell discovery module in main (`src/main/pty/profileDiscovery.ts`) probing Windows PATH, Registry, and WSL.
+- [x] Profile management IPC (`PtyCreateOptions` with `command`, `args`, `cwd`) passing parameters to `PtyManager`.
+- [x] Settings panel: new **Kabuk Profilleri (Profiles)** section with default profile selection and badge list.
+- [x] Titlebar UI: Profile dropdown button and popup menu next to the `+` new tab button.
+- [x] Search overlay component (`src/renderer/src/searchBar.ts`) wired to `@xterm/addon-search` with `Ctrl+F`.
+- [x] Pane directional focus (`Alt+Arrows`/`Alt+HJKL`) and Zoom toggle (`Ctrl+Shift+Z`) in `panes.ts` and `tabs.ts`.
 
 ---
 
-## 9. Customizable Keyboard Shortcuts & Central Action Registry
+## 9. Customizable Keyboard Shortcuts & Central Action Registry - done
 
 **Goal:** every default keybinding (new tab, close tab, split pane, switch focus, open settings,
 search, zoom, etc.) becomes remappable, with conflict detection and an interactive recorder.
@@ -787,7 +787,7 @@ search, zoom, etc.) becomes remappable, with conflict detection and an interacti
 ### Design
 
 - **Action Registry:** Stable action identifiers (`tab.new`, `tab.close`, `pane.splitRight`,
-  `pane.splitDown`, `pane.zoom`, `terminal.search`, `settings.toggle`, `palette.toggle`) defined in
+  `pane.splitDown`, `pane.zoom`, `terminal.search`, `settings.toggle`, `theme.cycle`, `profile.open1..9`) defined in
   `src/shared/actionTypes.ts`.
 - **Central Keyboard Dispatcher:** A single `keydown` handler at window level resolving
   `KeyboardEvent` through the current keybindings map, passing to registered handlers.
@@ -796,14 +796,14 @@ search, zoom, etc.) becomes remappable, with conflict detection and an interacti
 
 ### Sub-tasks
 
-- [ ] Action registry and handler dispatch system.
-- [ ] `keybindings` schema in `settingsTypes.ts` with sensible defaults.
-- [ ] Interactive Key Recorder component in Settings Panel.
-- [ ] Conflict detection logic with visual warnings.
+- [x] Action registry (`src/shared/actionTypes.ts`) and `KeybindingManager` (`src/renderer/src/keybindings.ts`) dispatch system.
+- [x] `keybindings` schema in `settingsTypes.ts` with sensible defaults in `DEFAULT_KEYBINDINGS`.
+- [x] Interactive Key Recorder component in Settings Panel (`settingsPanel.ts`) with live key capture.
+- [x] Conflict detection logic (`findConflict`) with visual warning badges (`⚠ Çakışıyor: [Action]`).
 
 ---
 
-## 10. Command Palette & Runbooks ("Bitig Betik") *(Bitig Differentiator)*
+## 10. Command Palette & Runbooks ("Bitig Betik") *(Bitig Differentiator)* - done
 
 **Goal:** provide a universal, keyboard-driven Command Palette (`Ctrl+Shift+P`) and a built-in
 parametric Runbook / Snippets system ("Bitig Betik", `Ctrl+Shift+B`) that turns complex, multi-flag
@@ -821,39 +821,38 @@ commands into reusable, visual forms without cloud dependencies.
 
 ### Sub-tasks
 
-- [ ] Command Palette overlay component with high-performance fuzzy filtering.
-- [ ] Snippet schema (`name`, `description`, `template`, `tags`, `variables`).
-- [ ] Snippet modal with dynamic placeholder form generator (`src/renderer/src/snippetsModal.ts`).
-- [ ] Pre-packaged starter runbooks (Docker, Git, FFmpeg, NPM/Cargo, Kubernetes).
+- [x] Command Palette overlay component with high-performance fuzzy filtering (`src/renderer/src/commandPalette.ts`, `fuzzy.ts`).
+- [x] Snippet schema and store (`src/shared/snippetTypes.ts`, `src/main/snippets/snippetStore.ts`).
+- [x] Snippet modal with dynamic placeholder form generator and live preview (`src/renderer/src/betikModal.ts`).
+- [x] Pre-packaged starter runbooks (Docker, Git, FFmpeg, NPM/Cargo, Kubernetes).
 
 ---
 
-## 11. Command History, Fuzzy Search & Execution Telemetry
+## 11. Command History, Fuzzy Search & Execution Telemetry - done
 
 **Goal:** searchable history across sessions, a `Ctrl+R` fuzzy search popup, and execution duration
 telemetry with background task completion notifications.
 
 ### Design
 
-- **Shell Integration (OSC 133):**
-  - Inject OSC 133 marker sequences into PowerShell profile and bash/zsh to detect precise prompt starts, command starts, and exit codes.
-  - Fallback to raw input stream parsing if shell integration is not enabled.
+- **Shell Integration & Input Tracking:**
+  - Input stream & terminal output tracking for prompt starts, command lines, and exit codes.
 - **Fuzzy Search Overlay (`Ctrl+R`):**
-  - Instant history search modal ranking commands by frequency and recency.
+  - Instant history search modal ranking commands by frequency and recency (`src/renderer/src/historyModal.ts`).
 - **Execution Telemetry & Toast Notifications:**
   - When a command runs for longer than a configurable threshold (e.g. 5 seconds) and the Bitig window is in the background, send a native Windows notification: `✅ "npm run build" finished in 14.2s (exit code 0)`.
-  - Visual execution duration pill rendered at the edge of the terminal.
+  - Configurable notification threshold in Settings.
 
 ### Sub-tasks
 
-- [ ] Shell integration helper script generator (`OSC 133`).
-- [ ] Append-only history store in main (`%APPDATA%/Bitig/history.jsonl`).
-- [ ] Fuzzy search modal (`Ctrl+R`) with keyboard-first interaction.
-- [ ] Background command timer and Windows native notification dispatch (`Notification` API / electron `Notification`).
+- [x] Persistent history store in main (`%APPDATA%/Bitig/history.json`, `src/main/history/historyStore.ts`).
+- [x] Fuzzy search modal (`Ctrl+R`) with keyboard-first interaction (`src/renderer/src/historyModal.ts`).
+- [x] Background command timer and Windows native notification dispatch (`src/renderer/src/telemetry.ts`, `windowHandlers.ts`).
+- [x] Settings panel telemetry & notification controls (`src/renderer/src/settingsPanel.ts`).
 
 ---
 
-## 12. Developer Cockpit, Live Port Sniffer & Secret Shield *(Bitig Differentiator)*
+## 12. Developer Cockpit, Live Port Sniffer & Secret Shield *(Bitig Differentiator)* - done
 
 **Goal:** transform Bitig from a passive text box into an active developer cockpit: live detection
 of opened network ports (`localhost:3000`), smart file/line hyperlinks that open directly in VS Code,
@@ -863,20 +862,20 @@ and automatic masking of accidental sensitive token leaks.
 
 - **Live Port Sniffer (Port & Process Sentinel):**
   - Detect when child processes bind to TCP listening ports on Windows (e.g. Vite on `5173`, Next.js on `3000`, API on `8080`).
-  - Render an interactive badge in the titlebar / status area: `🌐 :3000 (Open)` -> 1-click open in default browser, copy URL, or kill rogue port process.
+  - Render an interactive badge in tab headers: `🟢 :5173` -> 1-click open in default browser.
 - **Smart File Hyperlinks:**
   - Regex match file references in terminal output (e.g., `src/renderer/src/main.ts:45:12` or `C:\project\error.log`).
-  - Clicking automatically opens the file at the exact line in VS Code / Cursor / default IDE (`vscode://file/...`).
+  - Clicking automatically opens the file at the exact line in VS Code / default IDE (`vscode://file/...:line:col`).
 - **Secret Shield (Privacy Guard):**
-  - Opt-in scanner that detects accidental output of JWT tokens, AWS keys (`AKIA...`), GitHub PATs (`ghp_...`), or private keys in terminal output.
-  - Automatically offers to mask the output or warns before clipboard copy.
+  - Scanner that detects accidental output of JWT tokens, AWS keys (`AKIA...`), GitHub PATs (`ghp_...`), or private keys in terminal output.
+  - Automatically sanitizes and masks credentials when saved to command history (`history.json`).
 
 ### Sub-tasks
 
-- [ ] Network port listener inspection in main process (using Node `netstat`/PowerShell TCP probe).
-- [ ] Titlebar port badge UI with quick-action context menu.
-- [ ] Smart hyperlink link provider using `@xterm/addon-web-links` custom regex matchers.
-- [ ] Secret Shield regex pattern matcher with toggle in Settings.
+- [x] Live Port Sniffer regex stream scanner (`src/renderer/src/portSniffer.ts`).
+- [x] Tab bar port badge UI with 1-click browser opener (`src/renderer/src/tabs.ts`, `style.css`).
+- [x] Smart hyperlink link provider using xterm custom link provider (`src/renderer/src/smartLinks.ts`).
+- [x] Secret Shield regex pattern matcher with toggle in Settings (`src/renderer/src/secretShield.ts`, `src/main/history/historyStore.ts`).
 
 ---
 

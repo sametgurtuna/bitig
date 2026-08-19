@@ -1,8 +1,9 @@
 # Bitig — Özellikler & Fark Yaratan Yetenekler (FEATURES.md)
 
-> Bu doküman, **Bitig**'in sıradan bir terminal öykünücüsü olmanın ötesine geçerek
-> modern bir **Geliştirici Kokpiti (Developer Cockpit)** haline gelmesini sağlayan
-> temel ve benzersiz yeteneklerini detaylandırır.
+> **v0.9.0** — Port Sniffer, Smart Links ve Secret Shield dahil tüm Geliştirici
+> Kokpit özellikleri tamamlandı. Bu doküman, **Bitig**'in sıradan bir terminal
+> öykünücüsünün ötesine geçerek modern bir **Geliştirici Kokpiti** haline
+> gelmesini sağlayan temel ve benzersiz yeteneklerini detaylandırır.
 
 ---
 
@@ -26,7 +27,7 @@ Mevcut Windows ekosistemindeki terminaller iki uca savrulmuştur:
 |---|:---:|:---:|:---:|:---:|
 | **ConPTY Windows Entegrasyonu** | ✅ Native | ❌ (Özel motor) | ⚠️ (node-pty) | ✅ **ConPTY + xterm.js** |
 | **Yerel Parametrik Runbook ("Bitig Betik")** | ❌ Yok | ⚠️ (Bulut/Hesaplı) | ❌ Yok | 🚀 **Dahili & Yerel JSON (`Ctrl+Shift+B`)** |
-| **Canlı Port & Servis Dinleyicisi (Port Sniffer)** | ❌ Yok | ❌ Yok | ❌ Yok | 🌐 **Dahili (Tıkla-Aç & Kill PID)** |
+| **Canlı Port & Servis Dinleyicisi (Port Sniffer)** | ❌ Yok | ❌ Yok | ❌ Yok | 🌐 **Dahili — Shipped v0.9.0 (ANSI-stripped, buffered, tıkla-aç)** |
 | **Secret Shield (Token/Şifre Sansürü)** | ❌ Yok | ❌ Yok | ❌ Yok | 🛡️ **Dahili (Otomatik Maskeleme)** |
 | **Yerel AI Asistanı (Ollama / BYOK)** | ⚠️ (Copilot Sidebar) | ⚠️ (Warp AI / Bulut) | ❌ Yok | 💡 **Dahili (Ollama + BYOK / Sıfır İz)** |
 | **Quake / Dropdown HUD Modu** | ⚠️ (Ayrı mod/ayar) | ❌ Yok | ⚠️ (Eklentiyle) | 🪟 **Dahili (`Win+~` / `Ctrl+~`)** |
@@ -89,43 +90,45 @@ Bu komutları ezberlemek, not uygulamasından kopyala-yapıştır yapıp tırnak
 
 ---
 
-### 2. Canlı Port ve Servis Dinleyicisi (Live Port Sniffer)
+### 2. Canlı Port ve Servis Dinleyicisi (Live Port Sniffer) ✅ Shipped v0.9.0
 
 #### 🔴 Problem
-Bir backend veya frontend geliştirirken (`npm run dev`, `cargo run`, `docker compose up`, `python manage.py runserver`), uygulamanın hangi portta ayağa kalktığını görmek için akan logları taramak gerekir. Ayrıca bazen kapatılan terminal arkada asılı bir zombi Node/Python prosesi bırakır ve `EADDRINUSE: port 3000 already in use` hatasıyla geliştiriciyi uğraştırır.
+Bir backend veya frontend geliştirirken (`npm run dev`, `cargo run`, `docker compose up`, `python manage.py runserver`), uygulamanın hangi portta ayağa kalktığını görmek için akan logları taramak gerekir.
 
-#### 🟢 Bitig Çözümü
-Bitig'in main prosesi, PTY oturumuna bağlı çocuk proseslerin (child processes) açtığı TCP dinleme soketlerini izler.
-* Port açıldığı an sekme başlığında ve durum çubuğunda interaktif bir rozet belirir: `🌐 :3000 (Next.js)`.
+#### 🟢 Bitig Çözümü (v0.9.0'da tamamlandı)
+Bitig'in renderer katmanındaki `PortSniffer` sınıfı, gelen PTY çıktısını analiz eder:
+* **ANSI escape sequence'leri** tarama öncesi temizlenir — renk kodları regex'i kırmaz.
+* **Per-leaf rolling buffer** (512 karakter) ile parçalı PTY chunk'larındaki URL'ler kaybolmaz.
+* Port açıldığı an sekme başlığında yeşil, yanıp sönen interaktif bir rozet belirir: `🟢 :5173`.
 * **Rozet Aksiyonları:**
-  1. **Tek Tıkla Aç:** Varsayılan tarayıcıda `http://localhost:3000` açılır.
-  2. **URL Kopyala:** Panoya kopyalar.
-  3. **Prosesi Sonlandır (Kill PID):** Portu işgal eden prosesi tek tıkla öldürür.
+  1. **Tek Tıkla Aç:** Varsayılan tarayıcıda `http://localhost:PORT` açılır (`shell.openExternal`).
+  2. False positive önleme: `ready in 153 ms` gibi milisaniye değerleri port olarak yakalanmaz.
 
 ---
 
-### 3. Akıllı Linkler & IDE Entegrasyonu (Smart Hyperlinks)
+### 3. Akıllı Linkler & IDE Entegrasyonu (Smart Hyperlinks) ✅ Shipped v0.9.0
 
 #### 🔴 Problem
 Terminalde derleme hatası, test sonucu veya log akarken bir dosya konumu basıldığında (`at src/renderer/src/main.ts:42:15` veya `C:\Repo\error.log:120`), standart terminaller bunu düz metin olarak gösterir veya sadece `http://` linklerini tıkletir. Dosyayı editörde elle arayıp o satıra gitmek dakikalar çalar.
 
-#### 🟢 Bitig Çözümü
-Bitig, terminal çıktısındaki tüm dosya yollarını, yığın izlerini (stack traces) ve satır numaralarını `@xterm/addon-web-links` tabanlı akıllı regex sağlayıcılarıyla algılar:
-* `Ctrl + Sol Tık` yapıldığında dosya doğrudan tercih edilen IDE'de (VS Code, Cursor, Windsurf, WebStorm) tam olarak o satır ve sütunda açılır:
+#### 🟢 Bitig Çözümü (v0.9.0'da tamamlandı)
+Bitig, `src/renderer/src/smartLinks.ts` içinde xterm.js'e özel link sağlayıcı kaydeder:
+* Yığın izi desenlerini tanır: `src/main.ts:42:15`, `C:\Users\...\file.py:102`.
+* `Ctrl + Sol Tık` ile dosya doğrudan VS Code / Cursor'da tam satır ve sütunda açılır:
   ```
   vscode://file/c:/Users/samet/Desktop/Bitig/src/renderer/src/main.ts:42:15
   ```
-* Ayarlardan varsayılan editör protokolü seçilebilir (`vscode://`, `cursor://`, `idea://`, `subl://`).
+* `cockpit:open-file` IPC kanalı üzerinden `shell.openExternal` ile açılır.
 
 ---
 
-### 4. Secret Shield — Gizli Bilgi & Token Kalkanı
+### 4. Secret Shield — Gizli Bilgi & Token Kalkanı ✅ Shipped v0.9.0
 
 #### 🔴 Problem
-Canlı yayınlarda, ofiste ekran paylaşımı yaparken veya ekran görüntüsü alırken yanlışlıkla `cat .env`, `git remote -v`, `echo $STRIPE_KEY` gibi komutlar çalıştırıldığında hassas API anahtarları açığa çıkar ve güvenlik ihlallerine yol açar.
+Canlı yayınlarda veya ekran paylaşımı yaparken `cat .env`, `echo $STRIPE_KEY` gibi komutlar çalıştırıldığında hassas API anahtarları açığa çıkar.
 
-#### 🟢 Bitig Çözümü
-Bitig'in renderer katmanındaki çıktı denetleyicisi, terminale basılan verileri bilinen hassas desenlere karşı canlı olarak tarar:
+#### 🟢 Bitig Çözümü (v0.9.0'da tamamlandı)
+`src/renderer/src/secretShield.ts` ve `src/main/history/historyStore.ts` birlikte çalışır:
 * **Algılanan Desenler:**
   * JWT Tokenlar (`eyJ...`)
   * AWS Access Key (`AKIA[0-9A-Z]{16}`)
@@ -133,9 +136,8 @@ Bitig'in renderer katmanındaki çıktı denetleyicisi, terminale basılan veril
   * OpenAI / Anthropic API Key (`sk-...`, `sk-ant-...`)
   * Özel Anahtarlar (`-----BEGIN RSA PRIVATE KEY-----`)
 * **Kalkan Davranışı:**
-  * Metin ekranda otomatik olarak `••••••••[SECRET MASKED]••••••••` şeklinde sansürlenir.
-  * Üzerine fareyle gelindiğinde `👁️ Göster` butonu çıkar.
-  * Bu metin kopyalanmak istendiğinde kullanıcıdan onay isteyen bir güvenlik uyarısı belirir.
+  * Komut **geçmişine kaydedilirken** otomatik olarak `ghp_************` şeklinde maskelenir — shoulder surfing ve ekran paylaşımı sızıntılarını önler.
+  * Ekran maskeleme (render katmanı) roadmap'teki bir sonraki adımdır.
 
 ---
 

@@ -6,13 +6,15 @@ import type {
   PtyDataEvent,
   PtyExitEvent
 } from '../shared/ptyTypes';
-import { WINDOW_CHANNELS } from '../shared/windowTypes';
-import type { WindowMaximizeChangeEvent } from '../shared/windowTypes';
+import { WINDOW_CHANNELS, type WindowMaximizeChangeEvent, type WindowNotifyPayload } from '../shared/windowTypes';
 import { THEME_CHANNELS } from '../shared/themeTypes';
 import type { BitigTheme } from '../shared/themeTypes';
 import { SETTINGS_CHANNELS } from '../shared/settingsTypes';
 import type { BitigSettings, BitigSettingsPatch } from '../shared/settingsTypes';
 import { FONT_CHANNELS } from '../shared/fontTypes';
+import { SNIPPET_CHANNELS, type BitigSnippet } from '../shared/snippetTypes';
+import { HISTORY_CHANNELS, type HistoryEntry } from '../shared/historyTypes';
+import { COCKPIT_CHANNELS } from '../shared/cockpitTypes';
 
 // nodeIntegration kapali, contextIsolation acik: renderer'a sadece bu daralmis
 // API yuzeyi contextBridge ile sunulur, dogrudan Node/Electron erisimi verilmez.
@@ -61,6 +63,10 @@ const windowApi = {
   },
 
   isMaximized: (): Promise<boolean> => ipcRenderer.invoke(WINDOW_CHANNELS.isMaximized),
+
+  notify: (payload: WindowNotifyPayload): void => {
+    ipcRenderer.send(WINDOW_CHANNELS.notify, payload);
+  },
 
   onMaximizeChange: (listener: (event: WindowMaximizeChangeEvent) => void): (() => void) => {
     const subscription = (
@@ -111,12 +117,37 @@ const fontsApi = {
   list: (): Promise<string[]> => ipcRenderer.invoke(FONT_CHANNELS.list)
 };
 
+const snippetsApi = {
+  list: (): Promise<BitigSnippet[]> => ipcRenderer.invoke(SNIPPET_CHANNELS.list),
+  save: (snippet: BitigSnippet): Promise<BitigSnippet[]> =>
+    ipcRenderer.invoke(SNIPPET_CHANNELS.save, snippet),
+  delete: (id: string): Promise<BitigSnippet[]> =>
+    ipcRenderer.invoke(SNIPPET_CHANNELS.delete, id),
+  reset: (): Promise<BitigSnippet[]> => ipcRenderer.invoke(SNIPPET_CHANNELS.reset)
+};
+
+const historyApi = {
+  list: (): Promise<HistoryEntry[]> => ipcRenderer.invoke(HISTORY_CHANNELS.list),
+  add: (payload: { command: string; cwd?: string; durationMs?: number; exitCode?: number }): Promise<HistoryEntry[]> =>
+    ipcRenderer.invoke(HISTORY_CHANNELS.add, payload),
+  clear: (): Promise<HistoryEntry[]> => ipcRenderer.invoke(HISTORY_CHANNELS.clear)
+};
+
+const cockpitApi = {
+  openUrl: (url: string): Promise<boolean> => ipcRenderer.invoke(COCKPIT_CHANNELS.openUrl, url),
+  openFile: (payload: { filePath: string; line?: number; column?: number }): Promise<boolean> =>
+    ipcRenderer.invoke(COCKPIT_CHANNELS.openFile, payload)
+};
+
 export type BitigApi = {
   pty: typeof ptyApi;
   windowControls: typeof windowApi;
   theme: typeof themeApi;
   settings: typeof settingsApi;
   fonts: typeof fontsApi;
+  snippets: typeof snippetsApi;
+  history: typeof historyApi;
+  cockpit: typeof cockpitApi;
 };
 
 const bitigApi: BitigApi = {
@@ -124,7 +155,10 @@ const bitigApi: BitigApi = {
   windowControls: windowApi,
   theme: themeApi,
   settings: settingsApi,
-  fonts: fontsApi
+  fonts: fontsApi,
+  snippets: snippetsApi,
+  history: historyApi,
+  cockpit: cockpitApi
 };
 
 contextBridge.exposeInMainWorld('bitig', bitigApi);

@@ -2,6 +2,13 @@ import { buildFontStack, type AppearanceController } from './appearance';
 import { loadUsableFonts, type FontInfo } from './fonts';
 import type { BitigTheme } from '../../shared/themeTypes';
 import type { BackgroundImageFit, BitigSettings } from '../../shared/settingsTypes';
+import {
+  ACTION_DEFINITIONS,
+  normalizeKeyCombo,
+  type ActionCategory,
+  type ActionId
+} from '../../shared/actionTypes';
+import type { KeybindingManager } from './keybindings';
 
 const FIT_LABELS: Record<BackgroundImageFit, string> = {
   cover: 'Kapla (cover)',
@@ -16,10 +23,7 @@ const NERD_FONT_SAMPLE_ICONS = '\uE0B0  \uE706  \uF09B  \uF07B  \uE62B  \uF120';
 /**
  * Windows Terminal'deki ayarlar sekmesine benzer bir ayarlar paneli:
  * title bar'daki disli butonuyla acilir, #terminal-shell'in yerini
- * kaplar. Gorunum (tema/opaklik/arkaplan gorseli) ve Font (aile/boyut,
- * Nerd Font tespiti) bolumlerini icerir - klavye kisayolu ozellestirme
- * henuz ayri bir milestone (8), implement edilmeden burada sahte kontrol
- * gostermiyoruz.
+ * kaplar. Gorunum, Kabuk Profilleri, Font ve Klavye Kisayollari bolumlerini icerir.
  */
 export class SettingsPanel {
   private isOpen = false;
@@ -27,12 +31,14 @@ export class SettingsPanel {
   // panel her acildiginda degil, ilk acilista bir kez yuklenir.
   private fonts: FontInfo[] | null = null;
   private fontsLoading = false;
+  private recordingActionId: ActionId | null = null;
 
   constructor(
     private readonly panelEl: HTMLElement,
     private readonly terminalShellEl: HTMLElement,
     private readonly toggleBtn: HTMLButtonElement,
-    private readonly appearance: AppearanceController
+    private readonly appearance: AppearanceController,
+    private readonly keybindings: KeybindingManager
   ) {
     this.toggleBtn.addEventListener('click', () => this.toggle());
     this.appearance.onChange(() => {
@@ -47,10 +53,11 @@ export class SettingsPanel {
 
   open(): void {
     this.isOpen = true;
+    this.recordingActionId = null;
     this.terminalShellEl.classList.add('hidden');
     this.panelEl.classList.remove('hidden');
     this.toggleBtn.classList.add('active');
-    document.addEventListener('keydown', this.handleKeydown);
+    document.addEventListener('keydown', this.handleKeydown, true);
     this.render();
     void this.ensureFontsLoaded();
   }
@@ -73,16 +80,37 @@ export class SettingsPanel {
 
   close(): void {
     this.isOpen = false;
+    this.recordingActionId = null;
     this.panelEl.classList.add('hidden');
     this.terminalShellEl.classList.remove('hidden');
     this.toggleBtn.classList.remove('active');
-    document.removeEventListener('keydown', this.handleKeydown);
+    document.removeEventListener('keydown', this.handleKeydown, true);
   }
 
   private readonly handleKeydown = (event: KeyboardEvent): void => {
-    // Bu dinleyici sadece panel acikken document'e ekleniyor (bkz. open/
-    // close), bu yuzden terminale odaklanmisken Escape'in normal shell
-    // davranisina (ör. vim) karismasi soz konusu degil.
+    // Eger su anda bir kisayol tusu kaydediliyorsa
+    if (this.recordingActionId) {
+      event.preventDefault();
+      event.stopPropagation();
+
+      // Sadece Escape tusu basilmissa kayittan vazgec
+      if (event.key === 'Escape' && !event.ctrlKey && !event.altKey && !event.shiftKey) {
+        this.recordingActionId = null;
+        this.render();
+        return;
+      }
+
+      const combo = normalizeKeyCombo(event);
+      if (combo) {
+        const actionId = this.recordingActionId;
+        this.recordingActionId = null;
+        window.bitig.settings.set({
+          keybindings: { [actionId]: combo }
+        });
+      }
+      return;
+    }
+
     if (event.key === 'Escape') this.close();
   };
 
@@ -93,6 +121,10 @@ export class SettingsPanel {
 
     this.panelEl.replaceChildren(
       this.buildHeader(),
+      this.buildProfileSection(settings),
+      this.buildKeybindingsSection(settings),
+      this.buildCockpitSection(settings),
+      this.buildTelemetrySection(settings),
       this.buildThemeSection(themes, settings),
       this.buildFontSection(settings),
       this.buildOpacitySection(settings),
@@ -106,7 +138,7 @@ export class SettingsPanel {
     header.className = 'settings-header';
 
     const title = document.createElement('h2');
-    title.textContent = 'Gorunum Ayarlari';
+    title.textContent = 'Ayarlar';
 
     const closeBtn = document.createElement('button');
     closeBtn.className = 'settings-close-btn';
@@ -117,6 +149,161 @@ export class SettingsPanel {
 
     header.append(title, closeBtn);
     return header;
+  }
+
+  private buildProfileSection(settings: BitigSettings): HTMLElement {
+    const section = this.buildSection('Kabuk Profilleri');
+
+    const desc = document.createElement('p');
+    desc.className = 'settings-desc';
+    desc.textContent = 'Yeni sekmelerde ve pencerelerde baslatilacak varsayilan kabugu belirleyin:';
+
+    const row = document.createElement('div');
+    row.className = 'settings-row';
+
+    const label = document.createElement('label');
+    label.className = 'settings-label';
+    label.textContent = 'Varsayilan Profil';
+    label.htmlFor = 'settings-default-profile-select';
+
+    const select = document.createElement('select');
+    select.id = 'settings-default-profile-select';
+    select.className = 'settings-select';
+
+    const profiles = settings.profiles || [];
+    for (const profile of profiles) {
+      const option = document.createElement('option');
+      option.value = profile.id;
+      option.textContent = profile.name;
+      if (profile.id === settings.defaultProfileId) {
+        option.selected = true;
+      }
+      select.appendChild(option);
+    }
+
+    select.addEventListener('change', () => {
+      window.bitig.settings.set({ defaultProfileId: select.value });
+    });
+
+    row.append(label, select);
+
+    const profileList = document.createElement('div');
+    profileList.className = 'profile-badge-list';
+    for (const p of profiles) {
+      const badge = document.createElement('div');
+      badge.className = 'profile-badge';
+      badge.innerHTML = `
+        <span class="profile-badge-dot" style="background: ${p.color || '#7dd3fc'}"></span>
+        <span class="profile-badge-name">${p.name}</span>
+        <span class="profile-badge-cmd">${p.command}</span>
+      `;
+      profileList.appendChild(badge);
+    }
+
+    section.append(desc, row, profileList);
+    return section;
+  }
+
+  private buildKeybindingsSection(settings: BitigSettings): HTMLElement {
+    const section = this.buildSection('Klavye Kisayollari');
+
+    const desc = document.createElement('p');
+    desc.className = 'settings-desc';
+    desc.textContent =
+      'Terminal eylemleri icin klavye kisayollarini ozellestirin. Bir kisayola tiklayip yeni tus kombinasyonuna basarak aninda degistirebilirsiniz.';
+
+    section.appendChild(desc);
+
+    const categories: ActionCategory[] = ['Sekmeler', 'Paneller', 'Gorunum ve Arama', 'Uygulama'];
+
+    for (const cat of categories) {
+      const catActions = ACTION_DEFINITIONS.filter((a) => a.category === cat);
+      if (catActions.length === 0) continue;
+
+      const catHeader = document.createElement('h4');
+      catHeader.className = 'keybinding-cat-title';
+      catHeader.textContent = cat;
+      section.appendChild(catHeader);
+
+      const table = document.createElement('div');
+      table.className = 'keybinding-table';
+
+      for (const def of catActions) {
+        const currentKey = settings.keybindings?.[def.id] || def.defaultKeys;
+        const isRecording = this.recordingActionId === def.id;
+        const conflict = this.keybindings.findConflict(def.id, currentKey);
+
+        const row = document.createElement('div');
+        row.className = 'keybinding-row';
+        if (isRecording) row.classList.add('recording-row');
+
+        const info = document.createElement('div');
+        info.className = 'keybinding-info';
+
+        const name = document.createElement('span');
+        name.className = 'keybinding-name';
+        name.textContent = def.name;
+
+        const actionDesc = document.createElement('span');
+        actionDesc.className = 'keybinding-desc';
+        actionDesc.textContent = def.description;
+
+        info.append(name, actionDesc);
+
+        const controls = document.createElement('div');
+        controls.className = 'keybinding-controls';
+
+        if (conflict) {
+          const conflictBadge = document.createElement('span');
+          conflictBadge.className = 'keybinding-conflict-badge';
+          conflictBadge.title = `Bu tus baska bir eylemle cakismakta: ${conflict.name}`;
+          conflictBadge.textContent = `⚠ Cakisiyor: ${conflict.name}`;
+          controls.appendChild(conflictBadge);
+        }
+
+        const keyBtn = document.createElement('button');
+        keyBtn.type = 'button';
+        keyBtn.className = `keybinding-btn ${isRecording ? 'recording' : ''}`;
+        keyBtn.title = isRecording ? 'Iptal icin Esc tusuna basin' : 'Degistirmek icin tiklayin';
+
+        if (isRecording) {
+          keyBtn.innerHTML = '<span class="recording-pulse"></span> Tus bekleniyor...';
+        } else {
+          keyBtn.textContent = currentKey;
+        }
+
+        keyBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          this.recordingActionId = isRecording ? null : def.id;
+          this.render();
+        });
+
+        controls.appendChild(keyBtn);
+
+        // Varsayilana don butonu
+        if (currentKey !== def.defaultKeys) {
+          const resetBtn = document.createElement('button');
+          resetBtn.type = 'button';
+          resetBtn.className = 'keybinding-reset-btn';
+          resetBtn.title = `Varsayilana don (${def.defaultKeys})`;
+          resetBtn.innerHTML = '↺';
+          resetBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            window.bitig.settings.set({
+              keybindings: { [def.id]: def.defaultKeys }
+            });
+          });
+          controls.appendChild(resetBtn);
+        }
+
+        row.append(info, controls);
+        table.appendChild(row);
+      }
+
+      section.appendChild(table);
+    }
+
+    return section;
   }
 
   private buildThemeSection(themes: BitigTheme[], settings: BitigSettings): HTMLElement {
@@ -401,6 +588,128 @@ export class SettingsPanel {
 
     row.append(input, valueLabel);
     return { row };
+  }
+
+  private buildTelemetrySection(settings: BitigSettings): HTMLElement {
+    const section = this.buildSection('Bildirimler ve Gorev Telemetrisi');
+
+    const desc = document.createElement('p');
+    desc.className = 'settings-desc';
+    desc.textContent =
+      'Uzun suren komutlar (derleme, test vb.) tamamlandiginda ve Bitig arka plandayken Windows masaustu bildirimi alin.';
+
+    const enableRow = document.createElement('div');
+    enableRow.className = 'settings-row';
+
+    const enableLabel = document.createElement('label');
+    enableLabel.className = 'settings-checkbox-label';
+    const enableCheckbox = document.createElement('input');
+    enableCheckbox.type = 'checkbox';
+    enableCheckbox.checked = settings.telemetry?.enableNotifications ?? true;
+    enableCheckbox.addEventListener('change', () => {
+      window.bitig.settings.set({
+        telemetry: { enableNotifications: enableCheckbox.checked }
+      });
+    });
+    enableLabel.append(enableCheckbox, document.createTextNode(' Uzun suren gorev bildirimlerini etkinlestir'));
+    enableRow.appendChild(enableLabel);
+
+    const thresholdRow = document.createElement('div');
+    thresholdRow.className = 'settings-row';
+
+    const thresholdLabel = document.createElement('label');
+    thresholdLabel.className = 'settings-label';
+    thresholdLabel.textContent = 'Bildirim Esik Suresi:';
+
+    const thresholdSelect = document.createElement('select');
+    thresholdSelect.className = 'settings-select';
+
+    const thresholds = [
+      { ms: 3000, label: '3 saniye' },
+      { ms: 5000, label: '5 saniye (Varsayilan)' },
+      { ms: 10000, label: '10 saniye' },
+      { ms: 30000, label: '30 saniye' },
+      { ms: 60000, label: '1 dakika' }
+    ];
+
+    const currentThreshold = settings.telemetry?.notificationThresholdMs ?? 5000;
+    for (const t of thresholds) {
+      const opt = document.createElement('option');
+      opt.value = String(t.ms);
+      opt.textContent = t.label;
+      if (t.ms === currentThreshold) opt.selected = true;
+      thresholdSelect.appendChild(opt);
+    }
+
+    thresholdSelect.addEventListener('change', () => {
+      window.bitig.settings.set({
+        telemetry: { notificationThresholdMs: Number(thresholdSelect.value) }
+      });
+    });
+
+    thresholdRow.append(thresholdLabel, thresholdSelect);
+    section.append(desc, enableRow, thresholdRow);
+    return section;
+  }
+
+  private buildCockpitSection(settings: BitigSettings): HTMLElement {
+    const section = this.buildSection('Gelistirici Kokpiti (Developer Cockpit)');
+
+    const desc = document.createElement('p');
+    desc.className = 'settings-desc';
+    desc.textContent =
+      'Canli sunucu portlarini sekme basliginda yakalayin, dosya/satir baglantilarini editorde acin ve gizli anahtar sizintilarini engelleyin.';
+
+    // 1. Canli Port Dinleyicisi
+    const portRow = document.createElement('div');
+    portRow.className = 'settings-row';
+    const portLabel = document.createElement('label');
+    portLabel.className = 'settings-checkbox-label';
+    const portCheckbox = document.createElement('input');
+    portCheckbox.type = 'checkbox';
+    portCheckbox.checked = settings.cockpit?.enablePortSniffer ?? true;
+    portCheckbox.addEventListener('change', () => {
+      window.bitig.settings.set({
+        cockpit: { enablePortSniffer: portCheckbox.checked }
+      });
+    });
+    portLabel.append(portCheckbox, document.createTextNode(' Canli Port Dinleyicisi (Live Port Sniffer)'));
+    portRow.appendChild(portLabel);
+
+    // 2. Gizli Anahtar Kalkani
+    const shieldRow = document.createElement('div');
+    shieldRow.className = 'settings-row';
+    const shieldLabel = document.createElement('label');
+    shieldLabel.className = 'settings-checkbox-label';
+    const shieldCheckbox = document.createElement('input');
+    shieldCheckbox.type = 'checkbox';
+    shieldCheckbox.checked = settings.cockpit?.enableSecretShield ?? true;
+    shieldCheckbox.addEventListener('change', () => {
+      window.bitig.settings.set({
+        cockpit: { enableSecretShield: shieldCheckbox.checked }
+      });
+    });
+    shieldLabel.append(shieldCheckbox, document.createTextNode(' Gizli Anahtar Kalkani (Secret Shield Token Masking)'));
+    shieldRow.appendChild(shieldLabel);
+
+    // 3. Editorde Ac
+    const editorRow = document.createElement('div');
+    editorRow.className = 'settings-row';
+    const editorLabel = document.createElement('label');
+    editorLabel.className = 'settings-checkbox-label';
+    const editorCheckbox = document.createElement('input');
+    editorCheckbox.type = 'checkbox';
+    editorCheckbox.checked = settings.cockpit?.openLinksInEditor ?? true;
+    editorCheckbox.addEventListener('change', () => {
+      window.bitig.settings.set({
+        cockpit: { openLinksInEditor: editorCheckbox.checked }
+      });
+    });
+    editorLabel.append(editorCheckbox, document.createTextNode(' Dosya/Satir Baglantilarini Kod Editorunde Ac'));
+    editorRow.appendChild(editorLabel);
+
+    section.append(desc, portRow, shieldRow, editorRow);
+    return section;
   }
 
   private async browseBackgroundImage(): Promise<void> {

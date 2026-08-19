@@ -2,6 +2,10 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { app } from 'electron';
 import type { BitigSettings, BitigSettingsPatch } from '../../shared/settingsTypes';
+import { DEFAULT_PROFILES } from '../../shared/profileTypes';
+import { DEFAULT_KEYBINDINGS } from '../../shared/actionTypes';
+import { DEFAULT_COCKPIT_SETTINGS } from '../../shared/cockpitTypes';
+import { discoverProfiles } from '../pty/profileDiscovery';
 
 const DEFAULT_SETTINGS: BitigSettings = {
   schemaVersion: 1,
@@ -13,12 +17,17 @@ const DEFAULT_SETTINGS: BitigSettings = {
     backgroundImageFit: 'cover'
   },
   terminal: {
-    // Windows 11'de kurulu gelir; font sistemi oncesindeki sabit
-    // fontFamily zincirinin de ilk sirasiydi, yani varsayilan gorunum
-    // degismiyor.
     fontFamily: 'Cascadia Code',
     fontSize: 14
-  }
+  },
+  profiles: DEFAULT_PROFILES,
+  defaultProfileId: 'powershell',
+  keybindings: DEFAULT_KEYBINDINGS,
+  telemetry: {
+    enableNotifications: true,
+    notificationThresholdMs: 5000
+  },
+  cockpit: DEFAULT_COCKPIT_SETTINGS
 };
 
 const MIN_OPACITY = 0.3;
@@ -26,34 +35,32 @@ const MAX_OPACITY = 1;
 const MIN_FONT_SIZE = 8;
 const MAX_FONT_SIZE = 32;
 
-/**
- * `%APPDATA%/Bitig/settings.json` dosyasini yonetir: yukler, kismi
- * guncellemeleri derinlemesine (deep) birlestirip diske yazar, elle
- * yapilan disaridan (dosyayi dogrudan duzenleme) degisiklikleri izler.
- * Bozuk/gecersiz dosya durumunda sessizce cokmek yerine varsayilanlara
- * doner ve gorunur bir uyari basar (bkz. ROADMAP.md milestone 4 kabul
- * kriterleri).
- */
 export class SettingsStore {
   private readonly filePath = path.join(app.getPath('userData'), 'settings.json');
   private settings: BitigSettings = DEFAULT_SETTINGS;
   private readonly listeners = new Set<(settings: BitigSettings) => void>();
-  // persist()'in son yazdigi tam JSON metni. fs.watch, kendi yazdigimiz
-  // dosyayi da tetikler; bunu disaridan (elle) bir degisiklikten ayirt
-  // etmek icin zamanlamaya guvenmek yerine icerigi karsilastiriyoruz.
   private lastWrittenJson = '';
   private watchDebounceTimer: NodeJS.Timeout | null = null;
 
-  load(): void {
+  async load(): Promise<void> {
     this.settings = this.readFromDisk();
+
+    // Eger ilk acilissa veya profiller tanimli degilse sistemdeki kabuklari kesfet
+    if (!this.settings.profiles || this.settings.profiles.length === 0) {
+      try {
+        const discovered = await discoverProfiles();
+        if (discovered.length > 0) {
+          this.settings.profiles = discovered;
+          this.settings.defaultProfileId = discovered[0].id;
+        }
+      } catch (err) {
+        console.error('[Bitig] Profil kesfi sirasinda hata:', err);
+      }
+    }
+
     this.persist(); // eksik alanlari tamamlanmis haliyle diske yaz
 
     fs.watch(this.filePath, { persistent: false }, () => {
-      // Bazi editorler/araclar dosyayi tek seferde degil ardisik birden
-      // fazla islemle (ör. once bosalt, sonra yaz) kaydeder; her adim ayri
-      // bir fs.watch olayi dogurabilir. Araya kisa bir debounce koyup son
-      // olaydan sonraki durumu okuyarak "yarim yazilmis dosyayi parse edip
-      // gecici olarak varsayilanlara donme" riskini buyuk olcude azaltiyoruz.
       if (this.watchDebounceTimer) clearTimeout(this.watchDebounceTimer);
       this.watchDebounceTimer = setTimeout(() => this.handleExternalChange(), 100);
     });
@@ -78,9 +85,15 @@ export class SettingsStore {
 
   /** Ayarlar panelindeki "Varsayilanlara don" butonu icin. */
   reset(): BitigSettings {
-    // DEFAULT_SETTINGS'i dogrudan atamiyoruz: this.settings her zaman kendi
-    // objesi olmali, DEFAULT_SETTINGS sabiti hicbir yerde mutate edilmemeli.
-    this.settings = { ...DEFAULT_SETTINGS, appearance: { ...DEFAULT_SETTINGS.appearance } };
+    this.settings = {
+      ...DEFAULT_SETTINGS,
+      appearance: { ...DEFAULT_SETTINGS.appearance },
+      terminal: { ...DEFAULT_SETTINGS.terminal },
+      profiles: [...DEFAULT_SETTINGS.profiles],
+      keybindings: { ...DEFAULT_SETTINGS.keybindings },
+      telemetry: { ...DEFAULT_SETTINGS.telemetry },
+      cockpit: { ...DEFAULT_SETTINGS.cockpit }
+    };
     this.persist();
     this.notify();
     return this.settings;
@@ -117,8 +130,6 @@ export class SettingsStore {
       const parsed = JSON.parse(raw) as BitigSettingsPatch;
       return this.mergeAndClamp(DEFAULT_SETTINGS, parsed);
     } catch (error) {
-      // Dosya var ama gecerli JSON degil - varsayilanlara don, ama bunu
-      // sessizce yapma.
       console.error(
         `[Bitig] settings.json gecersiz JSON iceriyor, varsayilan ayarlara donuluyor: ${String(error)}`
       );
@@ -131,7 +142,12 @@ export class SettingsStore {
       schemaVersion: 1,
       activeTheme: patch.activeTheme ?? base.activeTheme,
       appearance: { ...base.appearance, ...patch.appearance },
-      terminal: { ...base.terminal, ...patch.terminal }
+      terminal: { ...base.terminal, ...patch.terminal },
+      profiles: Array.isArray(patch.profiles) && patch.profiles.length > 0 ? patch.profiles : base.profiles,
+      defaultProfileId: patch.defaultProfileId ?? base.defaultProfileId,
+      keybindings: { ...base.keybindings, ...patch.keybindings },
+      telemetry: { ...base.telemetry, ...patch.telemetry },
+      cockpit: { ...base.cockpit, ...patch.cockpit }
     };
     merged.appearance.opacity = clamp(
       merged.appearance.opacity,
@@ -153,6 +169,10 @@ export class SettingsStore {
     );
     if (typeof merged.terminal.fontFamily !== 'string' || merged.terminal.fontFamily.trim() === '') {
       merged.terminal.fontFamily = DEFAULT_SETTINGS.terminal.fontFamily;
+    }
+    // Gecerli bir defaultProfileId kontrolu
+    if (!merged.profiles.some((p) => p.id === merged.defaultProfileId)) {
+      merged.defaultProfileId = merged.profiles[0]?.id || 'powershell';
     }
     return merged;
   }

@@ -13,6 +13,9 @@ export const PTY_CHANNELS = {
 export interface PtyCreateOptions {
   cols: number;
   rows: number;
+  command?: string;
+  args?: string[];
+  cwd?: string;
 }
 
 export interface PtyCreateResult {

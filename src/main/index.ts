@@ -6,8 +6,13 @@ import { registerWindowHandlers } from './ipc/windowHandlers';
 import { registerThemeHandlers } from './ipc/themeHandlers';
 import { registerSettingsHandlers } from './ipc/settingsHandlers';
 import { registerFontHandlers } from './ipc/fontHandlers';
+import { registerSnippetHandlers } from './ipc/snippetHandlers';
+import { registerHistoryHandlers } from './ipc/historyHandlers';
+import { registerCockpitHandlers } from './ipc/cockpitHandlers';
 import { ThemeStore } from './theme/themeStore';
 import { SettingsStore } from './settings/settingsStore';
+import { SnippetStore } from './snippets/snippetStore';
+import { HistoryStore } from './history/historyStore';
 
 // app.getPath('userData') varsayilan olarak package.json > name'e gore
 // hesaplanir; bunu acikca 'Bitig' yapiyoruz ki CLAUDE.md'de belgelenen
@@ -17,6 +22,8 @@ app.setName('Bitig');
 const ptyManager = new PtyManager();
 const themeStore = new ThemeStore();
 const settingsStore = new SettingsStore();
+const snippetStore = new SnippetStore();
+const historyStore = new HistoryStore();
 
 function createMainWindow(): void {
   const mainWindow = new BrowserWindow({
@@ -62,17 +69,22 @@ function createMainWindow(): void {
   }
 }
 
-void app.whenReady().then(() => {
+void app.whenReady().then(async () => {
   // Store'lar ilk pencere olusmadan once yuklenmeli: IPC handler'lari
   // (registerThemeHandlers/registerSettingsHandlers) kayit anindan itibaren
   // gecerli veri donebilmeli.
-  settingsStore.load();
+  await settingsStore.load();
   themeStore.load();
+  snippetStore.load();
+  historyStore.load();
 
-  // Pencereye bagli olmayan tek handler; ipcMain.handle ayni kanal icin
+  // Pencereye bagli olmayan handler'lar; ipcMain.handle ayni kanal icin
   // ikinci kez cagrilinca hata verdigi icin pencere olusturmanin degil
   // uygulama baslangicinin parcasi.
   registerFontHandlers();
+  registerSnippetHandlers(snippetStore);
+  registerHistoryHandlers(historyStore);
+  registerCockpitHandlers();
 
   createMainWindow();
 

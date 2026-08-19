@@ -6,9 +6,15 @@ export const WINDOW_CHANNELS = {
   toggleMaximize: 'window:toggle-maximize',
   close: 'window:close',
   isMaximized: 'window:is-maximized',
-  maximizeChange: 'window:maximize-change'
+  maximizeChange: 'window:maximize-change',
+  notify: 'window:notify'
 } as const;
 
 export interface WindowMaximizeChangeEvent {
   isMaximized: boolean;
+}
+
+export interface WindowNotifyPayload {
+  title: string;
+  body: string;
 }

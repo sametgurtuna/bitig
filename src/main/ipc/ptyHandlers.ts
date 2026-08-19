@@ -15,7 +15,7 @@ import type { PtyManager } from '../pty/ptyManager';
  */
 export function registerPtyHandlers(ptyManager: PtyManager, webContents: WebContents): void {
   ipcMain.handle(PTY_CHANNELS.create, (_event, options: PtyCreateOptions): PtyCreateResult => {
-    const id = ptyManager.create(options.cols, options.rows);
+    const id = ptyManager.create(options.cols, options.rows, options.command, options.args, options.cwd);
 
     ptyManager.onData(id, (data) => {
       webContents.send(PTY_CHANNELS.data, { id, data });

@@ -1,5 +1,5 @@
-// Ayarlar (settings.json) icin main/preload/renderer arasi paylasilan IPC
-// sozlesmesi ve sema (bkz. CLAUDE.md "Ayarlar / Temalar").
+import type { ShellProfile } from './profileTypes';
+import type { CockpitSettings } from './cockpitTypes';
 
 export const SETTINGS_CHANNELS = {
   get: 'settings:get',
@@ -31,17 +31,32 @@ export interface TerminalSettings {
   fontSize: number;
 }
 
+export interface TelemetrySettings {
+  enableNotifications: boolean;
+  notificationThresholdMs: number;
+}
+
 export interface BitigSettings {
   schemaVersion: 1;
   /** Aktif BitigTheme'in id'si (bkz. themeTypes.ts). */
   activeTheme: string;
   appearance: AppearanceSettings;
   terminal: TerminalSettings;
+  profiles: ShellProfile[];
+  defaultProfileId: string;
+  keybindings: Record<string, string>;
+  telemetry: TelemetrySettings;
+  cockpit: CockpitSettings;
 }
 
 /** settings:set ile gonderilen kismi guncelleme; SettingsStore mevcut
  *  ayarlarin uzerine derinlemesine (deep) birlestirir. */
-export type BitigSettingsPatch = Partial<Omit<BitigSettings, 'appearance' | 'terminal'>> & {
+export type BitigSettingsPatch = Partial<Omit<BitigSettings, 'appearance' | 'terminal' | 'profiles' | 'keybindings' | 'telemetry' | 'cockpit'>> & {
   appearance?: Partial<AppearanceSettings>;
   terminal?: Partial<TerminalSettings>;
+  profiles?: ShellProfile[];
+  keybindings?: Record<string, string>;
+  telemetry?: Partial<TelemetrySettings>;
+  cockpit?: Partial<CockpitSettings>;
 };
+

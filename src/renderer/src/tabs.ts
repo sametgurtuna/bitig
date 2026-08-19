@@ -5,95 +5,189 @@ import {
   createPaneLeaf,
   disposePaneLeaf,
   findLeaf,
+  navigateDirection,
   renderPaneTree,
   splitLeaf,
+  type CreatePaneLeafOptions,
   type PaneLeaf,
   type PaneNode,
   type SplitDirection,
   type TerminalFontOptions
 } from './panes';
 import { bitigDark } from '../../shared/builtinThemes';
+import type { BitigSettings } from '../../shared/settingsTypes';
+import type { ShellProfile } from '../../shared/profileTypes';
+import type { ActionId } from '../../shared/actionTypes';
+import { SearchBar } from './searchBar';
+import type { KeybindingManager } from './keybindings';
+import { ExecutionTelemetry } from './telemetry';
+import { PortSniffer } from './portSniffer';
+import type { DiscoveredPort } from '../../shared/cockpitTypes';
 
 interface Tab {
-  id: string; // istemci tarafinda uretilir (crypto.randomUUID); artik bir
-  // PTY id'si degil, cunku bir sekme birden fazla pane (ve dolayisiyla
-  // birden fazla PTY oturumu) barindirabilir.
+  id: string;
   title: string;
   root: PaneNode;
-  activeLeafId: string; // sekme icinde odakli olan pane'in PTY id'si
+  activeLeafId: string;
   containerEl: HTMLDivElement;
   tabEl: HTMLButtonElement;
+  profileId: string;
+  isZoomed: boolean;
 }
 
 /**
- * Birden fazla bagimsiz sekmeyi yonetir; her sekme kendi pane agacina
- * (split edilebilir bir veya daha fazla terminal) sahiptir. PTY olaylari
- * (pty:data/pty:exit) tek bir global dinleyiciden PTY id'sine gore ilgili
- * pane'e yonlendirilir; sekme ya da pane basina ayri dinleyici kaydedilmez.
+ * Sekmeleri, pane agaclarini ve klavye kisayollarini yoneten ana magaza.
+ * Profil yonetimi, dahili arama, yonsel split gezinmesi ve zoom yeteneklerini barindirir.
  */
 export class TabStore {
   private readonly tabs: Tab[] = [];
   private readonly tabsById = new Map<string, Tab>();
   private readonly leavesByPtyId = new Map<string, { tab: Tab; leaf: PaneLeaf }>();
   private activeId: string | null = null;
-  // IPC'den ilk tema/ayar yaniti gelene kadar (appearance.ts) senkron
-  // varsayilanlar gerekir; ikisi de tema/font sistemi oncesindeki sabit
-  // degerlerle ayni, yani varsayilan gorunum degismiyor.
   private currentTerminalTheme: ITheme = bitigDark.terminal;
   private currentFont: TerminalFontOptions = {
     fontFamily: "'Cascadia Code', 'Cascadia Mono', Consolas, monospace",
     fontSize: 14
   };
+  private settings: BitigSettings | null = null;
+  private readonly searchBar: SearchBar;
+  private readonly telemetry: ExecutionTelemetry;
+  private readonly portSniffer: PortSniffer;
 
   constructor(
     private readonly rootEl: HTMLElement,
     private readonly tabbarListEl: HTMLElement,
-    // Alt+Shift+T'nin gercek davranisini (hangi temaya gecilecegini bilmek)
-    // appearance.ts sahiplenir; TabStore sadece kisayolu yakalayip bu
-    // callback'i cagirir - boylece tek bir merkezi klavye yonlendiricisi
-    // (bkz. handleGlobalKeydown) korunur.
+    private readonly keybindings: KeybindingManager,
+    telemetry?: ExecutionTelemetry,
     private readonly onCycleThemeShortcut?: () => void
   ) {
+    this.searchBar = new SearchBar(this.rootEl);
+    this.telemetry = telemetry || new ExecutionTelemetry();
+    this.portSniffer = new PortSniffer();
+
     window.bitig.pty.onData((event) => {
-      this.leavesByPtyId.get(event.id)?.leaf.terminal.write(event.data);
+      const entry = this.leavesByPtyId.get(event.id);
+      entry?.leaf.terminal.write(event.data);
+      this.telemetry.handleTerminalOutput(event.id, event.data);
+      if (entry) {
+        this.portSniffer.processOutput(entry.tab.id, entry.leaf.id, event.data);
+      }
     });
 
     window.bitig.pty.onExit((event) => {
       const entry = this.leavesByPtyId.get(event.id);
       entry?.leaf.terminal.write(`\r\n[proses sonlandi, exit code: ${event.exitCode}]\r\n`);
+      this.telemetry.finishCommand(event.id, event.exitCode);
     });
 
-    window.addEventListener('keydown', (event) => this.handleGlobalKeydown(event));
+    this.portSniffer.onPortsChanged((ports, tabId) => {
+      this.updateTabPorts(tabId, ports);
+    });
+
+    this.registerKeybindings();
   }
 
-  async createTab(): Promise<void> {
+  private registerKeybindings(): void {
+    this.keybindings.registerAction('tab.new', () => void this.createTab());
+    this.keybindings.registerAction('tab.close', () => {
+      if (this.activeId) this.closeTab(this.activeId);
+    });
+    this.keybindings.registerAction('tab.next', () => this.cycleTab(1));
+    this.keybindings.registerAction('tab.previous', () => this.cycleTab(-1));
+
+    this.keybindings.registerAction('pane.splitRight', () => void this.splitActivePane('row'));
+    this.keybindings.registerAction('pane.splitDown', () => void this.splitActivePane('column'));
+    this.keybindings.registerAction('pane.close', () => this.closeActivePane());
+    this.keybindings.registerAction('pane.zoom', () => this.toggleZoomActivePane());
+
+    this.keybindings.registerAction('pane.navigateLeft', () => this.navigateActivePane('left'));
+    this.keybindings.registerAction('pane.navigateRight', () => this.navigateActivePane('right'));
+    this.keybindings.registerAction('pane.navigateUp', () => this.navigateActivePane('up'));
+    this.keybindings.registerAction('pane.navigateDown', () => this.navigateActivePane('down'));
+
+    this.keybindings.registerAction('terminal.search', () => this.toggleSearch());
+    this.keybindings.registerAction('theme.cycle', () => this.onCycleThemeShortcut?.());
+
+    // 1..9 Profil kisayollari
+    for (let i = 1; i <= 9; i++) {
+      this.keybindings.registerAction(`profile.open${i}` as ActionId, () => {
+        const profiles = this.getProfiles();
+        if (i - 1 < profiles.length) {
+          void this.createTab(profiles[i - 1].id);
+        }
+      });
+    }
+  }
+
+  setSettings(settings: BitigSettings): void {
+    this.settings = settings;
+    if (settings.keybindings) {
+      this.keybindings.setBindings(settings.keybindings);
+    }
+  }
+
+  getProfiles(): ShellProfile[] {
+    return this.settings?.profiles || [];
+  }
+
+  getDefaultProfile(): ShellProfile | undefined {
+    const profiles = this.getProfiles();
+    const defaultId = this.settings?.defaultProfileId;
+    return profiles.find((p) => p.id === defaultId) || profiles[0];
+  }
+
+  getProfileById(id?: string): ShellProfile | undefined {
+    if (!id) return this.getDefaultProfile();
+    return this.getProfiles().find((p) => p.id === id) || this.getDefaultProfile();
+  }
+
+  async createTab(profileId?: string, cwd?: string): Promise<void> {
+    const profile = this.getProfileById(profileId);
+    let ptyId = '';
+    const options: CreatePaneLeafOptions = {
+      command: profile?.command,
+      args: profile?.args,
+      cwd: cwd || profile?.startingDirectory,
+      onInput: (data) => this.telemetry.handleTerminalInput(ptyId, data)
+    };
+
     const leaf = await createPaneLeaf(
-      (event) => this.isReservedShortcut(event),
+      (event) => this.keybindings.isReserved(event),
       this.currentTerminalTheme,
-      this.currentFont
+      this.currentFont,
+      options
     );
+    ptyId = leaf.id;
 
     const containerEl = document.createElement('div');
     containerEl.className = 'tab-pane hidden';
     this.rootEl.appendChild(containerEl);
 
     const id = crypto.randomUUID();
+    const tabTitle = profile?.name || 'PowerShell';
     const tab: Tab = {
       id,
-      title: 'PowerShell',
+      title: tabTitle,
       root: leaf,
       activeLeafId: leaf.id,
       containerEl,
-      tabEl: this.buildTabElement(id)
+      tabEl: this.buildTabElement(id, tabTitle),
+      profileId: profile?.id || 'powershell',
+      isZoomed: false
     };
+
+    // Terminal baslik degisimlerini sekme basligina yansit
+    leaf.terminal.onTitleChange((newTitle) => {
+      if (newTitle && newTitle.trim() !== '') {
+        this.updateTabTitle(tab, newTitle.trim());
+      }
+    });
 
     this.leavesByPtyId.set(leaf.id, { tab, leaf });
     this.tabs.push(tab);
     this.tabsById.set(tab.id, tab);
 
     this.renderTabPanes(tab);
-    // setActiveTab kendi icinde renderTabBar() cagirir; DOM'a yeni eklenen
-    // tabEl bu cagri sirasinda #tabbar-list'e tasinir.
     this.setActiveTab(tab.id);
   }
 
@@ -108,18 +202,16 @@ export class TabStore {
       this.leavesByPtyId.delete(leaf.id);
       disposePaneLeaf(leaf);
     }
+    this.portSniffer.clearTab(id);
     tab.containerEl.remove();
     tab.tabEl.remove();
 
     if (this.tabs.length === 0) {
-      // Son sekme kapaninca Windows Terminal'deki gibi tum pencere kapanir.
       window.bitig.windowControls.close();
       return;
     }
 
     if (this.activeId === id) {
-      // Kapatilan sekme aktifti; komsu sekmeye gec (setActiveTab kendi
-      // icinde renderTabBar() cagirir).
       const fallback = this.tabs[Math.min(index, this.tabs.length - 1)];
       this.setActiveTab(fallback.id);
     }
@@ -138,9 +230,6 @@ export class TabStore {
     this.activeId = id;
     this.renderTabBar();
 
-    // container az once gorunur oldu. Her leaf'in kendi ResizeObserver'i
-    // bunu genelde yakalar, ama display:none -> block gecisinde tarayicilar
-    // arasi tutarlilik icin burada da acikca fit()+resize cagiriyoruz.
     for (const leaf of collectLeaves(next.root)) {
       leaf.fitAddon.fit();
       window.bitig.pty.resize(leaf.id, leaf.terminal.cols, leaf.terminal.rows);
@@ -149,15 +238,39 @@ export class TabStore {
   }
 
   /** Aktif sekmenin odakli pane'ini belirtilen yonde ikiye boler. */
-  async splitActivePane(direction: SplitDirection): Promise<void> {
+  async splitActivePane(direction: SplitDirection, profileId?: string): Promise<void> {
     const tab = this.getActiveTab();
     if (!tab) return;
 
+    // Zoom aktifse split oncesi zoom'dan cik
+    if (tab.isZoomed) {
+      tab.isZoomed = false;
+    }
+
+    const activeLeaf = findLeaf(tab.root, tab.activeLeafId);
+    const profile = this.getProfileById(profileId || tab.profileId);
+    let ptyId = '';
+    const options: CreatePaneLeafOptions = {
+      command: profile?.command,
+      args: profile?.args,
+      cwd: activeLeaf?.cwd || profile?.startingDirectory,
+      onInput: (data) => this.telemetry.handleTerminalInput(ptyId, data)
+    };
+
     const newLeaf = await createPaneLeaf(
-      (event) => this.isReservedShortcut(event),
+      (event) => this.keybindings.isReserved(event),
       this.currentTerminalTheme,
-      this.currentFont
+      this.currentFont,
+      options
     );
+    ptyId = newLeaf.id;
+
+    newLeaf.terminal.onTitleChange((newTitle) => {
+      if (tab.activeLeafId === newLeaf.id && newTitle && newTitle.trim() !== '') {
+        this.updateTabTitle(tab, newTitle.trim());
+      }
+    });
+
     this.leavesByPtyId.set(newLeaf.id, { tab, leaf: newLeaf });
 
     tab.root = splitLeaf(tab.root, tab.activeLeafId, direction, newLeaf);
@@ -166,18 +279,78 @@ export class TabStore {
     this.focusTerminal(tab, newLeaf.id);
   }
 
-  /** Aktif sekmenin odakli pane'ini kapatir; son pane ise sekmenin tumu kapanir. */
   closeActivePane(): void {
     const tab = this.getActiveTab();
     if (!tab) return;
     this.closePaneInTab(tab, tab.activeLeafId);
   }
 
-  /**
-   * Aktif temayi acik tum sekmelerdeki/pane'lerdeki her xterm.js instance'ina
-   * uygular ve sonraki yeni sekme/pane'lerin de bu temayla acilmasi icin
-   * saklar (bkz. appearance.ts).
-   */
+  /** Aktif odakli pane'i tam ekran yapar veya eski split duzenine dondurur. */
+  toggleZoomActivePane(): void {
+    const tab = this.getActiveTab();
+    if (!tab) return;
+    const leaves = collectLeaves(tab.root);
+    if (leaves.length < 2) return; // Tek pane varken zoom anlamsizdir
+
+    tab.isZoomed = !tab.isZoomed;
+    this.renderTabPanes(tab);
+
+    const activeLeaf = findLeaf(tab.root, tab.activeLeafId);
+    if (activeLeaf) {
+      activeLeaf.fitAddon.fit();
+      window.bitig.pty.resize(activeLeaf.id, activeLeaf.terminal.cols, activeLeaf.terminal.rows);
+      this.focusTerminal(tab, activeLeaf.id);
+    }
+    this.updateTabElementZoom(tab);
+  }
+
+  /** Yonsel olarak komsu pane'e odaklanir. */
+  navigateActivePane(direction: 'left' | 'right' | 'up' | 'down'): void {
+    const tab = this.getActiveTab();
+    if (!tab || tab.isZoomed) return;
+
+    const targetId = navigateDirection(tab.root, tab.activeLeafId, direction);
+    if (targetId) {
+      this.focusLeaf(tab, targetId);
+    }
+  }
+
+  /** Aktif terminalde arama cubugunu acar/kapatir. */
+  toggleSearch(): void {
+    const tab = this.getActiveTab();
+    if (!tab) return;
+    const leaf = findLeaf(tab.root, tab.activeLeafId);
+    if (leaf) {
+      this.searchBar.toggle(leaf.terminal, leaf.searchAddon);
+    }
+  }
+
+  /** Aktif odakli pane'in PTY oturumuna veri/komut gonderir. */
+  writeToActivePane(text: string): void {
+    const tab = this.getActiveTab();
+    if (!tab) return;
+    const leaf = findLeaf(tab.root, tab.activeLeafId);
+    if (leaf) {
+      this.telemetry.startCommand(leaf.id, text.replace(/[\r\n]+$/, ''));
+      window.bitig.pty.write(leaf.id, text);
+      leaf.terminal.focus();
+    }
+  }
+
+  /** Acik sekmelerin id, baslik ve aktiflik durumlarini doner. */
+  getTabsInfo(): { id: string; title: string; active: boolean }[] {
+    return this.tabs.map((tab) => ({
+      id: tab.id,
+      title: tab.title,
+      active: tab.id === this.activeId
+    }));
+  }
+
+  /** Belirtilen sekmeye gecis yapar. */
+  switchToTab(id: string): void {
+    this.setActiveTab(id);
+  }
+
   applyTerminalTheme(theme: ITheme): void {
     this.currentTerminalTheme = theme;
     for (const tab of this.tabs) {
@@ -187,21 +360,12 @@ export class TabStore {
     }
   }
 
-  /**
-   * Aktif fontu acik tum terminallere uygular ve sonraki sekme/pane'ler
-   * icin saklar. Temadan farkli olarak font degisimi hucre olculerini de
-   * degistirir; bu yuzden her leaf yeniden fit edilip PTY'ye yeni satir/
-   * sutun sayisi bildirilmeli, yoksa shell eski boyuta gore cizmeye
-   * devam eder.
-   */
   applyTerminalFont(font: TerminalFontOptions): void {
     this.currentFont = font;
     for (const tab of this.tabs) {
       for (const leaf of collectLeaves(tab.root)) {
         leaf.terminal.options.fontFamily = font.fontFamily;
         leaf.terminal.options.fontSize = font.fontSize;
-        // Gizli sekmelerin container'i 0x0 olur; fit() orada anlamsiz
-        // deger uretir, sekmeye donuldugunde setActiveTab zaten fit ediyor.
         if (leaf.container.clientWidth === 0 || leaf.container.clientHeight === 0) continue;
         leaf.fitAddon.fit();
         window.bitig.pty.resize(leaf.id, leaf.terminal.cols, leaf.terminal.rows);
@@ -209,12 +373,64 @@ export class TabStore {
     }
   }
 
-  /** beforeunload sirasinda tum sekmelerdeki tum PTY oturumlarini sonlandirir. */
   disposeAll(): void {
     for (const tab of this.tabs) {
       for (const leaf of collectLeaves(tab.root)) {
         window.bitig.pty.dispose(leaf.id);
       }
+    }
+  }
+
+  private updateTabTitle(tab: Tab, title: string): void {
+    tab.title = title;
+    const titleEl = tab.tabEl.querySelector('.tab-title');
+    if (titleEl) {
+      titleEl.textContent = title;
+    }
+  }
+
+  private updateTabElementZoom(tab: Tab): void {
+    const zoomBadge = tab.tabEl.querySelector('.tab-zoom-badge');
+    if (tab.isZoomed) {
+      if (!zoomBadge) {
+        const badgeEl = document.createElement('span');
+        badgeEl.className = 'tab-zoom-badge';
+        badgeEl.textContent = '🔍';
+        badgeEl.title = 'Pane buyutuldu (Ctrl+Shift+Z)';
+        tab.tabEl.insertBefore(badgeEl, tab.tabEl.querySelector('.tab-close'));
+      }
+    } else {
+      zoomBadge?.remove();
+    }
+  }
+
+  private updateTabPorts(tabId: string, ports: DiscoveredPort[]): void {
+    const tab = this.tabsById.get(tabId);
+    if (!tab) return;
+
+    let portsContainer = tab.tabEl.querySelector('.tab-ports-container') as HTMLElement | null;
+    if (ports.length === 0) {
+      portsContainer?.remove();
+      return;
+    }
+
+    if (!portsContainer) {
+      portsContainer = document.createElement('span');
+      portsContainer.className = 'tab-ports-container';
+      tab.tabEl.insertBefore(portsContainer, tab.tabEl.querySelector('.tab-close'));
+    }
+
+    portsContainer.replaceChildren();
+    for (const p of ports) {
+      const badge = document.createElement('span');
+      badge.className = 'tab-port-badge';
+      badge.title = `${p.url} tarayicida ac`;
+      badge.innerHTML = `<span class="tab-port-dot"></span>:${p.port}`;
+      badge.addEventListener('click', (e) => {
+        e.stopPropagation();
+        void window.bitig.cockpit.openUrl(p.url);
+      });
+      portsContainer.appendChild(badge);
     }
   }
 
@@ -224,15 +440,18 @@ export class TabStore {
 
     const newRoot = closeLeafFromTree(tab.root, leafId);
     this.leavesByPtyId.delete(leafId);
+    this.portSniffer.clearLeaf(leafId);
     disposePaneLeaf(leaf);
 
     if (newRoot === null) {
-      // Sekmenin son pane'i kapandi; sekmenin kendisini kapat.
       this.closeTab(tab.id);
       return;
     }
 
     tab.root = newRoot;
+    if (collectLeaves(newRoot).length < 2) {
+      tab.isZoomed = false;
+    }
     if (tab.activeLeafId === leafId) {
       tab.activeLeafId = collectLeaves(newRoot)[0].id;
     }
@@ -253,11 +472,14 @@ export class TabStore {
   }
 
   private renderTabPanes(tab: Tab): void {
-    // Birden fazla pane varken odakli olani ince bir kenarlikla belirt;
-    // tek pane varken bu vurgu gereksiz gorsel gurultu olur.
-    const highlightActive = collectLeaves(tab.root).length > 1;
-    const dom = renderPaneTree(tab.root, tab.activeLeafId, highlightActive, (leafId) =>
-      this.focusLeaf(tab, leafId)
+    const leaves = collectLeaves(tab.root);
+    const highlightActive = leaves.length > 1 && !tab.isZoomed;
+    const dom = renderPaneTree(
+      tab.root,
+      tab.activeLeafId,
+      highlightActive,
+      (leafId) => this.focusLeaf(tab, leafId),
+      tab.isZoomed
     );
     tab.containerEl.replaceChildren(dom);
   }
@@ -285,15 +507,12 @@ export class TabStore {
 
   private renderTabBar(): void {
     for (const tab of this.tabs) {
-      // appendChild zaten DOM'da olan bir node'u tasir (klonlamaz), bu
-      // yuzden bu tam-yeniden-cizim her seferinde event listener'lari
-      // korur ve sirayi this.tabs dizisiyle senkron tutar.
       this.tabbarListEl.appendChild(tab.tabEl);
       tab.tabEl.classList.toggle('active', tab.id === this.activeId);
     }
   }
 
-  private buildTabElement(id: string): HTMLButtonElement {
+  private buildTabElement(id: string, initialTitle: string): HTMLButtonElement {
     const tabEl = document.createElement('button');
     tabEl.className = 'tab';
     tabEl.setAttribute('role', 'tab');
@@ -301,7 +520,7 @@ export class TabStore {
 
     const titleEl = document.createElement('span');
     titleEl.className = 'tab-title';
-    titleEl.textContent = 'PowerShell';
+    titleEl.textContent = initialTitle;
 
     const closeBtn = document.createElement('button');
     closeBtn.className = 'tab-close';
@@ -317,9 +536,6 @@ export class TabStore {
       this.closeTab(id);
     });
 
-    // Orta tus (tekerlek) tikla kapatma: tarayicilarin standart sekme
-    // davranisi. mousedown'da preventDefault olmazsa Windows'ta orta tik
-    // otomatik kaydirma (autoscroll) imlecini tetikler.
     tabEl.addEventListener('mousedown', (event) => {
       if (event.button === 1) event.preventDefault();
     });
@@ -347,64 +563,5 @@ export class TabStore {
     });
 
     return tabEl;
-  }
-
-  private handleGlobalKeydown(event: KeyboardEvent): void {
-    const key = event.key.toLowerCase();
-
-    if (event.ctrlKey && event.shiftKey && key === 't') {
-      event.preventDefault();
-      void this.createTab();
-      return;
-    }
-
-    if (event.ctrlKey && event.shiftKey && key === 'w') {
-      event.preventDefault();
-      if (this.activeId) this.closeTab(this.activeId);
-      return;
-    }
-
-    if (event.ctrlKey && event.shiftKey && key === 'x') {
-      event.preventDefault();
-      this.closeActivePane();
-      return;
-    }
-
-    if (event.ctrlKey && key === 'tab') {
-      event.preventDefault();
-      this.cycleTab(event.shiftKey ? -1 : 1);
-      return;
-    }
-
-    if (event.altKey && event.shiftKey && key === 'd') {
-      event.preventDefault();
-      void this.splitActivePane('row');
-      return;
-    }
-
-    if (event.altKey && event.shiftKey && key === 'e') {
-      event.preventDefault();
-      void this.splitActivePane('column');
-      return;
-    }
-
-    if (event.altKey && event.shiftKey && key === 't') {
-      event.preventDefault();
-      this.onCycleThemeShortcut?.();
-    }
-  }
-
-  // handleGlobalKeydown ile birebir ayni kosullari kontrol eder: sadece
-  // gercekten bir uygulama kisayolu olarak islenen kombinasyonlar burada
-  // true donmeli, yoksa ör. duz Ctrl+T gibi gercek bir shell kontrol
-  // karakteri sessizce yutulur.
-  private isReservedShortcut(event: KeyboardEvent): boolean {
-    if (event.type !== 'keydown') return false;
-    const key = event.key.toLowerCase();
-
-    if (event.ctrlKey && key === 'tab') return true;
-    if (event.ctrlKey && event.shiftKey && (key === 't' || key === 'w' || key === 'x')) return true;
-    if (event.altKey && event.shiftKey && (key === 'd' || key === 'e' || key === 't')) return true;
-    return false;
   }
 }

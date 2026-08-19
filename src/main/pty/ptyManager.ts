@@ -10,15 +10,17 @@ import type { IPty } from 'node-pty';
 export class PtyManager {
   private readonly sessions = new Map<string, IPty>();
 
-  create(cols: number, rows: number): string {
+  create(cols: number, rows: number, command?: string, args?: string[], cwd?: string): string {
     const id = randomUUID();
-    const shell = this.resolveShell();
+    const shell = command && command.trim() !== '' ? command : this.resolveShell();
+    const spawnArgs = Array.isArray(args) ? args : [];
+    const resolvedCwd = this.resolveCwd(cwd);
 
-    const shellProcess = pty.spawn(shell, [], {
+    const shellProcess = pty.spawn(shell, spawnArgs, {
       name: 'xterm-256color',
       cols,
       rows,
-      cwd: os.homedir(),
+      cwd: resolvedCwd,
       env: process.env as Record<string, string>
     });
 
@@ -56,8 +58,13 @@ export class PtyManager {
   }
 
   private resolveShell(): string {
-    // Prototip icin sabit: Windows PowerShell. Ileride ayarlardan (varsa pwsh,
-    // WSL, cmd) secilebilir hale getirilecek (bkz. CLAUDE.md yol haritasi).
     return 'powershell.exe';
+  }
+
+  private resolveCwd(cwd?: string): string {
+    if (!cwd || cwd.trim() === '') return os.homedir();
+    if (cwd === '~' || cwd === '%USERPROFILE%') return os.homedir();
+    let expanded = cwd.replace(/%([^%]+)%/g, (_, n) => process.env[n] || '');
+    return expanded || os.homedir();
   }
 }

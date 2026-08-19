@@ -1,6 +1,8 @@
 import { Terminal, type ITheme } from '@xterm/xterm';
 import { FitAddon } from '@xterm/addon-fit';
 import { WebLinksAddon } from '@xterm/addon-web-links';
+import { SearchAddon } from '@xterm/addon-search';
+import { registerSmartLinks } from './smartLinks';
 
 export type SplitDirection = 'row' | 'column';
 
@@ -9,8 +11,11 @@ export interface PaneLeaf {
   id: string; // PTY session id
   terminal: Terminal;
   fitAddon: FitAddon;
+  searchAddon: SearchAddon;
   container: HTMLDivElement;
   resizeObserver: ResizeObserver;
+  cwd?: string;
+  title?: string;
 }
 
 export interface PaneSplit {
@@ -22,25 +27,32 @@ export interface PaneSplit {
 
 export type PaneNode = PaneLeaf | PaneSplit;
 
-/**
- * Yeni bir PTY oturumu baslatir ve ona bagli bir xterm.js instance'ini bir
- * pane yaprağına (leaf) sarar. Her leaf'in kendi ResizeObserver'i vardir;
- * bu sayede pencere yeniden boyutlandirma, divider surukleme ve sekme
- * degistirme sonrasi container boyutu her degistiginde fit()+pty:resize
- * otomatik tetiklenir - ayri bir "resize" event zincirine gerek kalmaz.
- */
 export interface TerminalFontOptions {
   /** Yedek zinciri eklenmis, hazir CSS font-family degeri. */
   fontFamily: string;
   fontSize: number;
 }
 
+export interface CreatePaneLeafOptions {
+  command?: string;
+  args?: string[];
+  cwd?: string;
+  onInput?: (data: string) => void;
+}
+
 export async function createPaneLeaf(
   isReservedShortcut: (event: KeyboardEvent) => boolean,
   terminalTheme: ITheme,
-  font: TerminalFontOptions
+  font: TerminalFontOptions,
+  options?: CreatePaneLeafOptions
 ): Promise<PaneLeaf> {
-  const { id } = await window.bitig.pty.create({ cols: 80, rows: 24 });
+  const { id } = await window.bitig.pty.create({
+    cols: 80,
+    rows: 24,
+    command: options?.command,
+    args: options?.args,
+    cwd: options?.cwd
+  });
 
   const container = document.createElement('div');
   container.className = 'pane-leaf';
@@ -52,28 +64,62 @@ export async function createPaneLeaf(
     fontSize: font.fontSize,
     lineHeight: 1.25,
     scrollback: 5000,
-    // Terminal alaninin arkaplanini xterm degil #terminal-shell boyuyor
-    // (bkz. appearance.ts): xterm varsayilan olarak opak bir arkaplan
-    // cizer ve terminal pencerenin neredeyse tamamini kapladigi icin bu,
-    // seffafligi ve arkaplan gorselini tamamen orter. allowTransparency
-    // + alfasi sifir bir tema arkaplani ile o katmani devre disi
-    // birakiyoruz.
     allowTransparency: true,
     theme: terminalTheme
   });
 
   const fitAddon = new FitAddon();
+  const searchAddon = new SearchAddon();
   terminal.loadAddon(fitAddon);
+  terminal.loadAddon(searchAddon);
   terminal.loadAddon(new WebLinksAddon());
   terminal.open(container);
 
   terminal.attachCustomKeyEventHandler((event) => !isReservedShortcut(event));
-  terminal.onData((data) => window.bitig.pty.write(id, data));
+  terminal.onData((data) => {
+    options?.onInput?.(data);
+    window.bitig.pty.write(id, data);
+  });
+
+  const leaf: PaneLeaf = {
+    kind: 'leaf',
+    id,
+    terminal,
+    fitAddon,
+    searchAddon,
+    container,
+    resizeObserver: null as unknown as ResizeObserver,
+    cwd: options?.cwd
+  };
+
+  registerSmartLinks(terminal, () => leaf.cwd);
+
+  // OSC 7 calisma dizini (CWD) takibi
+  try {
+    terminal.parser.registerOscHandler(7, (data) => {
+      let pathStr = data;
+      if (pathStr.startsWith('file://')) {
+        try {
+          const url = new URL(pathStr);
+          pathStr = decodeURIComponent(url.pathname);
+          if (pathStr.startsWith('/') && pathStr.includes(':')) {
+            pathStr = pathStr.slice(1);
+          }
+        } catch {
+          pathStr = pathStr.replace(/^file:\/\/[^/]+/, '');
+        }
+      }
+      if (pathStr) {
+        leaf.cwd = pathStr;
+      }
+      return true;
+    });
+  } catch {
+    // OSC 7 parser desteklenmiyorsa sessizce gec
+  }
 
   let resizePending = false;
   const resizeObserver = new ResizeObserver(() => {
-    // Bir ResizeObserver callback'i tek frame'de birden fazla entry
-    // tasiyabilir; rAF ile bunlari tek bir fit()+resize cagrisina indiriyoruz.
     if (resizePending) return;
     resizePending = true;
     requestAnimationFrame(() => {
@@ -84,8 +130,9 @@ export async function createPaneLeaf(
     });
   });
   resizeObserver.observe(container);
+  leaf.resizeObserver = resizeObserver;
 
-  return { kind: 'leaf', id, terminal, fitAddon, container, resizeObserver };
+  return leaf;
 }
 
 export function disposePaneLeaf(leaf: PaneLeaf): void {
@@ -115,9 +162,7 @@ export function splitLeaf(
 
 /**
  * targetId'li leaf'i agactan cikarir. Ebeveyni split node'du ve tek cocuk
- * kaldiysa, kalan kardes yukari tasinir (split node kaybolur). Kok leaf'in
- * kendisi kapatiliyorsa null doner - cagiran bu durumda sekmenin tamamini
- * kapatmali.
+ * kaldiysa, kalan kardes yukari tasinir. Kok leaf kapatiliyorsa null doner.
  */
 export function closeLeafFromTree(root: PaneNode, targetId: string): PaneNode | null {
   if (root.kind === 'leaf') return root.id === targetId ? null : root;
@@ -126,10 +171,10 @@ export function closeLeafFromTree(root: PaneNode, targetId: string): PaneNode | 
   if (a.kind === 'leaf' && a.id === targetId) return b;
   if (b.kind === 'leaf' && b.id === targetId) return a;
 
-  // Bu noktada a/b split node'lar (ya da hedefi icermeyen leaf'ler); null
-  // sadece dogrudan leaf-esleme durumunda dondugu icin ?? asla devreye
-  // girmez, ama TS'in null olmayan tuple tipini saglamak icin burada.
-  return { ...root, children: [closeLeafFromTree(a, targetId) ?? a, closeLeafFromTree(b, targetId) ?? b] };
+  return {
+    ...root,
+    children: [closeLeafFromTree(a, targetId) ?? a, closeLeafFromTree(b, targetId) ?? b]
+  };
 }
 
 export function collectLeaves(root: PaneNode): PaneLeaf[] {
@@ -143,56 +188,151 @@ export function findLeaf(root: PaneNode, id: string): PaneLeaf | undefined {
 }
 
 /**
- * Pane agacindan taze bir DOM alt-agaci uretir. Leaf container'lari
- * appendChild ile TASINIR (klonlanmaz) - bu yuzden xterm.js'in canvas'i ve
- * scrollback'i her yeniden cizimde (split/close sonrasi) korunur; sadece
- * split sarmalayicilari ve divider'lar yeniden olusturulur.
+ * Yonsel pane odaklama (Alt+Left/Right/Up/Down).
+ * Ekranda cizili pane'lerin merkez koordinatlarini karsilastirarak
+ * istenen yondeki en yakin komsu leaf'in id'sini bulur.
+ */
+export function navigateDirection(
+  root: PaneNode,
+  activeLeafId: string,
+  direction: 'left' | 'right' | 'up' | 'down'
+): string | null {
+  const leaves = collectLeaves(root);
+  if (leaves.length < 2) return null;
+
+  const activeLeaf = leaves.find((l) => l.id === activeLeafId);
+  if (!activeLeaf) return null;
+
+  const activeRect = activeLeaf.container.getBoundingClientRect();
+  const activeCenter = {
+    x: activeRect.left + activeRect.width / 2,
+    y: activeRect.top + activeRect.height / 2
+  };
+
+  let bestId: string | null = null;
+  let bestScore = Infinity;
+
+  for (const candidate of leaves) {
+    if (candidate.id === activeLeafId) continue;
+    const rect = candidate.container.getBoundingClientRect();
+    const center = {
+      x: rect.left + rect.width / 2,
+      y: rect.top + rect.height / 2
+    };
+
+    const dx = center.x - activeCenter.x;
+    const dy = center.y - activeCenter.y;
+
+    let isMatch = false;
+    let primaryDist = 0;
+    let crossDist = 0;
+
+    switch (direction) {
+      case 'left':
+        if (dx < -5) {
+          isMatch = true;
+          primaryDist = -dx;
+          crossDist = Math.abs(dy);
+        }
+        break;
+      case 'right':
+        if (dx > 5) {
+          isMatch = true;
+          primaryDist = dx;
+          crossDist = Math.abs(dy);
+        }
+        break;
+      case 'up':
+        if (dy < -5) {
+          isMatch = true;
+          primaryDist = -dy;
+          crossDist = Math.abs(dx);
+        }
+        break;
+      case 'down':
+        if (dy > 5) {
+          isMatch = true;
+          primaryDist = dy;
+          crossDist = Math.abs(dx);
+        }
+        break;
+    }
+
+    if (isMatch) {
+      // Birincil eksen mesafesi + capraz eksen agirligi
+      const score = primaryDist + crossDist * 1.5;
+      if (score < bestScore) {
+        bestScore = score;
+        bestId = candidate.id;
+      }
+    }
+  }
+
+  return bestId;
+}
+
+/**
+ * Pane agacindan DOM alt-agaci uretir.
+ * isZoomed true ise sadece aktif leaf gorunur, digerleri gizlenir.
  */
 export function renderPaneTree(
   root: PaneNode,
   activeLeafId: string,
   highlightActive: boolean,
+  onFocusLeaf: (id: string) => void,
+  isZoomed = false
+): HTMLElement {
+  if (isZoomed) {
+    const activeLeaf = findLeaf(root, activeLeafId) || collectLeaves(root)[0];
+    if (activeLeaf) {
+      activeLeaf.container.classList.remove('pane-leaf-zoomed-hidden');
+      activeLeaf.container.classList.add('pane-leaf-zoomed');
+      activeLeaf.container.classList.remove('pane-leaf-active');
+      activeLeaf.container.onmousedown = () => onFocusLeaf(activeLeaf.id);
+      return activeLeaf.container;
+    }
+  }
+
+  return renderPaneNodeInternal(root, activeLeafId, highlightActive, onFocusLeaf);
+}
+
+function renderPaneNodeInternal(
+  node: PaneNode,
+  activeLeafId: string,
+  highlightActive: boolean,
   onFocusLeaf: (id: string) => void
 ): HTMLElement {
-  if (root.kind === 'leaf') {
-    root.container.classList.toggle('pane-leaf-active', highlightActive && root.id === activeLeafId);
-    // addEventListener yerine ozellik atamasi kullaniyoruz: container her
-    // renderPaneTree cagrisinda ayni kalir, addEventListener kullansaydik
-    // her cagri eski dinleyicinin ustune yenisini yigar (onFocusLeaf art
-    // arda birden fazla kez tetiklenirdi).
-    root.container.onmousedown = () => onFocusLeaf(root.id);
-    return root.container;
+  if (node.kind === 'leaf') {
+    node.container.classList.remove('pane-leaf-zoomed');
+    node.container.classList.remove('pane-leaf-zoomed-hidden');
+    node.container.classList.toggle('pane-leaf-active', highlightActive && node.id === activeLeafId);
+    node.container.onmousedown = () => onFocusLeaf(node.id);
+    return node.container;
   }
 
   const wrapper = document.createElement('div');
-  wrapper.className = `pane-split pane-split-${root.direction}`;
+  wrapper.className = `pane-split pane-split-${node.direction}`;
 
-  const [a, b] = root.children;
+  const [a, b] = node.children;
 
   const aSlot = document.createElement('div');
   aSlot.className = 'pane-slot';
-  aSlot.style.flexGrow = String(root.ratio);
-  aSlot.appendChild(renderPaneTree(a, activeLeafId, highlightActive, onFocusLeaf));
+  aSlot.style.flexGrow = String(node.ratio);
+  aSlot.appendChild(renderPaneNodeInternal(a, activeLeafId, highlightActive, onFocusLeaf));
 
   const bSlot = document.createElement('div');
   bSlot.className = 'pane-slot';
-  bSlot.style.flexGrow = String(1 - root.ratio);
-  bSlot.appendChild(renderPaneTree(b, activeLeafId, highlightActive, onFocusLeaf));
+  bSlot.style.flexGrow = String(1 - node.ratio);
+  bSlot.appendChild(renderPaneNodeInternal(b, activeLeafId, highlightActive, onFocusLeaf));
 
   const divider = document.createElement('div');
-  divider.className = `pane-divider pane-divider-${root.direction}`;
-  wirePaneDivider(divider, wrapper, root, aSlot, bSlot);
+  divider.className = `pane-divider pane-divider-${node.direction}`;
+  wirePaneDivider(divider, wrapper, node, aSlot, bSlot);
 
   wrapper.append(aSlot, divider, bSlot);
   return wrapper;
 }
 
-/**
- * Divider'i surukleyerek split oranini degistirir. aSlot/bSlot'un
- * flexGrow'unu canli guncelleriz; bu, ilgili leaf container'larinin gercek
- * boyutunu degistirir ve her leaf'in kendi ResizeObserver'i bunu yakalayip
- * fit()+pty:resize'i otomatik tetikler - burada ayrica cagirmaya gerek yok.
- */
 function wirePaneDivider(
   divider: HTMLDivElement,
   wrapper: HTMLDivElement,

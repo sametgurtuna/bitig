@@ -21,9 +21,15 @@
         <div id="titlebar-drag">
           <span id="titlebar-label">Bitig</span>
           <div id="tabbar-list" role="tablist"></div>
-          <button id="new-tab-btn" title="Yeni sekme (Ctrl+Shift+T)" aria-label="Yeni sekme">
-            <svg viewBox="0 0 10 10"><path d="M5 0v10M0 5h10" /></svg>
-          </button>
+          <div id="new-tab-group">
+            <button id="new-tab-btn" title="Yeni sekme (Ctrl+Shift+T)" aria-label="Yeni sekme">
+              <svg viewBox="0 0 10 10"><path d="M5 0v10M0 5h10" /></svg>
+            </button>
+            <button id="new-tab-dropdown-btn" title="Kabuk profili sec..." aria-label="Kabuk profili sec">
+              <svg viewBox="0 0 10 10"><path d="M2 3.5l3 3 3-3" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+            </button>
+            <div id="profile-dropdown-menu" class="profile-dropdown-menu hidden"></div>
+          </div>
         </div>
         <button id="settings-btn" title="Gorunum ayarlari" aria-label="Ayarlari ac">
           <svg viewBox="0 0 10 10" id="settings-btn-icon">

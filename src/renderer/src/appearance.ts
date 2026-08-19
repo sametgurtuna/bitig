@@ -97,6 +97,7 @@ export class AppearanceController {
 
   private async applyAll(): Promise<void> {
     if (!this.settings) return;
+    this.tabStore?.setSettings(this.settings);
     const theme = this.resolveActiveTheme();
     this.applyTerminalAndUiTheme(theme, this.settings.appearance.opacity);
     this.tabStore?.applyTerminalFont({
