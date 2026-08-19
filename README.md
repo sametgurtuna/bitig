@@ -32,6 +32,8 @@
 - [Architecture](#architecture)
 - [IPC Channel Reference](#ipc-channel-reference)
 - [Getting Started](#getting-started)
+- [Keyboard Shortcuts](#keyboard-shortcuts)
+- [Customization](#customization)
 - [Project Structure](#project-structure)
 - [Roadmap](#roadmap)
 - [Contributing](#contributing)
@@ -52,7 +54,10 @@ extension system once the core is solid).
 This project is under active, early development. It currently supports
 multiple tabs, each of which can itself be split into multiple resizable
 panes, each a real PowerShell process running behind a custom window,
-rendered with xterm.js. A theme system is next.
+rendered with xterm.js, themeable and optionally transparent with a
+background image. A GUI settings panel is next - for now, everything is
+driven by hand-editing a hot-reloaded `settings.json` plus a couple of
+keyboard shortcuts (see [Customization](#customization)).
 
 ## Features
 
@@ -74,6 +79,12 @@ Shipped so far:
 - A fully custom, frameless window: draggable title bar, minimize/maximize/
   close controls, rounded corners, and drop shadow, none of it borrowed from
   the OS chrome.
+- A JSON-based theme system: four built-in themes (Bitig Dark, Bitig Light,
+  a Dracula-style palette, a Nord-style palette) plus drop-in custom themes
+  from `%APPDATA%/Bitig/themes/`, hot-reloaded, cycled with `Alt+Shift+T`.
+- Transparency (real desktop showing through the window, not a simulated
+  blur) and an optional full-window background image, both driven by
+  `settings.json`.
 - A typed, one-way-clear IPC contract between the Electron main process and
   the renderer, exposed through a narrow `contextBridge` API (no direct
   Node access from the UI).
@@ -85,8 +96,8 @@ Planned, in order:
 - [x] Working minimal terminal (window, PTY, rendering, keyboard input)
 - [x] Tabs (open, close, switch, drag-to-reorder)
 - [x] Split panes (horizontal and vertical, resizable, drag divider)
-- [ ] Theme system (JSON based, built-in themes plus user themes)
-- [ ] Transparency and background image support
+- [x] Theme system (JSON based, built-in themes plus user themes)
+- [x] Transparency and background image support
 - [ ] Settings panel (GUI, no manual JSON editing required)
 - [ ] Nerd Font detection and font picker
 - [ ] Customizable keyboard shortcuts
@@ -114,29 +125,42 @@ The renderer never touches Node or native modules directly.
 flowchart LR
     subgraph Main["Main process (Node, full OS access)"]
         PM[PtyManager]
-        PH[pty:* IPC handlers]
-        WH[window:* IPC handlers]
+        TS[ThemeStore]
+        SS[SettingsStore]
+        PH[pty:* handlers]
+        WH[window:* handlers]
+        OH["theme:* / settings:*\nhandlers"]
         PM --> PH
+        TS --> OH
+        SS --> OH
     end
 
     subgraph Preload["Preload (contextBridge, sandboxed)"]
-        API["window.bitig API\n(pty + windowControls)"]
+        API["window.bitig API\n(pty, windowControls,\ntheme, settings)"]
     end
 
     subgraph Renderer["Renderer (no Node access)"]
         UI[xterm.js terminal]
         TB[Custom title bar]
+        AC[AppearanceController]
     end
 
     Shell["Real shell process\n(PowerShell via ConPTY)"]
+    FS["%APPDATA%/Bitig/\nsettings.json + themes/"]
 
     PM <--> Shell
+    SS <--> FS
+    TS <--> FS
     UI -- keyboard input --> API
     API -- ipcRenderer --> PH
     PH -- webContents.send --> API
     API -- shell output --> UI
     TB -- window controls --> API
     API -- ipcRenderer --> WH
+    AC -- ipcRenderer --> OH
+    OH -- webContents.send --> API
+    API -- theme + appearance --> AC
+    AC -- applies theme --> UI
 ```
 
 Every tab owns a pane tree (`src/renderer/src/panes.ts`): a single leaf by
@@ -144,13 +168,17 @@ default, or a nested tree of splits once the user divides it. Every leaf
 maps to exactly one `PtyManager` session and one `xterm.js` instance;
 `TabStore` (`src/renderer/src/tabs.ts`) manages tabs and dispatches PTY
 events to the correct leaf regardless of how deep it is nested.
+`AppearanceController` (`src/renderer/src/appearance.ts`) is the one place
+that resolves the active theme and appearance settings and applies them:
+terminal colors to every open leaf, chrome colors as CSS custom
+properties, and the background image layer.
 
 ## IPC Channel Reference
 
-Naming convention: `<domain>:<action>`. Defined once in
-`src/shared/ptyTypes.ts` and `src/shared/windowTypes.ts`, consumed by main,
-preload, and renderer alike, so the contract cannot silently drift between
-processes.
+Naming convention: `<domain>:<action>`. Defined once in `src/shared/*.ts`
+(`ptyTypes.ts`, `windowTypes.ts`, `themeTypes.ts`, `settingsTypes.ts`),
+consumed by main, preload, and renderer alike, so the contract cannot
+silently drift between processes.
 
 | Channel | Direction | Kind | Purpose |
 |---|---|---|---|
@@ -165,6 +193,12 @@ processes.
 | `window:close` | renderer to main | send | Close the window |
 | `window:is-maximized` | renderer to main | invoke | Query current maximize state |
 | `window:maximize-change` | main to renderer | event | Notify the renderer when maximize state changes (OS-driven or otherwise) |
+| `theme:list` | renderer to main | invoke | Return every built-in + user theme |
+| `theme:list-changed` | main to renderer | event | A file in `themes/` was added, removed, or edited |
+| `settings:get` | renderer to main | invoke | Return the current settings object |
+| `settings:set` | renderer to main | send | Apply a partial update (deep-merged) |
+| `settings:changed` | main to renderer | event | Broadcasts the full settings object after any change, from IPC or a hand-edit |
+| `settings:read-background-image` | renderer to main | invoke | Read the configured background image file and return it as a `data:` URL |
 
 ## Getting Started
 
@@ -199,6 +233,117 @@ npm run build
 
 Produces production bundles under `out/`.
 
+## Keyboard Shortcuts
+
+There is no settings panel yet (see [Roadmap](#roadmap)), so these are the
+only way to drive tabs, panes, and themes today. They are hardcoded for
+now; milestone 8 makes them remappable.
+
+| Shortcut | Action |
+|---|---|
+| `Ctrl+Shift+T` | New tab |
+| `Ctrl+Shift+W` | Close the active tab |
+| `Ctrl+Tab` / `Ctrl+Shift+Tab` | Next / previous tab |
+| Middle-click a tab | Close that tab |
+| Drag a tab | Reorder tabs |
+| `Alt+Shift+D` | Split the focused pane, new pane to the right |
+| `Alt+Shift+E` | Split the focused pane, new pane below |
+| `Ctrl+Shift+X` | Close the focused pane (closes the tab if it was the last pane) |
+| Click a pane | Focus it |
+| Drag a pane divider | Resize the two panes on either side |
+| `Alt+Shift+T` | Cycle to the next available theme |
+
+## Customization
+
+No GUI yet - both of the following are read live from disk with no
+restart required, which in practice covers most of what a settings panel
+would otherwise be for.
+
+### Settings
+
+`%APPDATA%/Bitig/settings.json` is created automatically on first launch.
+Edit it in any text editor and save; the running app picks up the change
+within a fraction of a second (`fs.watch`-based, debounced so a
+still-being-saved file is never read half-written).
+
+```jsonc
+{
+  "schemaVersion": 1,
+  "activeTheme": "nord",
+  "appearance": {
+    "opacity": 0.92,
+    "backgroundImage": "C:\\Users\\you\\Pictures\\bg.png",
+    "backgroundImageOpacity": 0.25,
+    "backgroundImageFit": "cover"
+  }
+}
+```
+
+- `activeTheme` - the `id` of a built-in or custom theme (see below).
+- `appearance.opacity` - `0.3`-`1`, clamped on write so the window can
+  never become fully invisible or unclickable by a typo.
+- `appearance.backgroundImage` - an absolute path to an image, or `null`.
+  There is no in-app file picker yet (that needs a settings panel to host
+  a "Browse..." button) - point it at a file by hand.
+- `appearance.backgroundImageFit` - `"cover"`, `"contain"`, `"center"`, or
+  `"tile"`.
+
+### Themes
+
+Four themes ship built in: `bitig-dark` (default), `bitig-light`,
+`dracula`, `nord`. Cycle through them with `Alt+Shift+T`, or set
+`activeTheme` to a specific `id` directly.
+
+Drop a custom theme JSON file into `%APPDATA%/Bitig/themes/` and it
+becomes available immediately, no restart - editing an already-selected
+theme file updates the running terminal's colors live, too.
+
+```jsonc
+{
+  "schemaVersion": 1,
+  "id": "my-custom-theme",
+  "name": "My Custom Theme",
+  "author": "you",
+  "terminal": {
+    "background": "#0f1117",
+    "foreground": "#d8dee9",
+    "cursor": "#7dd3fc",
+    "cursorAccent": "#0f1117",
+    "selectionBackground": "#2d3444",
+    "black": "#1a1c23",
+    "red": "#f47067",
+    "green": "#7ee787",
+    "yellow": "#e3b341",
+    "blue": "#79c0ff",
+    "magenta": "#d2a8ff",
+    "cyan": "#56d4dd",
+    "white": "#d0d7de",
+    "brightBlack": "#4b5263",
+    "brightRed": "#ff9492",
+    "brightGreen": "#a5f3b8",
+    "brightYellow": "#f2cc60",
+    "brightBlue": "#a5d6ff",
+    "brightMagenta": "#e2c5ff",
+    "brightCyan": "#8ce4ec",
+    "brightWhite": "#ffffff"
+  },
+  "ui": {
+    "background": "#0f1117",
+    "titlebarBackground": "#14161e",
+    "titlebarText": "#8b93a7",
+    "border": "#22252f",
+    "accent": "#7dd3fc"
+  }
+}
+```
+
+`terminal` maps directly onto xterm.js's own theme fields (all 16 ANSI
+colors plus background/foreground/cursor/selection); `ui` covers the
+title bar and window chrome. A file missing required fields or with an
+invalid `schemaVersion` is skipped with a logged error rather than
+crashing the app or silently corrupting the theme list - check the
+terminal running `npm run dev` if a theme you dropped in doesn't show up.
+
 ## Project Structure
 
 ```
@@ -210,21 +355,28 @@ Bitig/
     shared/
       ptyTypes.ts             # PTY IPC contract, shared across processes
       windowTypes.ts          # Window control IPC contract
+      themeTypes.ts           # BitigTheme schema + theme:* IPC contract
+      settingsTypes.ts        # BitigSettings schema + settings:* IPC contract
+      builtinThemes/          # bitigDark/bitigLight/dracula/nord.ts + index (BUILTIN_THEMES)
     main/
       index.ts                # App lifecycle, BrowserWindow creation
       pty/ptyManager.ts       # PTY session lifecycle (create/write/resize/dispose)
+      theme/themeStore.ts     # Merges built-in + user themes, watches themes/
+      settings/settingsStore.ts # Loads/merges/watches settings.json, clamps opacity
       ipc/ptyHandlers.ts      # pty:* channel handlers
       ipc/windowHandlers.ts   # window:* channel handlers
+      ipc/themeHandlers.ts    # theme:* channel handlers
+      ipc/settingsHandlers.ts # settings:* channel handlers
     preload/
       index.ts                # contextBridge surface: window.bitig
     renderer/
       index.html
       src/
-        main.ts                # Thin bootstrap: title bar + TabStore
+        main.ts                # Thin bootstrap: title bar + AppearanceController + TabStore
         tabs.ts                 # TabStore: tab lifecycle, tab bar, drag-to-reorder, shortcuts
         panes.ts                # Pane tree: split/close/render, divider drag, per-leaf ResizeObserver
+        appearance.ts           # Applies active theme/opacity/background image, theme-cycle shortcut
         titlebar.ts             # Custom title bar behavior
-        theme.ts                # Terminal color theme
         style.css
 ```
 
@@ -239,9 +391,9 @@ and acceptance criteria for every upcoming feature, lives in
 ## Contributing
 
 This project is in an early, fast-moving stage; the architecture may still
-shift as tabs and split panes land. If you want to experiment locally, fork
-the repo, keep changes to one concern per commit, and write commit messages
-in English, following the existing style.
+shift as the settings panel and further milestones land. If you want to
+experiment locally, fork the repo, keep changes to one concern per commit,
+and write commit messages in English, following the existing style.
 
 ## Naming
 
@@ -269,6 +421,8 @@ on Turkic mythology and Old Turkic vocabulary.
 - [Mimari](#mimari)
 - [IPC Kanal Referansi](#ipc-kanal-referansi)
 - [Baslarken](#baslarken)
+- [Klavye Kisayollari](#klavye-kisayollari)
+- [Ozellestirme](#ozellestirme)
 - [Proje Yapisi](#proje-yapisi)
 - [Yol Haritasi](#yol-haritasi)
 - [Katkida Bulunma](#katkida-bulunma)
@@ -289,8 +443,11 @@ hafif bir eklenti sistemi) bir terminal.
 Proje aktif ve erken gelistirme asamasinda. Su an birden fazla sekmeyi
 destekliyor; her sekme kendi icinde birden fazla boyutlandirilabilir
 pane'e bolunebiliyor, her pane ozel bir pencerenin arkasinda calisan
-gercek bir PowerShell prosesi, xterm.js ile render ediliyor. Sirada tema
-sistemi var.
+gercek bir PowerShell prosesi, xterm.js ile render ediliyor, temalanabilir
+ve istege bagli olarak arkaplan gorseliyle seffaf olabiliyor. Sirada GUI
+ayarlar paneli var - simdilik her sey elle duzenlenen, hot-reload'lu bir
+`settings.json` ve birkac klavye kisayoluyla yonetiliyor (bkz.
+[Ozellestirme](#ozellestirme)).
 
 ## Ozellikler
 
@@ -313,6 +470,12 @@ Su ana kadar tamamlananlar:
 - Tamamen ozel, cercevesiz (frameless) bir pencere: suruklenebilir title
   bar, minimize/maximize/close kontrolleri, yuvarlak koseler ve golge - hicbiri
   OS'nin varsayilan pencere govdesinden gelmiyor.
+- JSON tabanli tema sistemi: dort hazir tema (Bitig Dark, Bitig Light,
+  Dracula-stili, Nord-stili) artı `%APPDATA%/Bitig/themes/` altina birakilan
+  ozel temalar, hot-reload'lu, `Alt+Shift+T` ile dongusel gecis.
+  Seffaflik (simule edilmis bir bulaniklik degil, pencerenin arkasindaki
+  gercek masaustunun gorunmesi) ve istege bagli tam pencere arkaplan
+  gorseli, ikisi de `settings.json` uzerinden yonetiliyor.
 - Electron main sureci ile renderer arasinda tipli, tek yonu net bir IPC
   sozlesmesi; dar bir `contextBridge` API'siyle disari aciliyor (UI'dan
   dogrudan Node erisimi yok).
@@ -324,8 +487,8 @@ Sirasiyla planlananlar:
 - [x] Calisan minimal terminal (pencere, PTY, render, klavye girisi)
 - [x] Sekmeler (ac, kapat, gecis yap, surukle-sirala)
 - [x] Split pane (yatay ve dikey bolme, boyutlandirilabilir divider)
-- [ ] Tema sistemi (JSON tabanli, hazir temalar + kullanici temalari)
-- [ ] Seffaflik ve arkaplan gorseli destegi
+- [x] Tema sistemi (JSON tabanli, hazir temalar + kullanici temalari)
+- [x] Seffaflik ve arkaplan gorseli destegi
 - [ ] Ayarlar paneli (GUI, elle JSON duzenlemeye gerek kalmadan)
 - [ ] Nerd Font tespiti ve font secici
 - [ ] Ozellestirilebilir klavye kisayollari
@@ -353,29 +516,42 @@ Renderer hicbir zaman Node ya da native modullere dogrudan dokunmuyor.
 flowchart LR
     subgraph Main["Main process (Node, tam OS erisimi)"]
         PM[PtyManager]
-        PH["pty:* IPC handler'lari"]
-        WH["window:* IPC handler'lari"]
+        TS[ThemeStore]
+        SS[SettingsStore]
+        PH["pty:* handler'lari"]
+        WH["window:* handler'lari"]
+        OH["theme:* / settings:*\nhandler'lari"]
         PM --> PH
+        TS --> OH
+        SS --> OH
     end
 
     subgraph Preload["Preload (contextBridge, sandboxli)"]
-        API["window.bitig API\n(pty + windowControls)"]
+        API["window.bitig API\n(pty, windowControls,\ntheme, settings)"]
     end
 
     subgraph Renderer["Renderer (Node erisimi yok)"]
         UI[xterm.js terminal]
         TB["Ozel title bar"]
+        AC[AppearanceController]
     end
 
     Shell["Gercek shell prosesi\n(ConPTY uzerinden PowerShell)"]
+    FS["%APPDATA%/Bitig/\nsettings.json + themes/"]
 
     PM <--> Shell
+    SS <--> FS
+    TS <--> FS
     UI -- klavye girisi --> API
     API -- ipcRenderer --> PH
     PH -- webContents.send --> API
     API -- shell ciktisi --> UI
     TB -- pencere kontrolleri --> API
     API -- ipcRenderer --> WH
+    AC -- ipcRenderer --> OH
+    OH -- webContents.send --> API
+    API -- tema + gorunum --> AC
+    AC -- temayi uygular --> UI
 ```
 
 Her sekme bir pane agacina sahiptir (`src/renderer/src/panes.ts`):
@@ -383,14 +559,17 @@ varsayilan olarak tek bir leaf, kullanici boldukce ic ice gecmis bir split
 agaci. Her leaf tam olarak bir `PtyManager` oturumuna ve bir `xterm.js`
 instance'ina karsilik gelir; `TabStore` (`src/renderer/src/tabs.ts`)
 sekmeleri yonetir ve PTY olaylarini, ne kadar derinde olursa olsun dogru
-leaf'e yonlendirir.
+leaf'e yonlendirir. `AppearanceController`
+(`src/renderer/src/appearance.ts`), aktif temayi ve gorunum ayarlarini
+cozumleyip uygulayan tek yer: terminal renklerini acik her leaf'e, chrome
+renklerini CSS custom property olarak, ve arkaplan gorseli katmanini.
 
 ## IPC Kanal Referansi
 
-Isimlendirme kurali: `<alan>:<eylem>`. `src/shared/ptyTypes.ts` ve
-`src/shared/windowTypes.ts` icinde bir kere tanimlanir, main/preload/renderer
-tarafindan ortak kullanilir - bu sayede sozlesme surecler arasinda sessizce
-kaymaz.
+Isimlendirme kurali: `<alan>:<eylem>`. `src/shared/*.ts` icinde
+(`ptyTypes.ts`, `windowTypes.ts`, `themeTypes.ts`, `settingsTypes.ts`) bir
+kere tanimlanir, main/preload/renderer tarafindan ortak kullanilir - bu
+sayede sozlesme surecler arasinda sessizce kaymaz.
 
 | Kanal | Yon | Tip | Amac |
 |---|---|---|---|
@@ -405,6 +584,12 @@ kaymaz.
 | `window:close` | renderer -> main | send | Pencereyi kapatir |
 | `window:is-maximized` | renderer -> main | invoke | Mevcut maximize durumunu sorgular |
 | `window:maximize-change` | main -> renderer | event | Maximize durumu degistiginde renderer'i bilgilendirir (OS kaynakli dahil) |
+| `theme:list` | renderer -> main | invoke | Tum hazir + kullanici temalarini doner |
+| `theme:list-changed` | main -> renderer | event | `themes/` klasorunde bir dosya eklendi/silindi/degisti |
+| `settings:get` | renderer -> main | invoke | Guncel ayarlar objesini doner |
+| `settings:set` | renderer -> main | send | Kismi bir guncelleme uygular (derinlemesine birlestirilir) |
+| `settings:changed` | main -> renderer | event | Herhangi bir yoldan (IPC ya da elle duzenleme) degisince tam ayarlar objesini yayinlar |
+| `settings:read-background-image` | renderer -> main | invoke | Ayarlanan arkaplan gorseli dosyasini okuyup `data:` URL olarak doner |
 
 ## Baslarken
 
@@ -439,6 +624,117 @@ npm run build
 
 Prodüksiyon paketlerini `out/` altinda uretir.
 
+## Klavye Kisayollari
+
+Henuz bir ayarlar paneli yok (bkz. [Yol Haritasi](#yol-haritasi)), bu
+yuzden sekmeleri, pane'leri ve temalari yonetmenin tek yolu bunlar. Simdilik
+sabit; milestone 8 bunlari yeniden atanabilir hale getirecek.
+
+| Kisayol | Eylem |
+|---|---|
+| `Ctrl+Shift+T` | Yeni sekme |
+| `Ctrl+Shift+W` | Aktif sekmeyi kapat |
+| `Ctrl+Tab` / `Ctrl+Shift+Tab` | Sonraki / onceki sekme |
+| Sekmeye orta tikla | O sekmeyi kapat |
+| Sekmeyi surukle | Sekmeleri yeniden sirala |
+| `Alt+Shift+D` | Odakli pane'i bol, yeni pane saga |
+| `Alt+Shift+E` | Odakli pane'i bol, yeni pane asagiya |
+| `Ctrl+Shift+X` | Odakli pane'i kapat (son pane ise sekme de kapanir) |
+| Pane'e tikla | Odaklan |
+| Divider'i surukle | Iki yanindaki pane'leri yeniden boyutlandir |
+| `Alt+Shift+T` | Sonraki mevcut temaya gec |
+
+## Ozellestirme
+
+Henuz GUI yok - asagidakilerin ikisi de restart gerekmeden, diskten canli
+okunur; pratikte bir ayarlar panelinin karsilayacagi cogu ihtiyaci zaten
+karsilar.
+
+### Ayarlar
+
+`%APPDATA%/Bitig/settings.json` ilk acilista otomatik olusturulur. Herhangi
+bir metin editorunde duzenleyip kaydet; calisan uygulama degisikligi saniye
+altinda yakalar (`fs.watch` tabanli, yarim yazilmis bir dosyayi asla
+okumamak icin debounce'lu).
+
+```jsonc
+{
+  "schemaVersion": 1,
+  "activeTheme": "nord",
+  "appearance": {
+    "opacity": 0.92,
+    "backgroundImage": "C:\\Users\\sen\\Pictures\\arkaplan.png",
+    "backgroundImageOpacity": 0.25,
+    "backgroundImageFit": "cover"
+  }
+}
+```
+
+- `activeTheme` - hazir ya da ozel bir temanin `id`'si (asagiya bak).
+- `appearance.opacity` - `0.3`-`1` arasi, yazilirken kelepceleniyor ki bir
+  yazim hatasi pencereyi tamamen gorunmez/tiklanamaz hale getiremesin.
+- `appearance.backgroundImage` - bir gorselin mutlak yolu, ya da `null`.
+  Henuz uygulama icinde dosya secici yok (bunun icin "Browse..." butonu
+  barindiracak bir ayarlar paneli gerekir) - yolu elle yaz.
+- `appearance.backgroundImageFit` - `"cover"`, `"contain"`, `"center"` ya
+  da `"tile"`.
+
+### Temalar
+
+Dort hazir tema geliyor: `bitig-dark` (varsayilan), `bitig-light`,
+`dracula`, `nord`. `Alt+Shift+T` ile aralarinda dolas, ya da `activeTheme`'i
+dogrudan bir `id`'ye ayarla.
+
+`%APPDATA%/Bitig/themes/` klasorune ozel bir tema JSON dosyasi birak, hemen
+kullanilabilir olur, restart gerekmez - zaten secili bir tema dosyasini
+duzenlemek de calisan terminalin renklerini canli gunceller.
+
+```jsonc
+{
+  "schemaVersion": 1,
+  "id": "benim-temam",
+  "name": "Benim Temam",
+  "author": "sen",
+  "terminal": {
+    "background": "#0f1117",
+    "foreground": "#d8dee9",
+    "cursor": "#7dd3fc",
+    "cursorAccent": "#0f1117",
+    "selectionBackground": "#2d3444",
+    "black": "#1a1c23",
+    "red": "#f47067",
+    "green": "#7ee787",
+    "yellow": "#e3b341",
+    "blue": "#79c0ff",
+    "magenta": "#d2a8ff",
+    "cyan": "#56d4dd",
+    "white": "#d0d7de",
+    "brightBlack": "#4b5263",
+    "brightRed": "#ff9492",
+    "brightGreen": "#a5f3b8",
+    "brightYellow": "#f2cc60",
+    "brightBlue": "#a5d6ff",
+    "brightMagenta": "#e2c5ff",
+    "brightCyan": "#8ce4ec",
+    "brightWhite": "#ffffff"
+  },
+  "ui": {
+    "background": "#0f1117",
+    "titlebarBackground": "#14161e",
+    "titlebarText": "#8b93a7",
+    "border": "#22252f",
+    "accent": "#7dd3fc"
+  }
+}
+```
+
+`terminal`, xterm.js'in kendi tema alanlarina (16 ANSI rengi artı
+background/foreground/cursor/selection) birebir karsilik gelir; `ui` title
+bar ve pencere govdesini kapsar. Gerekli alanlari eksik ya da
+`schemaVersion`'i gecersiz bir dosya, uygulamayi cokertmeden ya da tema
+listesini sessizce bozmadan, loglanmis bir hatayla atlanir - biraktigin
+bir tema gorunmuyorsa `npm run dev` calisan terminale bak.
+
 ## Proje Yapisi
 
 ```
@@ -450,21 +746,28 @@ Bitig/
     shared/
       ptyTypes.ts             # PTY IPC sozlesmesi, surecler arasi paylasilir
       windowTypes.ts          # Pencere kontrol IPC sozlesmesi
+      themeTypes.ts           # BitigTheme semasi + theme:* IPC sozlesmesi
+      settingsTypes.ts        # BitigSettings semasi + settings:* IPC sozlesmesi
+      builtinThemes/          # bitigDark/bitigLight/dracula/nord.ts + index (BUILTIN_THEMES)
     main/
       index.ts                # App lifecycle, BrowserWindow olusturma
       pty/ptyManager.ts       # PTY oturum yasam dongusu (create/write/resize/dispose)
+      theme/themeStore.ts     # Hazir + kullanici temalarini birlestirir, themes/'i izler
+      settings/settingsStore.ts # settings.json'u yukler/birlestirir/izler, opakligi kelepceler
       ipc/ptyHandlers.ts      # pty:* kanal handler'lari
       ipc/windowHandlers.ts   # window:* kanal handler'lari
+      ipc/themeHandlers.ts    # theme:* kanal handler'lari
+      ipc/settingsHandlers.ts # settings:* kanal handler'lari
     preload/
       index.ts                # contextBridge yuzeyi: window.bitig
     renderer/
       index.html
       src/
-        main.ts                # Ince bootstrap: title bar + TabStore
+        main.ts                # Ince bootstrap: title bar + AppearanceController + TabStore
         tabs.ts                 # TabStore: sekme yasam dongusu, tab bar, surukle-sirala, kisayollar
         panes.ts                # Pane agaci: split/close/render, divider surukleme, leaf basina ResizeObserver
+        appearance.ts           # Aktif tema/opaklik/arkaplan gorselini uygular, tema dongusu kisayolu
         titlebar.ts             # Ozel title bar davranisi
-        theme.ts                # Terminal renk temasi
         style.css
 ```
 
@@ -478,10 +781,10 @@ ediliyor.
 
 ## Katkida Bulunma
 
-Proje erken ve hizli degisen bir asamada; sekmeler ve split pane eklendikce
-mimari daha da degisebilir. Lokal olarak denemek istersen reposu fork'la,
-her commit'i tek bir konuya odakla ve commit mesajlarini mevcut stile uygun
-sekilde Ingilizce yaz.
+Proje erken ve hizli degisen bir asamada; ayarlar paneli ve sonraki
+milestone'lar eklendikce mimari daha da degisebilir. Lokal olarak denemek
+istersen reposu fork'la, her commit'i tek bir konuya odakla ve commit
+mesajlarini mevcut stile uygun sekilde Ingilizce yaz.
 
 ## Isim Hakkinda
 
