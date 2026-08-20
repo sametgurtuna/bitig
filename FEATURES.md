@@ -2,7 +2,7 @@
 
 # Bitig · Features & Differentiators
 
-<sub>Version <b>1.0.1</b> · Inline command suggestions, true multi-window, and live working-directory tab titles</sub>
+<sub>Version <b>1.0.2</b> · Smarter, prefix-exact inline suggestions and a <code>Tab</code> key that stays in the terminal</sub>
 
 <sub><a href="README.md">README</a> · <a href="CHANGELOG.md">Changelog</a> · <a href="ROADMAP.md">Roadmap</a></sub>
 
@@ -34,7 +34,7 @@ Bitig aims to close the gap between the two. Four core principles:
 
 Legend: `+` built in and complete, `~` partial or via plugin, `-` absent.
 
-| Feature | Windows Terminal | Warp | Hyper / Tabby | Bitig 1.0.1 |
+| Feature | Windows Terminal | Warp | Hyper / Tabby | Bitig 1.0.2 |
 |---|:---:|:---:|:---:|:---|
 | ConPTY integration | `+` native | `-` custom engine | `~` node-pty | `+` **ConPTY + xterm.js** |
 | Inline (ghost) command suggestions | `-` | `+` cloud-assisted | `-` | `+` **Local history + project aware, `Tab` to accept** |
@@ -68,7 +68,7 @@ Legend: `+` built in and complete, `~` partial or via plugin, `-` absent.
 
 ## 1. Inline Command Suggestions
 
-`Tab` to accept · Shipped v1.0.1
+`Tab` to accept · Shipped v1.0.1 · Rebuilt in v1.0.2
 
 **Problem.** You type `npm run dev` twenty times a day. Reaching for `Ctrl+R` and
 searching history for a command you already know by heart is friction, and the
@@ -76,25 +76,41 @@ shell's own `Tab` completion knows nothing about the commands *you* actually run
 
 **Solution.** As you type, Bitig renders the most likely full command as
 translucent ghost text after the cursor. Press `Tab` (or `→` / `End` at the end of
-the line) to accept it; `Esc` dismisses it. If there is no suggestion, `Tab` is
-passed straight through to the shell, so native completion is never broken.
+the line) to accept it, `Ctrl`/`Alt`+`→` to accept a single word or path segment,
+`Esc` to dismiss. If there is no suggestion, `Tab` is passed straight through to
+the shell, so native completion is never broken.
 
-The suggestion engine (`src/renderer/src/autocomplete.ts`) ranks candidates from
-three sources, prefix matches always winning over fuzzy ones:
+A suggestion is always a **true prefix extension** of what you typed — it is
+rendered as `candidate.slice(line.length)`, so a fuzzy match (scattered
+characters) would produce a suffix unrelated to the line. v1.0.2 removed fuzzy
+candidates from this path entirely.
 
-| Source | Example |
-|---|---|
-| **Command history**, ranked by frecency (`timestamp + count * 60s`) | `docker compose up -d` |
-| **Project context** — `package.json` scripts, `Makefile` targets, subdirectories for `cd` | `npm run typecheck`, `cd src` |
-| **Built-in dictionary** of common developer commands | `git status`, `code .` |
+The suggestion engine (`src/renderer/src/autocomplete.ts`) ranks candidates from:
 
-Project context is resolved in the main process (`completion:context`) and cached
-per directory by mtime, so no disk access happens on the keystroke path.
+| Source | Ranking signal | Example |
+|---|---|---|
+| **Command history** | frecency: recency bucket + `log2(count)` + same-working-directory bonus + non-zero-exit penalty | `docker compose up -d` |
+| **Current session** | anything you ran in this pane outranks the history file it is not in yet | `npm run typecheck` |
+| **Project context** | `package.json` scripts across `npm` / `pnpm` / `yarn` / `bun`, `Makefile` targets | `pnpm dev`, `make release` |
+| **Path arguments** | directory and file names for the last argument of `cd`, `ls`, `cat`, `code`, `rm`, `node`, ... (`cd`, `pushd`, `mkdir` get directories only) | `cd src/renderer/` |
+| **Built-in dictionary** | fallback for an empty history | `git status`, `code .` |
+
+Exact-case candidates beat case-folded ones, and longer completions are
+penalized, so the safest completion wins. Project context is resolved in the main
+process (`completion:context`), cached per directory by mtime, and refreshed on a
+5 second TTL plus after every command — so a file you just created is
+completable immediately, with no disk access on the keystroke path.
 
 > **Implementation note.** The ghost text is a positioned DOM overlay, never
 > written into the terminal buffer — writing it would collide with the shell's own
 > echo and corrupt the line. Its letter spacing is corrected at render time so it
 > lands exactly on the terminal's character grid.
+>
+> **`Tab` never leaves the terminal.** xterm.js only calls `preventDefault()` for
+> keys it handles itself; when the suggestion layer swallows `Tab`, that step is
+> skipped and the browser would move DOM focus onto a title bar or status bar
+> button. Every path that swallows `Tab` calls `preventDefault()` explicitly, and
+> a capture-phase guard blocks focus traversal outside real text inputs (v1.0.2).
 
 ---
 

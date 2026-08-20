@@ -12,7 +12,8 @@
 
 | Version | Date | Headline |
 |---|---|---|
-| [**1.0.1**](#101---2026-08-20) | 2026-08-20 | Inline command suggestions, true multi-window, live working-directory tab titles |
+| [**1.0.2**](#102---2026-08-20) | 2026-08-20 | Smarter inline suggestions, Tab no longer steals focus |
+| [1.0.1](#101---2026-08-20) | 2026-08-20 | Inline command suggestions, true multi-window, live working-directory tab titles |
 | [1.0.0](#100---2026-08-20) | 2026-08-20 | Stable release: plugin runtime, Windows installer, compact icon-driven UI |
 | [0.9.8](#098---2026-08-20) | 2026-08-20 | Bitig Bilge, the local and BYOK AI companion |
 | [0.9.5](#095---2026-08-20) | 2026-08-20 | Quake HUD mode and Broadcast Input |
@@ -23,6 +24,59 @@
 | [0.7.0](#070---2026-08-19) | 2026-08-19 | Shell profiles, auto-discovery, in-terminal search |
 | [0.6.x](#06x---2026-08-19) | 2026-08-19 | Settings panel, font picker, Nerd Font detection |
 | [0.1.0](#010---2026-08-19) | 2026-08-19 | First working terminal: window, PTY, xterm.js |
+
+---
+
+## [1.0.2] - 2026-08-20
+
+### Fixed
+
+- **`Tab` no longer moves DOM focus out of the terminal
+  (`src/renderer/src/panes.ts`, `keybindings.ts`, `autocomplete.ts`):**
+  accepting an inline suggestion swallowed the key event, and xterm.js only
+  calls `preventDefault()` for keys *it* handles. The browser therefore treated
+  `Tab` as focus navigation and moved focus onto title bar / status bar buttons
+  (most visibly the broadcast toggle), so the next `Enter` triggered a button
+  instead of running a command. Every path that swallows `Tab` now calls
+  `preventDefault()` explicitly, and a capture-phase guard in
+  `KeybindingManager` blocks focus traversal everywhere except real text inputs.
+- **Ghost text is no longer built from fuzzy matches
+  (`src/renderer/src/autocomplete.ts`):** a suggestion is rendered as
+  `candidate.slice(line.length)`, which is only meaningful when the candidate
+  actually starts with the typed line. Fuzzy candidates (scattered character
+  matches) were accepted too, producing suffixes unrelated to what was typed.
+  Only genuine prefix matches are candidates now.
+- **A shell-side `Tab` completion no longer poisons later suggestions:** when
+  the shell rewrites the line itself, the tracked input buffer is dropped and
+  suggestions stay muted until the line is genuinely reset (`Enter`, `Ctrl+C`,
+  `Ctrl+U`, `Ctrl+L`, `Esc`). Previously the next keystroke un-muted a
+  half-empty buffer and suggested nonsense.
+
+### Changed
+
+- **Suggestion ranking is now real frecency:** recency buckets, run count
+  (`log2`), a bonus when the command was last run in the *same* working
+  directory, and a penalty for commands that exited non-zero. Commands executed
+  in the current session outrank everything, since they are not yet in
+  `history.json`.
+- **Context-aware completion:**
+  - `package.json` scripts complete across `npm`, `pnpm`, `yarn` and `bun`
+    (`pnpm dev`, `yarn run build`, ...), not just `npm run`.
+  - The last argument of a path command (`cd`, `ls`, `cat`, `code`, `rm`,
+    `mv`, `node`, ...) completes from directory and file names; `cd`, `pushd`
+    and `mkdir` only offer directories. Names containing spaces are skipped
+    because they would need quoting, which ghost text cannot express.
+  - Exact-case candidates are preferred, and longer completions are penalized
+    so the safest completion wins.
+- **Project context is refreshed on a 5 second TTL and after every command**
+  instead of only when the working directory changes, so files created by the
+  command you just ran are immediately completable.
+
+### Added
+
+- **`Ctrl`/`Alt`+`Right` accepts the suggestion one word (or path segment) at a
+  time**, fish-style; accepting also immediately produces the next suggestion
+  for the remainder of the line (e.g. `cd src/` then the subdirectory).
 
 ---
 

@@ -2,7 +2,7 @@
 
 # Bitig Roadmap
 
-<sub>Every milestone through <b>1.0.1</b> is shipped. This document is the design record behind them, and the plan for what comes next.</sub>
+<sub>Every milestone through <b>1.0.2</b> is shipped. This document is the design record behind them, and the plan for what comes next.</sub>
 
 <sub><a href="README.md">README</a> · <a href="FEATURES.md">Features</a> · <a href="CHANGELOG.md">Changelog</a></sub>
 
@@ -18,7 +18,7 @@ decisions are made and revisited once real usage exposes wrong assumptions.
 
 **Status legend:** `[ ]` not started · `[~]` in progress · `[x]` done.
 
-**Current state:** version 1.0.1 is released. Milestones 1 through 17 are
+**Current state:** version 1.0.2 is released. Milestones 1 through 18 are
 complete and shipped as an NSIS installer and a portable executable for
 Windows 11 x64. Work beyond this point is tracked under
 [Post-1.0 Direction](#post-10-direction).
@@ -69,6 +69,7 @@ design decision is not obvious:
 | 15 | Lightweight plugin system & sandboxing | 9, 10 | `1.0.0` (done) |
 | 16 | Packaging, installer & portable build | all | `1.0.0` (done) |
 | 17 | Inline suggestions, multi-window, shell integration | 16 | `1.0.1` (done) |
+| 18 | Suggestion quality & terminal key ownership | 17 | `1.0.2` (done) |
 
 Milestones can be built iteratively; each milestone represents a self-contained, tested, and deliverable capability.
 
@@ -1055,6 +1056,80 @@ working directory is known. The original plan was "last event wins", but in
 practice those themes publish the last command as the title, which is exactly
 what the milestone set out to replace. Titles from OSC 0/2 still win for panes
 where no directory could be determined (e.g. `ssh` sessions).
+
+---
+
+## Milestone 18 - Suggestion Quality & Terminal Key Ownership (`1.0.2`, done)
+
+### Why now
+
+Real use of 1.0.1 exposed two defects in the feature it shipped, both of the
+kind that only appear once a human types into the thing:
+
+1. Suggestions were frequently *wrong* in a specific way: the appended text had
+   no relation to the typed line.
+2. Pressing `Tab` sometimes behaved like a web page — focus jumped onto a
+   chrome button (the broadcast toggle was the visible one), and the next
+   `Enter` pressed that button instead of running the command.
+
+### Design
+
+**Prefix-only candidates.** Ghost text is `candidate.slice(line.length)`. That
+expression is only meaningful if the candidate *starts with* the typed line, but
+the ranking function also admitted fuzzy matches (scattered characters, first
+character anchored) and sliced them the same way, so the overlay showed the tail
+of an unrelated command. The fix is not a better fuzzy score — it is that fuzzy
+matching does not belong on this path at all. Fuzzy stays where it is
+appropriate: the palette, history modal and Betik search, which *highlight*
+matches instead of appending them.
+
+**Frecency instead of list order.** 1.0.1 ranked history purely by the order
+`history:list` returned. 1.0.2 scores each entry: a recency bucket (hour / day /
+week), `log2(count)` for frequency, a bonus when the entry was recorded in the
+same working directory, and a penalty when it exited non-zero. Commands from the
+current session are scored above all of them, because they are not in
+`history.json` yet. Directory affinity is what makes the same prefix suggest
+different commands in different projects.
+
+**Context-aware argument completion.** Prefix matching on whole command lines
+cannot complete `cd sr` into `cd src/` unless that exact line was run before.
+The last token is now completed independently from the project context when the
+command is one that takes a path, and `package.json` scripts are offered for all
+four package managers rather than only `npm run`. Names containing spaces are
+skipped: they would need quoting, and a quoted candidate is no longer a prefix
+extension of the typed line, which is the invariant the overlay depends on.
+
+**Key ownership.** xterm.js calls `preventDefault()` only for keys it handles
+itself; returning `false` from `attachCustomKeyEventHandler` means *we* handled
+it, so that step never runs and the browser's default focus traversal applies.
+The rule adopted: any code path that swallows `Tab` calls `preventDefault()`
+itself. A capture-phase guard in `KeybindingManager` enforces the same for the
+whole window, exempting real text inputs so modal and settings forms keep
+working.
+
+**Buffer trust.** The typed line is reconstructed from the input stream, so
+anything that rewrites the line without going through us invalidates it. Arrow
+keys already muted suggestions; a shell-side `Tab` completion did not. Both now
+mute until the line is genuinely reset (`Enter`, `Ctrl+C`, `Ctrl+U`, `Ctrl+L`,
+`Esc`) rather than un-muting on the next keystroke with a half-empty buffer.
+
+### Sub-tasks
+
+- [x] `autocomplete.ts`: prefix-only candidate admission, frecency scoring with cwd affinity and exit-code penalty, session-history tier.
+- [x] Path-argument completion (directories and files, directory-only commands, space-containing names skipped).
+- [x] `npm` / `pnpm` / `yarn` / `bun` script variants; 5 second context TTL plus post-command invalidation.
+- [x] `Ctrl`/`Alt`+`Right` word-wise acceptance, with a follow-up suggestion after every acceptance.
+- [x] `preventDefault()` on every `Tab`-swallowing path (`panes.ts`, `autocomplete.ts`) and a capture-phase focus-traversal guard (`keybindings.ts`).
+- [x] Mute-until-reset semantics for arrow keys and shell-side completion.
+- [x] CLAUDE.md pitfall notes for both defects.
+
+### Acceptance criteria
+
+- [x] Every suggestion shown is a literal continuation of the typed line.
+- [x] `Tab` never moves focus to a title bar or status bar button, with or without a visible suggestion.
+- [x] The same prefix suggests the command last run *in that directory* when history contains several matches.
+- [x] `cd` plus a partial directory name completes to a real subdirectory of the current working directory; accepting it immediately offers the next segment.
+- [x] After the shell's own `Tab` completion rewrites the line, no suggestion is shown until the line is reset.
 
 ---
 

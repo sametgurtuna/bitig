@@ -9,7 +9,7 @@
 <sub>Sifirdan yazilan, Windows icin bir terminal emulatoru.</sub>
 </p>
 
-[![Version](https://img.shields.io/badge/version-1.0.1-7dd3fc?style=for-the-badge&labelColor=0f1117)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-1.0.2-7dd3fc?style=for-the-badge&labelColor=0f1117)](CHANGELOG.md)
 [![Platform](https://img.shields.io/badge/Windows%2011-x64-0f1117?style=for-the-badge&logo=windows&logoColor=7dd3fc&labelColor=0f1117)](#installation)
 [![Electron](https://img.shields.io/badge/Electron-43-47848F?style=for-the-badge&logo=electron&logoColor=white&labelColor=0f1117)](https://www.electronjs.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178C6?style=for-the-badge&logo=typescript&logoColor=white&labelColor=0f1117)](tsconfig.json)
@@ -50,7 +50,7 @@
 |---|---|
 | [About](#about) | What Bitig is and is not |
 | [Installation](#installation) | Setup installer and portable build |
-| [Feature Overview](#feature-overview) | Everything shipped in 1.0.1 |
+| [Feature Overview](#feature-overview) | Everything shipped in 1.0.2 |
 | [Tech Stack](#tech-stack) | Layers and why each was chosen |
 | [Architecture](#architecture) | Process boundaries and data flow |
 | [IPC Channel Reference](#ipc-channel-reference) | The full typed contract |
@@ -82,8 +82,8 @@ Download the latest release for Windows 11 x64:
 
 | Build | File | Notes |
 |---|---|---|
-| **Setup** | `Bitig-Setup-1.0.1.exe` | NSIS installer. Choose install directory, creates Start Menu and desktop shortcuts. |
-| **Portable** | `Bitig-Portable-1.0.1.exe` | Single self contained executable. No installation, no registry writes. |
+| **Setup** | `Bitig-Setup-1.0.2.exe` | NSIS installer. Choose install directory, creates Start Menu and desktop shortcuts. |
+| **Portable** | `Bitig-Portable-1.0.2.exe` | Single self contained executable. No installation, no registry writes. |
 
 Both builds are x64 only and require Windows 11. No runtime prerequisites:
 Node.js, Electron and the native ConPTY bindings are bundled.
@@ -98,7 +98,7 @@ Node.js, Electron and the native ConPTY bindings are bundled.
 </tr>
 <tr>
 <td valign="top"><b>Inline suggestions</b></td>
-<td>Fish style ghost text as you type, ranked from frecency ordered command history, project context (<code>package.json</code> scripts, <code>Makefile</code> targets, subdirectories after <code>cd</code>) and a built in command dictionary. <code>Tab</code> accepts, <code>Esc</code> dismisses, and when there is no suggestion <code>Tab</code> falls through to the shell's own completion untouched.</td>
+<td>Fish style ghost text as you type. Only true prefix matches are ever suggested, ranked by frecency (recency, run count, same working directory, and a penalty for commands that failed), then by project context: <code>package.json</code> scripts across <code>npm</code>/<code>pnpm</code>/<code>yarn</code>/<code>bun</code>, <code>Makefile</code> targets, and directory or file names for the argument of path commands (<code>cd</code>, <code>code</code>, <code>cat</code>, <code>rm</code> and friends). <code>Tab</code> accepts the whole suggestion, <code>Ctrl</code>/<code>Alt</code>+<code>→</code> accepts one word at a time, <code>Esc</code> dismisses, and when there is no suggestion <code>Tab</code> falls through to the shell's own completion untouched.</td>
 </tr>
 <tr>
 <td valign="top"><b>Windows and tabs</b></td>
@@ -334,6 +334,7 @@ conflict detection and a per shortcut reset.
 | `Alt+Shift+I` | Toggle Broadcast Input |
 | `Win+~` / `Ctrl+~` | Quake HUD window |
 | `Tab` | Accept the inline suggestion |
+| `Ctrl`/`Alt`+`Right` | Accept the suggestion one word at a time |
 
 </td></tr>
 </table>
@@ -416,7 +417,7 @@ Node `vm` context with no filesystem or process globals; only the declared
 {
   "id": "git-status",
   "name": "Git Branch Sentinel",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Shows the active Git branch in the status bar.",
   "author": "Bitig Team",
   "main": "main.js",
@@ -582,7 +583,7 @@ Turkic mythology and Old Turkic vocabulary.
 |---|---|
 | [Proje Hakkinda](#proje-hakkinda) | Bitig ne, ne degil |
 | [Kurulum](#kurulum) | Setup ve portable dagitimlari |
-| [Ozellikler](#ozellikler) | 1.0.1 ile gelen her sey |
+| [Ozellikler](#ozellikler) | 1.0.2 ile gelen her sey |
 | [Teknik Yigin](#teknik-yigin) | Katmanlar ve tercih gerekceleri |
 | [Klavye Kisayollari](#klavye-kisayollari-1) | Varsayilan kisayollar |
 | [Ozellestirme](#ozellestirme) | Ayarlar, temalar, betikler, eklentiler |
@@ -610,8 +611,8 @@ Windows 11 x64 icin son surum:
 
 | Dagitim | Dosya | Not |
 |---|---|---|
-| **Setup** | `Bitig-Setup-1.0.1.exe` | NSIS kurulum sihirbazi. Kurulum dizini secilebilir, Baslat menusu ve masaustu kisayolu olusturur. |
-| **Portable** | `Bitig-Portable-1.0.1.exe` | Tek dosyalik bagimsiz calistirilabilir. Kurulum yok, kayit defterine yazmaz. |
+| **Setup** | `Bitig-Setup-1.0.2.exe` | NSIS kurulum sihirbazi. Kurulum dizini secilebilir, Baslat menusu ve masaustu kisayolu olusturur. |
+| **Portable** | `Bitig-Portable-1.0.2.exe` | Tek dosyalik bagimsiz calistirilabilir. Kurulum yok, kayit defterine yazmaz. |
 
 Iki dagitim da yalnizca x64 ve Windows 11 icindir. On kosul yoktur: Node.js,
 Electron ve native ConPTY baglayicilari paketin icinde gelir.
@@ -684,6 +685,7 @@ tespiti ve kisayol basina sifirlama ile yeniden atanabilir.
 | `Alt+Shift+I` | Broadcast Input ac/kapat |
 | `Win+~` / `Ctrl+~` | Quake HUD penceresi |
 | `Tab` | Satir ici oneriyi kabul et |
+| `Ctrl`/`Alt`+`Sag` | Oneriyi kelime kelime kabul et |
 
 </td></tr>
 </table>
