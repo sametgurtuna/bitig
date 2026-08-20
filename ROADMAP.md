@@ -2,7 +2,7 @@
 
 # Bitig Roadmap
 
-<sub>Every milestone through <b>1.0.2</b> is shipped. This document is the design record behind them, and the plan for what comes next.</sub>
+<sub>Every milestone through <b>1.0.3</b> is shipped. This document is the design record behind them, and the plan for what comes next.</sub>
 
 <sub><a href="README.md">README</a> · <a href="FEATURES.md">Features</a> · <a href="CHANGELOG.md">Changelog</a></sub>
 
@@ -18,7 +18,7 @@ decisions are made and revisited once real usage exposes wrong assumptions.
 
 **Status legend:** `[ ]` not started · `[~]` in progress · `[x]` done.
 
-**Current state:** version 1.0.2 is released. Milestones 1 through 18 are
+**Current state:** version 1.0.3 is released. Milestones 1 through 19 are
 complete and shipped as an NSIS installer and a portable executable for
 Windows 11 x64. Work beyond this point is tracked under
 [Post-1.0 Direction](#post-10-direction).
@@ -70,6 +70,7 @@ design decision is not obvious:
 | 16 | Packaging, installer & portable build | all | `1.0.0` (done) |
 | 17 | Inline suggestions, multi-window, shell integration | 16 | `1.0.1` (done) |
 | 18 | Suggestion quality & terminal key ownership | 17 | `1.0.2` (done) |
+| 19 | English localization, modern switches & deduplication | 18 | `1.0.3` (done) |
 
 Milestones can be built iteratively; each milestone represents a self-contained, tested, and deliverable capability.
 
@@ -1130,6 +1131,25 @@ mute until the line is genuinely reset (`Enter`, `Ctrl+C`, `Ctrl+U`, `Ctrl+L`,
 - [x] The same prefix suggests the command last run *in that directory* when history contains several matches.
 - [x] `cd` plus a partial directory name completes to a real subdirectory of the current working directory; accepting it immediately offers the next segment.
 - [x] After the shell's own `Tab` completion rewrites the line, no suggestion is shown until the line is reset.
+
+---
+
+## Milestone 19 - English Localization, Modern Switches & Deduplication (`1.0.3`, done)
+
+**Goal:** Provide 100% complete, native English UI strings and modern, sliding pill toggle switches across the entire application interface.
+
+### Technical approach
+
+1. **Complete English localization:** Translate all remaining settings descriptions, right-click pane/tab context menus, confirmation modals, status bar badges, tooltips, and starter plugin manifests.
+2. **Modern switch toggles:** Implement `.bitig-switch` in `style.css` with smooth cubic-bezier transitions and neon cyan accent glow (`#7dd3fc`).
+3. **Command palette deduplication:** Eliminate duplicate Betik Runbook actions in `commandPalette.ts` and standardize fallback categories.
+
+### Sub-tasks
+
+- [x] Translate all settings panels, context menus, modals, and status bar text to English.
+- [x] Replace native checkboxes with animated `.bitig-switch` sliders in `settingsPanel.ts` and `style.css`.
+- [x] Fix missing `type="checkbox"` attributes on session restore and close confirmation options.
+- [x] Deduplicate palette actions and verify keyboard navigation.
 
 ---
 

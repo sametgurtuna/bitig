@@ -762,10 +762,71 @@ body {
   opacity: 0.75;
 }
 
-.settings-label {
+.settings-toggle-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 5px 0;
+}
+
+.settings-toggle-row .settings-label {
+  flex: 1 1 auto;
+  cursor: pointer;
+  user-select: none;
+}
+
+/* Modern Sliding Toggle Switch */
+.bitig-switch {
+  position: relative;
+  display: inline-block;
+  width: 38px;
+  height: 22px;
   flex: 0 0 auto;
-  font: 12px/1 var(--bitig-font);
-  color: var(--bitig-text-dim);
+  cursor: pointer;
+}
+
+.bitig-switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+  position: absolute;
+}
+
+.bitig-switch-slider {
+  position: absolute;
+  cursor: pointer;
+  inset: 0;
+  background-color: var(--bitig-surface, #1e222d);
+  border: 1px solid var(--bitig-border, #333846);
+  border-radius: 20px;
+  transition: background-color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.bitig-switch-slider:before {
+  position: absolute;
+  content: '';
+  height: 14px;
+  width: 14px;
+  left: 3px;
+  bottom: 3px;
+  background-color: var(--bitig-text-dim, #94a3b8);
+  border-radius: 50%;
+  transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), background-color 0.2s ease;
+}
+
+.bitig-switch input:checked + .bitig-switch-slider {
+  background-color: var(--bitig-accent, #7dd3fc);
+  border-color: var(--bitig-accent, #7dd3fc);
+  box-shadow: 0 0 10px rgba(125, 211, 252, 0.35);
+}
+
+.bitig-switch input:checked + .bitig-switch-slider:before {
+  transform: translateX(16px);
+  background-color: #0f1117;
+}
+
+.bitig-switch:hover .bitig-switch-slider {
+  border-color: var(--bitig-accent);
 }
 
 .settings-checkbox-label {

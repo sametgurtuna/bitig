@@ -12,9 +12,37 @@
 
 | Version | Date | Headline |
 |---|---|---|
-| [**1.0.2**](#102---2026-08-20) | 2026-08-20 | Smarter inline suggestions, Tab no longer steals focus |
+| [**1.0.3**](#103---2026-08-20) | 2026-08-20 | Full English localization, modern animated toggle switches, deduplication |
+| [1.0.2](#102---2026-08-20) | 2026-08-20 | Smarter inline suggestions, Tab no longer steals focus |
 | [1.0.1](#101---2026-08-20) | 2026-08-20 | Inline command suggestions, true multi-window, live working-directory tab titles |
 | [1.0.0](#100---2026-08-20) | 2026-08-20 | Stable release: plugin runtime, Windows installer, compact icon-driven UI |
+
+---
+
+## [1.0.3] - 2026-08-20
+
+### Added
+
+- **Modern Pill Toggle Switches (`src/renderer/src/style.css`, `settingsPanel.ts`):**
+  - Replaced native HTML checkboxes with smooth sliding toggle switches (`.bitig-switch`) featuring fluid knob animations and neon cyan glow (`#7dd3fc`).
+  - Implemented clickable labels for all toggle rows across Terminal & Advanced Settings, Developer Cockpit, Notifications & Telemetry, Bitig Bilge AI, and Plugin Cards.
+
+### Changed
+
+- **100% English Localization Across All Surfaces:**
+  - All settings descriptions, section headers, select dropdown options, and toggle labels.
+  - Right-click pane & tab context menus (`Copy`, `Paste`, `Split Right`, `Split Down`, `Zoom Pane`, `Search Terminal`, `Clear Buffer`, `Ask Bilge AI`, `Rename Tab`, `Close Tab`, `Close Other Tabs`).
+  - Confirmation modals (`Close Tab`, `Close Other Tabs`, `Confirm`, `Cancel`).
+  - Status bar indicators, cursor positions, encoding tags, and tooltips.
+  - Built-in starter plugins (`Git Branch Sentinel`, `System Resource Monitor`, `Quick Web & Developer Search`).
+
+### Fixed
+
+- **Settings Checkbox Rendering & Type Attribution:**
+  - Fixed missing `type="checkbox"` attributes on session restore and confirmation toggles that previously rendered as text input boxes.
+- **Command Palette Deduplication:**
+  - Removed duplicate Betik Runbook action entry in the command palette (`collectItems`).
+  - Standardized plugin action fallbacks and categories.
 | [0.9.8](#098---2026-08-20) | 2026-08-20 | Bitig Bilge, the local and BYOK AI companion |
 | [0.9.5](#095---2026-08-20) | 2026-08-20 | Quake HUD mode and Broadcast Input |
 | [0.9.0](#090---2026-08-19) | 2026-08-19 | Developer Cockpit: port sniffer, smart links, secret shield |

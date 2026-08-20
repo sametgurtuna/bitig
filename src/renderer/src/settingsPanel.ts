@@ -261,6 +261,42 @@ export class SettingsPanel {
     return section;
   }
 
+  private buildToggleRow(
+    label: string,
+    checked: boolean,
+    onChange: (checked: boolean) => void
+  ): HTMLElement {
+    const row = document.createElement('div');
+    row.className = 'settings-row settings-toggle-row';
+
+    const lbl = document.createElement('label');
+    lbl.className = 'settings-label';
+    lbl.textContent = label;
+
+    const switchLabel = document.createElement('label');
+    switchLabel.className = 'bitig-switch';
+
+    const input = document.createElement('input');
+    input.type = 'checkbox';
+    input.checked = checked;
+
+    const slider = document.createElement('span');
+    slider.className = 'bitig-switch-slider';
+
+    input.addEventListener('change', () => {
+      onChange(input.checked);
+    });
+
+    lbl.addEventListener('click', () => {
+      input.checked = !input.checked;
+      onChange(input.checked);
+    });
+
+    switchLabel.append(input, slider);
+    row.append(lbl, switchLabel);
+    return row;
+  }
+
   private buildTerminalAdvancedSection(settings: BitigSettings): HTMLElement {
     const section = this.buildSection('Terminal & Advanced Settings');
 
@@ -269,72 +305,49 @@ export class SettingsPanel {
     desc.textContent = 'Terminal behavior, status bar, copy/paste ergonomics, and session persistence:';
 
     // 1. Copy on Select
-    const copyRow = document.createElement('div');
-    copyRow.className = 'settings-row settings-toggle-row';
-    const copyLabel = document.createElement('label');
-    copyLabel.className = 'settings-label';
-    copyLabel.textContent = 'Auto-Copy on Selection (PuTTY Style)';
-    const copyToggle = document.createElement('input');
-    copyToggle.type = 'checkbox';
-    copyToggle.checked = Boolean(settings.terminal.copyOnSelect);
-    copyToggle.addEventListener('change', () => {
-      window.bitig.settings.set({ terminal: { copyOnSelect: copyToggle.checked } });
-    });
-    copyRow.append(copyLabel, copyToggle);
+    const copyRow = this.buildToggleRow(
+      'Auto-Copy on Selection (PuTTY Style)',
+      Boolean(settings.terminal.copyOnSelect),
+      (checked) => {
+        window.bitig.settings.set({ terminal: { copyOnSelect: checked } });
+      }
+    );
 
     // 2. Paste on Right Click
-    const pasteRow = document.createElement('div');
-    pasteRow.className = 'settings-row settings-toggle-row';
-    const pasteLabel = document.createElement('label');
-    pasteLabel.className = 'settings-label';
-    pasteLabel.textContent = 'Paste Directly on Right-Click (Skip Context Menu)';
-    const pasteToggle = document.createElement('input');
-    pasteToggle.type = 'checkbox';
-    pasteToggle.checked = Boolean(settings.terminal.pasteOnRightClick);
-    pasteToggle.addEventListener('change', () => {
-      window.bitig.settings.set({ terminal: { pasteOnRightClick: pasteToggle.checked } });
-    });
-    pasteRow.append(pasteLabel, pasteToggle);
+    const pasteRow = this.buildToggleRow(
+      'Paste Directly on Right-Click (Skip Context Menu)',
+      Boolean(settings.terminal.pasteOnRightClick),
+      (checked) => {
+        window.bitig.settings.set({ terminal: { pasteOnRightClick: checked } });
+      }
+    );
 
     // 3. Confirm Before Close
-    const confirmRow = document.createElement('div');
-    confirmRow.className = 'settings-row settings-toggle-row';
-    const confirmLabel = document.createElement('label');
-    confirmLabel.className = 'settings-label';
-    confirmLabel.textContent = 'Show Confirmation When Closing Active Sessions';
-    const confirmToggle = document.createElement('input');
-    confirmToggle.checked = settings.terminal.confirmBeforeClose !== false;
-    confirmToggle.addEventListener('change', () => {
-      window.bitig.settings.set({ terminal: { confirmBeforeClose: confirmToggle.checked } });
-    });
-    confirmRow.append(confirmLabel, confirmToggle);
+    const confirmRow = this.buildToggleRow(
+      'Show Confirmation When Closing Active Sessions',
+      settings.terminal.confirmBeforeClose !== false,
+      (checked) => {
+        window.bitig.settings.set({ terminal: { confirmBeforeClose: checked } });
+      }
+    );
 
     // 4. Restore Session on Launch
-    const restoreRow = document.createElement('div');
-    restoreRow.className = 'settings-row settings-toggle-row';
-    const restoreLabel = document.createElement('label');
-    restoreLabel.className = 'settings-label';
-    restoreLabel.textContent = 'Restore Previous Tabs & Panes on Startup';
-    const restoreToggle = document.createElement('input');
-    restoreToggle.checked = Boolean(settings.terminal.restoreSession);
-    restoreToggle.addEventListener('change', () => {
-      window.bitig.settings.set({ terminal: { restoreSession: restoreToggle.checked } });
-    });
-    restoreRow.append(restoreLabel, restoreToggle);
+    const restoreRow = this.buildToggleRow(
+      'Restore Previous Tabs & Panes on Startup',
+      Boolean(settings.terminal.restoreSession),
+      (checked) => {
+        window.bitig.settings.set({ terminal: { restoreSession: checked } });
+      }
+    );
 
     // 5. Show Status Bar
-    const statusRow = document.createElement('div');
-    statusRow.className = 'settings-row settings-toggle-row';
-    const statusLabel = document.createElement('label');
-    statusLabel.className = 'settings-label';
-    statusLabel.textContent = 'Show Bottom Status Bar';
-    const statusToggle = document.createElement('input');
-    statusToggle.type = 'checkbox';
-    statusToggle.checked = settings.terminal.showStatusBar !== false;
-    statusToggle.addEventListener('change', () => {
-      window.bitig.settings.set({ terminal: { showStatusBar: statusToggle.checked } });
-    });
-    statusRow.append(statusLabel, statusToggle);
+    const statusRow = this.buildToggleRow(
+      'Show Bottom Status Bar',
+      settings.terminal.showStatusBar !== false,
+      (checked) => {
+        window.bitig.settings.set({ terminal: { showStatusBar: checked } });
+      }
+    );
 
     // 6. Scrollback Buffer
     const scrollRow = document.createElement('div');
@@ -359,32 +372,22 @@ export class SettingsPanel {
     scrollRow.append(scrollLabel, scrollSelect);
 
     // 7. Inline Suggestions (ghost text)
-    const suggestRow = document.createElement('div');
-    suggestRow.className = 'settings-row settings-toggle-row';
-    const suggestLabel = document.createElement('label');
-    suggestLabel.className = 'settings-label';
-    suggestLabel.textContent = 'Inline Command Suggestions (Tab to accept)';
-    const suggestToggle = document.createElement('input');
-    suggestToggle.type = 'checkbox';
-    suggestToggle.checked = settings.terminal.inlineSuggestions !== false;
-    suggestToggle.addEventListener('change', () => {
-      window.bitig.settings.set({ terminal: { inlineSuggestions: suggestToggle.checked } });
-    });
-    suggestRow.append(suggestLabel, suggestToggle);
+    const suggestRow = this.buildToggleRow(
+      'Inline Command Suggestions (Tab to accept)',
+      settings.terminal.inlineSuggestions !== false,
+      (checked) => {
+        window.bitig.settings.set({ terminal: { inlineSuggestions: checked } });
+      }
+    );
 
     // 8. Shell Integration (OSC 7 -> live tab titles)
-    const shellIntRow = document.createElement('div');
-    shellIntRow.className = 'settings-row settings-toggle-row';
-    const shellIntLabel = document.createElement('label');
-    shellIntLabel.className = 'settings-label';
-    shellIntLabel.textContent = 'Shell Integration (live working directory in tab titles)';
-    const shellIntToggle = document.createElement('input');
-    shellIntToggle.type = 'checkbox';
-    shellIntToggle.checked = settings.terminal.shellIntegration !== false;
-    shellIntToggle.addEventListener('change', () => {
-      window.bitig.settings.set({ terminal: { shellIntegration: shellIntToggle.checked } });
-    });
-    shellIntRow.append(shellIntLabel, shellIntToggle);
+    const shellIntRow = this.buildToggleRow(
+      'Shell Integration (live working directory in tab titles)',
+      settings.terminal.shellIntegration !== false,
+      (checked) => {
+        window.bitig.settings.set({ terminal: { shellIntegration: checked } });
+      }
+    );
 
     section.append(
       desc,
@@ -497,16 +500,24 @@ export class SettingsPanel {
           const right = document.createElement('div');
           right.className = 'plugin-card-right';
 
+          const switchLabel = document.createElement('label');
+          switchLabel.className = 'bitig-switch';
+
           const toggle = document.createElement('input');
           toggle.type = 'checkbox';
           toggle.checked = p.enabled;
+
+          const slider = document.createElement('span');
+          slider.className = 'bitig-switch-slider';
+
           toggle.addEventListener('change', async () => {
             toggle.disabled = true;
             await window.bitig.plugins.toggle(p.id, toggle.checked);
             await renderPlugins();
           });
 
-          right.appendChild(toggle);
+          switchLabel.append(toggle, slider);
+          right.appendChild(switchLabel);
           card.append(left, right);
           pluginListContainer.appendChild(card);
         }
@@ -924,21 +935,15 @@ export class SettingsPanel {
     desc.textContent =
       'Get a Windows desktop notification when a long-running command (build, test, etc.) finishes while Bitig is in the background.';
 
-    const enableRow = document.createElement('div');
-    enableRow.className = 'settings-row';
-
-    const enableLabel = document.createElement('label');
-    enableLabel.className = 'settings-checkbox-label';
-    const enableCheckbox = document.createElement('input');
-    enableCheckbox.type = 'checkbox';
-    enableCheckbox.checked = settings.telemetry?.enableNotifications ?? true;
-    enableCheckbox.addEventListener('change', () => {
-      window.bitig.settings.set({
-        telemetry: { enableNotifications: enableCheckbox.checked }
-      });
-    });
-    enableLabel.append(enableCheckbox, document.createTextNode(' Enable notifications for long-running tasks'));
-    enableRow.appendChild(enableLabel);
+    const enableRow = this.buildToggleRow(
+      'Enable notifications for long-running tasks',
+      settings.telemetry?.enableNotifications ?? true,
+      (checked) => {
+        window.bitig.settings.set({
+          telemetry: { enableNotifications: checked }
+        });
+      }
+    );
 
     const thresholdRow = document.createElement('div');
     thresholdRow.className = 'settings-row';
@@ -987,52 +992,37 @@ export class SettingsPanel {
       'Catch live server ports in the tab title, open file/line links in your editor, and block accidental secret-key leaks.';
 
     // 1. Live Port Sniffer
-    const portRow = document.createElement('div');
-    portRow.className = 'settings-row';
-    const portLabel = document.createElement('label');
-    portLabel.className = 'settings-checkbox-label';
-    const portCheckbox = document.createElement('input');
-    portCheckbox.type = 'checkbox';
-    portCheckbox.checked = settings.cockpit?.enablePortSniffer ?? true;
-    portCheckbox.addEventListener('change', () => {
-      window.bitig.settings.set({
-        cockpit: { enablePortSniffer: portCheckbox.checked }
-      });
-    });
-    portLabel.append(portCheckbox, document.createTextNode(' Live Port Sniffer'));
-    portRow.appendChild(portLabel);
+    const portRow = this.buildToggleRow(
+      'Live Port Sniffer (Detect active dev servers)',
+      settings.cockpit?.enablePortSniffer ?? true,
+      (checked) => {
+        window.bitig.settings.set({
+          cockpit: { enablePortSniffer: checked }
+        });
+      }
+    );
 
     // 2. Secret Shield
-    const shieldRow = document.createElement('div');
-    shieldRow.className = 'settings-row';
-    const shieldLabel = document.createElement('label');
-    shieldLabel.className = 'settings-checkbox-label';
-    const shieldCheckbox = document.createElement('input');
-    shieldCheckbox.type = 'checkbox';
-    shieldCheckbox.checked = settings.cockpit?.enableSecretShield ?? true;
-    shieldCheckbox.addEventListener('change', () => {
-      window.bitig.settings.set({
-        cockpit: { enableSecretShield: shieldCheckbox.checked }
-      });
-    });
-    shieldLabel.append(shieldCheckbox, document.createTextNode(' Secret Shield (Token Masking)'));
-    shieldRow.appendChild(shieldLabel);
+    const shieldRow = this.buildToggleRow(
+      'Secret Shield (Mask tokens & sensitive keys)',
+      settings.cockpit?.enableSecretShield ?? true,
+      (checked) => {
+        window.bitig.settings.set({
+          cockpit: { enableSecretShield: checked }
+        });
+      }
+    );
 
     // 3. Open in Editor
-    const editorRow = document.createElement('div');
-    editorRow.className = 'settings-row';
-    const editorLabel = document.createElement('label');
-    editorLabel.className = 'settings-checkbox-label';
-    const editorCheckbox = document.createElement('input');
-    editorCheckbox.type = 'checkbox';
-    editorCheckbox.checked = settings.cockpit?.openLinksInEditor ?? true;
-    editorCheckbox.addEventListener('change', () => {
-      window.bitig.settings.set({
-        cockpit: { openLinksInEditor: editorCheckbox.checked }
-      });
-    });
-    editorLabel.append(editorCheckbox, document.createTextNode(' Open File/Line Links in Code Editor'));
-    editorRow.appendChild(editorLabel);
+    const editorRow = this.buildToggleRow(
+      'Open File/Line Links in Code Editor',
+      settings.cockpit?.openLinksInEditor ?? true,
+      (checked) => {
+        window.bitig.settings.set({
+          cockpit: { openLinksInEditor: checked }
+        });
+      }
+    );
 
     section.append(desc, portRow, shieldRow, editorRow);
     return section;
@@ -1049,18 +1039,13 @@ export class SettingsPanel {
     const ai = settings.ai || DEFAULT_AI_SETTINGS;
 
     // 1. Enable
-    const enableRow = document.createElement('div');
-    enableRow.className = 'settings-row';
-    const enableLabel = document.createElement('label');
-    enableLabel.className = 'settings-checkbox-label';
-    const enableCheckbox = document.createElement('input');
-    enableCheckbox.type = 'checkbox';
-    enableCheckbox.checked = ai.enabled;
-    enableCheckbox.addEventListener('change', () => {
-      window.bitig.settings.set({ ai: { enabled: enableCheckbox.checked } });
-    });
-    enableLabel.append(enableCheckbox, document.createTextNode(' Enable Bitig Bilge AI assistant'));
-    enableRow.appendChild(enableLabel);
+    const enableRow = this.buildToggleRow(
+      'Enable Bitig Bilge AI Assistant',
+      ai.enabled,
+      (checked) => {
+        window.bitig.settings.set({ ai: { enabled: checked } });
+      }
+    );
 
     // 2. Provider selection
     const providerRow = document.createElement('div');

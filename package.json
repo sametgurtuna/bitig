@@ -1,6 +1,6 @@
 {
   "name": "bitig",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "A customizable Windows terminal emulator built from scratch - an alternative to Windows Terminal",
   "main": "./out/main/index.js",
   "author": {
