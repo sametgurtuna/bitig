@@ -78,7 +78,32 @@ All state lives in plain JSON under `%APPDATA%/Bitig/`.
 
 ### Installation
 
-Download the latest release for Windows 11 x64:
+**Winget**
+
+```powershell
+winget install Bitig.Bitig
+```
+
+**Scoop**
+
+```powershell
+scoop bucket add bitig https://github.com/sametgurtuna/scoop-bitig
+scoop install bitig
+```
+
+**Chocolatey**
+
+```powershell
+choco install bitig
+```
+
+Winget and Chocolatey install the NSIS build; Scoop installs the portable build
+and puts `bitig` on your `PATH`.
+
+**Direct download**
+
+The latest release for Windows 11 x64 is on the
+[Releases page](https://github.com/sametgurtuna/bitig/releases/latest):
 
 | Build | File | Notes |
 |---|---|---|
@@ -87,6 +112,17 @@ Download the latest release for Windows 11 x64:
 
 Both builds are x64 only and require Windows 11. No runtime prerequisites:
 Node.js, Electron and the native ConPTY bindings are bundled.
+
+**Updating and removing**
+
+```powershell
+winget upgrade Bitig.Bitig     # winget uninstall Bitig.Bitig
+scoop update bitig             # scoop uninstall bitig
+choco upgrade bitig            # choco uninstall bitig
+```
+
+Settings, themes, snippets and history live in `%APPDATA%/Bitig/` and survive an
+uninstall. Delete that folder for a clean slate.
 
 ### Feature Overview
 
@@ -607,7 +643,32 @@ Tum durum `%APPDATA%/Bitig/` altinda duz JSON olarak tutulur.
 
 ### Kurulum
 
-Windows 11 x64 icin son surum:
+**Winget**
+
+```powershell
+winget install Bitig.Bitig
+```
+
+**Scoop**
+
+```powershell
+scoop bucket add bitig https://github.com/sametgurtuna/scoop-bitig
+scoop install bitig
+```
+
+**Chocolatey**
+
+```powershell
+choco install bitig
+```
+
+Winget ve Chocolatey NSIS kurulumunu indirir; Scoop portable surumu kurar ve
+`bitig` komutunu `PATH`'e ekler.
+
+**Dogrudan indirme**
+
+Windows 11 x64 icin son surum
+[Releases sayfasinda](https://github.com/sametgurtuna/bitig/releases/latest):
 
 | Dagitim | Dosya | Not |
 |---|---|---|
@@ -616,6 +677,17 @@ Windows 11 x64 icin son surum:
 
 Iki dagitim da yalnizca x64 ve Windows 11 icindir. On kosul yoktur: Node.js,
 Electron ve native ConPTY baglayicilari paketin icinde gelir.
+
+**Guncelleme ve kaldirma**
+
+```powershell
+winget upgrade Bitig.Bitig     # winget uninstall Bitig.Bitig
+scoop update bitig             # scoop uninstall bitig
+choco upgrade bitig            # choco uninstall bitig
+```
+
+Ayarlar, temalar, betikler ve gecmis `%APPDATA%/Bitig/` altinda tutulur ve
+kaldirma sonrasi korunur. Sifirdan baslamak icin bu klasoru silin.
 
 ### Ozellikler
 
