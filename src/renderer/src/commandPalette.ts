@@ -3,6 +3,7 @@ import { fuzzyScore } from './fuzzy';
 import type { TabStore } from './tabs';
 import type { AppearanceController } from './appearance';
 import type { KeybindingManager } from './keybindings';
+import type { PluginRuntime } from './pluginRuntime';
 
 export interface PaletteItem {
   id: string;
@@ -36,7 +37,8 @@ export class CommandPalette {
     private readonly onOpenSettings: () => void,
     private readonly onOpenBetik: () => void,
     private readonly onOpenHistory: () => void,
-    private readonly onOpenBilge?: () => void
+    private readonly onOpenBilge?: () => void,
+    private readonly pluginRuntime?: PluginRuntime
   ) {
     this.backdropEl = document.createElement('div');
     this.backdropEl.className = 'palette-backdrop hidden';
@@ -170,15 +172,20 @@ export class CommandPalette {
       });
     }
 
-    // 5. Quick Betik action
-    items.push({
-      id: 'betik:open',
-      title: 'Open Bitig Betik Runbook',
-      subtitle: 'Saved command templates and parametric runner',
-      category: 'Betik',
-      shortcut: this.keybindings.getBinding('betik.toggle'),
-      action: () => this.onOpenBetik()
-    });
+    // 5. Dynamic Plugin Actions
+    if (this.pluginRuntime) {
+      const pluginActions = this.pluginRuntime.getActions();
+      for (const pa of pluginActions) {
+        items.push({
+          id: `plugin:${pa.actionId}`,
+          title: pa.name,
+          subtitle: pa.description || 'Plugin Action',
+          category: 'Actions',
+          shortcut: pa.defaultKeys,
+          action: () => window.bitig.plugins.executeAction(pa.actionId)
+        });
+      }
+    }
 
     this.items = items;
   }

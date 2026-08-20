@@ -1,5 +1,6 @@
 import type { TabStore } from './tabs';
 import type { AiPromptResponse } from '../../shared/aiTypes';
+import { icon } from './icons';
 
 /**
  * Bitig Bilge (AI Assistant - Ctrl+I):
@@ -42,7 +43,7 @@ export class BilgeModal {
     const titleWrap = document.createElement('div');
     titleWrap.className = 'bilge-title-wrap';
     titleWrap.innerHTML = `
-      <span class="bilge-icon">✨</span>
+      <span class="bilge-icon">${icon('sparkle')}</span>
       <span class="bilge-title">Bitig Bilge</span>
     `;
 
@@ -56,7 +57,7 @@ export class BilgeModal {
     const closeBtn = document.createElement('button');
     closeBtn.className = 'bilge-close-btn';
     closeBtn.title = 'Close (Esc)';
-    closeBtn.innerHTML = '✕';
+    closeBtn.innerHTML = icon('x');
     closeBtn.addEventListener('click', () => this.close());
 
     rightWrap.append(this.statusBadgeEl, closeBtn);

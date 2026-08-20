@@ -1,193 +1,278 @@
-# Bitig — Özellikler & Fark Yaratan Yetenekler (FEATURES.md)
+<div align="center">
 
-> **v0.9.8** — "Bitig Bilge" Yerel & BYOK AI Asistanı (`Ctrl+I`) dahil tüm
-> kokpit zekası tamamlandı. Bu doküman, **Bitig**'in sıradan bir terminal
-> öykünücüsünün ötesine geçerek modern bir **Geliştirici Kokpiti** haline
-> gelmesini sağlayan yeteneklerini detaylandırır.
+# Bitig · Ozellikler ve Fark Yaratan Yetenekler
 
----
+<sub>Surum <b>1.0.0</b> · Kokpit zekasi, yerel AI ve korumali eklenti sistemi tamamlandi</sub>
 
-## 🎯 Vizyon: Neden Başka Bir Terminal Değil?
+<sub><a href="README.md">README</a> · <a href="CHANGELOG.md">Changelog</a> · <a href="ROADMAP.md">Roadmap</a></sub>
 
-Mevcut Windows ekosistemindeki terminaller iki uca savrulmuştur:
-1. **Windows Terminal:** Hızlı ve kararlıdır ancak "düz bir metin kutusu"dur; modern geliştirici araçlarından, akıllı bağlamdan ve etkileşimli yardımcılardan yoksundur.
-2. **Warp / Bulut Tabanlı Terminaller:** Zengin özellikler sunar ancak zorunlu hesap kaydı, bulut telemetrisi ve kurumsal ortamlarda güvenlik/gizlilik endişesi yaratır.
-
-**Bitig'in Temel Felsefesi:**
-* ⚡ **%100 Yerel ve Bağımsız:** Sıfır bulut bağımlılığı, sıfır telemetri. Tüm veriler yerel JSON olarak `%APPDATA%/Bitig/` altında saklanır.
-* 🛡️ **Güvenlikten Taviz Yok:** Katı Electron sandboxing (`contextIsolation: true`, Node `vm` izole eklenti ortamı).
-* 🎹 **Önce Klavye:** Her yetenek faresiz, tek bir kısayolla yönetilebilir.
-* 🛠️ **Geliştirici Odaklı:** Sıradan metin akışını akıllı, tıklanabilir, parametrik ve izlenebilir bir iş istasyonuna dönüştürür.
+</div>
 
 ---
 
-## 📊 Karşılaştırma Matrisi
+## Vizyon: Neden Baska Bir Terminal?
 
-| Özellik | Windows Terminal | Warp | Hyper / Tabby | **Bitig** |
-|---|:---:|:---:|:---:|:---:|
-| **ConPTY Windows Entegrasyonu** | ✅ Native | ❌ (Özel motor) | ⚠️ (node-pty) | ✅ **ConPTY + xterm.js** |
-| **Yerel Parametrik Runbook ("Bitig Betik")** | ❌ Yok | ⚠️ (Bulut/Hesaplı) | ❌ Yok | 🚀 **Dahili & Yerel JSON (`Ctrl+Shift+B`)** |
-| **Canlı Port & Servis Dinleyicisi (Port Sniffer)** | ❌ Yok | ❌ Yok | ❌ Yok | 🌐 **Dahili — Shipped v0.9.0 (ANSI-stripped, buffered, tıkla-aç)** |
-| **Secret Shield (Token/Şifre Sansürü)** | ❌ Yok | ❌ Yok | ❌ Yok | 🛡️ **Dahili (Otomatik Maskeleme)** |
-| **Yerel AI Asistanı (Ollama / BYOK)** | ⚠️ (Copilot Sidebar) | ⚠️ (Warp AI / Bulut) | ❌ Yok | 💡 **Dahili — Shipped v0.9.8 (Ollama + BYOK / `Ctrl+I`)** |
-| **Quake / Dropdown HUD Modu** | ⚠️ (Ayrı mod/ayar) | ❌ Yok | ⚠️ (Eklentiyle) | 🪟 **Dahili — Shipped v0.9.5 (`Win+~` / `Ctrl+~`)** |
-| **Broadcast Input (Eşzamanlı Split Yayını)** | ❌ Yok | ❌ Yok | ⚠️ (Bazı sürümlerde) | 🔴 **Dahili — Shipped v0.9.5 (`Alt+Shift+I`)** |
-| **IDE Akıllı Linkleri (Dosya:Satır Açma)** | ❌ (Sadece URL) | ⚠️ (Kısmi) | ❌ (Sadece URL) | 🔗 **Dahili (`vscode://`, Cursor, vb.)** |
-| **Nerd Font Glyph Canlı Ölçüm & Tespiti** | ❌ Yok | ❌ Yok | ❌ Yok | ✨ **Dahili (Canvas PUA Probe)** |
+Windows ekosistemindeki terminaller iki uca savrulmus durumda:
+
+| | Guclu yani | Zayif yani |
+|---|---|---|
+| **Windows Terminal** | Hizli, kararli, native ConPTY | Duz bir metin kutusu; akilli baglam ve etkilesimli yardimci yok |
+| **Warp ve bulut tabanli terminaller** | Zengin ozellik seti | Zorunlu hesap, bulut telemetrisi, kurumsal ortamda gizlilik sorunu |
+
+Bitig bu iki ucun arasini kapatmayi hedefler. Dort temel ilke:
+
+| Ilke | Ne anlama geliyor |
+|---|---|
+| **Yuzde 100 yerel** | Sifir bulut bagimliligi, sifir telemetri, hesap yok. Tum veri `%APPDATA%/Bitig/` altinda duz JSON. |
+| **Guvenlikten taviz yok** | Kati Electron izolasyonu (`contextIsolation: true`, `sandbox: true`), eklentiler icin ayri bir Node `vm` baglami. |
+| **Once klavye** | Her yetenek faresiz, tek bir kisayolla yonetilebilir; her kisayol yeniden atanabilir. |
+| **Gelistirici odakli** | Siradan metin akisini tiklanabilir, parametrik ve izlenebilir bir is istasyonuna cevirir. |
 
 ---
 
-## 🚀 7 Benzersiz Temel Özellik
+## Karsilastirma Matrisi
+
+Gosterim: `+` dahili ve tam destek, `~` kismi ya da eklentiyle, `-` yok.
+
+| Ozellik | Windows Terminal | Warp | Hyper / Tabby | Bitig 1.0 |
+|---|:---:|:---:|:---:|:---|
+| ConPTY entegrasyonu | `+` native | `-` ozel motor | `~` node-pty | `+` **ConPTY + xterm.js** |
+| Yerel parametrik runbook | `-` | `~` bulut / hesap | `-` | `+` **Bitig Betik, yerel JSON (`Ctrl+Shift+B`)** |
+| Canli port dinleyicisi | `-` | `-` | `-` | `+` **ANSI temizlemeli, tamponlu, tikla-ac** |
+| Secret Shield (token sansuru) | `-` | `-` | `-` | `+` **Otomatik maskeleme** |
+| Yerel AI asistani | `~` Copilot | `~` Warp AI, bulut | `-` | `+` **Ollama + BYOK (`Ctrl+I`)** |
+| Quake / dropdown HUD | `~` ayri mod | `-` | `~` eklentiyle | `+` **Dahili (`Win+~`)** |
+| Broadcast input | `-` | `-` | `~` bazi surumler | `+` **Dahili (`Alt+Shift+I`)** |
+| IDE akilli linkleri | `-` sadece URL | `~` kismi | `-` sadece URL | `+` **`vscode://`, Cursor** |
+| Nerd Font glyph olcumu | `-` | `-` | `-` | `+` **Canvas PUA probe** |
+| Korumali eklenti calisma ortami | `-` | `-` | `~` tam Node erisimi | `+` **Node `vm`, izin listeli API** |
+
+---
+
+## Kokpit Yuzeyi
 
 ```
-┌──────────────────────────────────────────────────────────────────────────┐
-│                         B I T I G   K O K P I T                          │
-├──────────────────────────────────────────────────────────────────────────┤
-│ 🌐 Portlar: [:3000 (Next.js)] [:5173 (Vite)]      [Quake HUD: Win+~]     │
-│ ⚡ Betik: [Docker Dev Cluster]                    [Broadcast: Alt+Shift+I]│
-│ 🛡️ Secret Shield: [1 API Key Maskelendi]          [Bilge AI: Ctrl+I]      │
-└──────────────────────────────────────────────────────────────────────────┘
+┌────────────────────────────────────────────────────────────────────────┐
+│  B I T I G   K O K P I T                                               │
+├────────────────────────────────────────────────────────────────────────┤
+│  Portlar   :3000 (Next.js)   :5173 (Vite)      Quake HUD    Win+~      │
+│  Betik     Docker Dev Cluster                  Broadcast    Alt+Shift+I│
+│  Kalkan    1 API anahtari maskelendi           Bilge AI     Ctrl+I     │
+└────────────────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-### 1. "Bitig Betik" — Parametrik Runbook & Snippet Yöneticisi (`Ctrl+Shift+B`)
+## 1. Bitig Betik: Parametrik Runbook Yoneticisi
 
-#### 🔴 Problem
-Geliştiriciler her gün onlarca parametreli ve uzun komut çalıştırır:
-* `docker run -d -p 8080:80 -v C:\proje:/app --name api-dev node:20`
-* `ffmpeg -i input.mp4 -c:v libx264 -crf 23 -c:a aac output.mp4`
-* `git push origin HEAD:refs/for/main%topic=feature-xyz`
-* `kubectl port-forward svc/my-service 8080:80 -n staging`
+`Ctrl+Shift+B` · Shipped v0.8.0
 
-Bu komutları ezberlemek, not uygulamasından kopyala-yapıştır yapıp tırnakları/portları elle düzenlemek hata riskini artırır ve zaman kaybettirir.
+**Problem.** Gelistiriciler her gun onlarca parametreli, uzun komut calistirir:
 
-#### 🟢 Bitig Çözümü
-`Ctrl+Shift+B` kısayoluna basıldığında açılan arama penceresinden şablon seçilir. Bitig, şablon içindeki `{{değişken}}` alanlarını anında dinamik bir form arayüzüne dönüştürür. Geliştirici değerleri girip Enter'a bastığı anda derlenmiş komut doğrudan terminal prompt'una yazılır.
+```
+docker run -d -p 8080:80 -v C:\proje:/app --name api-dev node:20
+ffmpeg -i input.mp4 -c:v libx264 -crf 23 -c:a aac output.mp4
+kubectl port-forward svc/my-service 8080:80 -n staging
+```
 
-#### 🛠️ Şablon Şeması (`%APPDATA%/Bitig/snippets.json`)
+Bunlari ezberlemek, not uygulamasindan kopyalayip tirnaklari ve portlari elle
+duzenlemek hem zaman kaybi hem hata kaynagidir.
+
+**Cozum.** `Ctrl+Shift+B` ile acilan arama penceresinden sablon secilir. Bitig,
+sablondaki `{{degisken}}` alanlarini aninda dinamik bir forma cevirir. Degerler
+girilip `Enter`'a basildiginda derlenmis komut dogrudan aktif terminale yazilir.
+Canli onizleme, komut calismadan once tam olarak ne calisacagini gosterir.
+
+<details>
+<summary><b>Sablon semasi</b> (<code>%APPDATA%/Bitig/snippets.json</code>)</summary>
+
 ```jsonc
 {
   "snippets": [
     {
       "id": "docker-run-volume",
-      "name": "Docker Container Başlat (Port & Volume)",
-      "description": "Port yönlendirmesi ve dizin bağlamasıyla container açar",
+      "name": "Docker Container Baslat (Port & Volume)",
+      "description": "Port yonlendirmesi ve dizin baglamasiyla container acar",
       "category": "Docker",
-      "command": "docker run -d -p {{host_port:3000}}:{{container_port:3000}} -v \"{{host_dir:%CD%}}\":{{container_dir:/app}} --name {{name:my-app}} {{image:node:20-alpine}}",
+      "command": "docker run -d -p {{host_port}}:{{container_port}} -v \"{{host_dir}}\":{{container_dir}} --name {{name}} {{image}}",
       "variables": {
-        "host_port": { "label": "Host Portu", "default": "3000" },
-        "container_port": { "label": "Container Portu", "default": "3000" },
-        "host_dir": { "label": "Yerel Dizin", "default": "%CD%" },
-        "container_dir": { "label": "Hedef Dizin", "default": "/app" },
-        "name": { "label": "Container Adı", "default": "app-dev" },
-        "image": { "label": "Docker İmajı", "default": "node:20-alpine" }
+        "host_port":      { "label": "Host Portu",     "default": "3000" },
+        "container_port": { "label": "Container Portu","default": "3000" },
+        "host_dir":       { "label": "Yerel Dizin",    "default": "%CD%" },
+        "container_dir":  { "label": "Hedef Dizin",    "default": "/app" },
+        "name":           { "label": "Container Adi",  "default": "app-dev" },
+        "image":          { "label": "Docker Imaji",   "default": "node:20-alpine" }
       }
     }
   ]
 }
 ```
 
----
-
-### 2. Canlı Port ve Servis Dinleyicisi (Live Port Sniffer) ✅ Shipped v0.9.0
-
-#### 🔴 Problem
-Bir backend veya frontend geliştirirken (`npm run dev`, `cargo run`, `docker compose up`, `python manage.py runserver`), uygulamanın hangi portta ayağa kalktığını görmek için akan logları taramak gerekir.
-
-#### 🟢 Bitig Çözümü (v0.9.0'da tamamlandı)
-Bitig'in renderer katmanındaki `PortSniffer` sınıfı, gelen PTY çıktısını analiz eder:
-* **ANSI escape sequence'leri** tarama öncesi temizlenir — renk kodları regex'i kırmaz.
-* **Per-leaf rolling buffer** (512 karakter) ile parçalı PTY chunk'larındaki URL'ler kaybolmaz.
-* Port açıldığı an sekme başlığında yeşil, yanıp sönen interaktif bir rozet belirir: `🟢 :5173`.
-* **Rozet Aksiyonları:**
-  1. **Tek Tıkla Aç:** Varsayılan tarayıcıda `http://localhost:PORT` açılır (`shell.openExternal`).
-  2. False positive önleme: `ready in 153 ms` gibi milisaniye değerleri port olarak yakalanmaz.
+</details>
 
 ---
 
-### 3. Akıllı Linkler & IDE Entegrasyonu (Smart Hyperlinks) ✅ Shipped v0.9.0
+## 2. Canli Port ve Servis Dinleyicisi
 
-#### 🔴 Problem
-Terminalde derleme hatası, test sonucu veya log akarken bir dosya konumu basıldığında (`at src/renderer/src/main.ts:42:15` veya `C:\Repo\error.log:120`), standart terminaller bunu düz metin olarak gösterir veya sadece `http://` linklerini tıkletir. Dosyayı editörde elle arayıp o satıra gitmek dakikalar çalar.
+Shipped v0.9.0
 
-#### 🟢 Bitig Çözümü (v0.9.0'da tamamlandı)
-Bitig, `src/renderer/src/smartLinks.ts` içinde xterm.js'e özel link sağlayıcı kaydeder:
-* Yığın izi desenlerini tanır: `src/main.ts:42:15`, `C:\Users\...\file.py:102`.
-* `Ctrl + Sol Tık` ile dosya doğrudan VS Code / Cursor'da tam satır ve sütunda açılır:
-  ```
-  vscode://file/c:/Users/samet/Desktop/Bitig/src/renderer/src/main.ts:42:15
-  ```
-* `cockpit:open-file` IPC kanalı üzerinden `shell.openExternal` ile açılır.
+**Problem.** `npm run dev`, `cargo run`, `docker compose up` calistirildiginda
+uygulamanin hangi portta ayaga kalktigini gormek icin akan loglari taramak
+gerekir.
 
----
+**Cozum.** `src/renderer/src/portSniffer.ts` gelen PTY ciktisini analiz eder:
 
-### 4. Secret Shield — Gizli Bilgi & Token Kalkanı ✅ Shipped v0.9.0
-
-#### 🔴 Problem
-Canlı yayınlarda veya ekran paylaşımı yaparken `cat .env`, `echo $STRIPE_KEY` gibi komutlar çalıştırıldığında hassas API anahtarları açığa çıkar.
-
-#### 🟢 Bitig Çözümü (v0.9.0'da tamamlandı)
-`src/renderer/src/secretShield.ts` ve `src/main/history/historyStore.ts` birlikte çalışır:
-* **Algılanan Desenler:**
-  * JWT Tokenlar (`eyJ...`)
-  * AWS Access Key (`AKIA[0-9A-Z]{16}`)
-  * GitHub Personal Access Token (`ghp_[0-9a-zA-Z]{36}`)
-  * OpenAI / Anthropic API Key (`sk-...`, `sk-ant-...`)
-  * Özel Anahtarlar (`-----BEGIN RSA PRIVATE KEY-----`)
-* **Kalkan Davranışı:**
-  * Komut **geçmişine kaydedilirken** otomatik olarak `ghp_************` şeklinde maskelenir — shoulder surfing ve ekran paylaşımı sızıntılarını önler.
-  * Ekran maskeleme (render katmanı) roadmap'teki bir sonraki adımdır.
+- **ANSI escape dizileri** tarama oncesi temizlenir, renk kodlari regex'i kirmaz.
+- **Yaprak basina kayan tampon** (512 karakter) parcali PTY chunk'larinda bolunen
+  URL'lerin kaybolmasini engeller.
+- Port acildigi an sekme basliginda ve durum cubugunda tiklanabilir, nabiz atan
+  bir rozet belirir. Tek tikla `http://localhost:PORT` varsayilan tarayicida acilir.
+- `ready in 153 ms` gibi milisaniye degerleri port olarak yakalanmaz.
 
 ---
 
-### 5. "Bitig Bilge" — Yerel & Gizlilik Odaklı AI Asistanı (`Ctrl+I`) ✅ Shipped v0.9.8
+## 3. Akilli Linkler ve IDE Entegrasyonu
 
-#### 🔴 Problem
-Komut satırında bilinmeyen bir hata alındığında (`exit code != 0`), terminalden kopyalayıp tarayıcıda aratmak geliştirici akışını böler. Şirket kodlarını veya loglarını bulut AI servislerine yapıştırmak ise veri güvenliği politikalarına aykırıdır.
+Shipped v0.9.0
 
-#### 🟢 Bitig Çözümü (v0.9.8'de tamamlandı)
-* **%100 Yerel (Ollama / LM Studio) veya BYOK (Bring Your Own Key):** Bitig hiçbir veriyi kendi sunucularına iletmez. Kullanıcı ister yerel `http://localhost:11434` (Ollama) bağlar, ister kendi OpenAI / Gemini / Claude / DeepSeek anahtarını girer.
-* **Akıllı Hata Çözücü:** Komut hata verdiğinde veya `ai:explain-error` ile son komut ve ilgili hata satırları analiz edilerek Türkçe ve uygulanabilir çözüm üretilir.
-* **Doğal Dilden Komuta (Ctrl+I - Bitig Bilge Modalı):**
-  * `Ctrl+I` basıp *"100MB'tan büyük tüm .log dosyalarını bul ve sil"* yazıldığında, aktif shell'e uygun temiz komut üretilir; `Enter` ile anında çalıştırılır veya `Tab` ile terminale aktarılır.
+**Problem.** Bir derleme hatasi `at src/renderer/src/main.ts:42:15` bastiginda
+standart terminaller bunu duz metin olarak gosterir. Dosyayi editorde elle arayip
+o satira gitmek akisi boler.
 
----
+**Cozum.** `src/renderer/src/smartLinks.ts` xterm.js'e ozel bir link saglayici
+kaydeder. Yigin izi desenlerini tanir (`src/main.ts:42:15`,
+`C:\Users\...\file.py:102`) ve `Ctrl + Sol Tik` ile dosyayi tam satir ve sutunda
+editorde acar:
 
-### 6. Quake / Dropdown HUD Modu (`Win+~` / `Ctrl+~`) ✅ Shipped v0.9.5
+```
+vscode://file/c:/Users/samet/Desktop/Bitig/src/renderer/src/main.ts:42:15
+```
 
-#### 🔴 Problem
-Hızlı bir Git komutu çalıştırmak, bir paketi derlemek veya curl isteği atmak için açık olan onlarca pencere arasından terminali bulup öne getirmek zaman kaybıdır.
-
-#### 🟢 Bitig Çözümü (v0.9.5'te tamamlandı)
-* `Win+~` (veya ayarlanabilir `Ctrl+~`) tuşuna basıldığı an Bitig, ekranın üst kenarından yarı saydam, her zaman üstte bir HUD penceresi olarak belirir.
-* `quake:toggle` ve `quake:set-hotkey` kanalları ile dinamik kontrol edilir.
-* `autoHideOnBlur` ile odak kaybedildiğinde otomatik gizlenebilir.
+Acma islemi `cockpit:open-file` kanali uzerinden `shell.openExternal` ile yapilir.
 
 ---
 
-### 7. Broadcast Input — Eşzamanlı Komut Yayını (`Alt+Shift+I`) ✅ Shipped v0.9.5
+## 4. Secret Shield: Gizli Bilgi Kalkani
 
-#### 🔴 Problem
-Bir sekme içinde 4 split pane açıp farklı sunuculara veya mikroservislere bağlandığınızda, `git pull`, `systemctl restart service` veya `docker ps` gibi aynı komutu tüm pane'lere tek tek yazmak gerekir.
+Shipped v0.9.0
 
-#### 🟢 Bitig Çözümü (v0.9.5'te tamamlandı)
-* `Alt+Shift+I` kısayoluyla **Broadcast Modu** aktif edilir.
-* Pencere etrafında dikkat çekici kırmızı bir senkronizasyon çerçevesi (`🔴 BROADCAST AKTİF`) ve kayan uyarı banner'ı belirir.
-* Odaklı pane'de klavyeden yazılan her komut, aynı sekmedeki tüm split pane'lerin PTY oturumlarına eşzamanlı olarak iletilir.
-* Mod kapatıldığında paneller tekrar bağımsız çalışmaya döner.
+**Problem.** Canli yayinda veya ekran paylasiminda `cat .env`, `echo $STRIPE_KEY`
+gibi komutlar hassas anahtarlari acik eder. Daha kotusu, bu komutlar komut
+gecmisine duz metin olarak yazilir ve orada kalir.
+
+**Cozum.** `src/renderer/src/secretShield.ts` ve
+`src/main/history/historyStore.ts` birlikte calisir.
+
+| Algilanan desen | Ornek |
+|---|---|
+| JWT token | `eyJhbGciOi...` |
+| AWS access key | `AKIA[0-9A-Z]{16}` |
+| GitHub PAT | `ghp_[0-9a-zA-Z]{36}` |
+| OpenAI / Anthropic anahtari | `sk-...`, `sk-ant-...` |
+| Ozel anahtar blogu | `-----BEGIN RSA PRIVATE KEY-----` |
+
+Komut gecmise kaydedilirken deger otomatik olarak `ghp_************` seklinde
+maskelenir. Boylece gecmiste arama yapmak sizinti riski tasimaz.
 
 ---
 
-## 🏗️ Mimari Prensipler
+## 5. Bitig Bilge: Yerel ve Gizlilik Odakli AI Asistani
 
-Bitig'deki her yeni özellik şu 4 altın kurala uymak zorundadır:
+`Ctrl+I` · Shipped v0.9.8
 
-1. **Performanstan Ödün Yok (Zero Latency):** Terminal metin akışı PTY ve xterm.js arasında doğrudan akar. Ekstra analizler (port sniffer, secret shield) asenkron çalışır ve klavye girişinde en ufak bir gecikme (input lag) yaratamaz.
-2. **Klavye Dostu (Keyboard-First):** Her eylem bir kısayola (`actionId`) bağlanabilir ve Komut Paleti (`Ctrl+Shift+P`) üzerinden erişilebilir.
-3. **Veri Egemenliği (Data Sovereignty):** Kullanıcı verileri (şablonlar, geçmiş, ayarlar, API anahtarları) kullanıcının kendi bilgisayarında şifrelenmiş veya düz JSON olarak saklanır.
-4. **İzole Eklenti Mimarisi:** Eklentiler Node.js `vm` modülü içinde, sadece izin verilen Bitig API'lerine erişebilir; işletim sistemi çekirdeğine doğrudan yetkisiz erişim sağlayamaz.
+**Problem.** Bilinmeyen bir hata alindiginda terminalden kopyalayip tarayicida
+aratmak akisi boler. Sirket kodlarini veya loglarini bulut AI servislerine
+yapistirmak ise cogu veri guvenligi politikasina aykiridir.
+
+**Cozum.**
+
+- **Yuzde 100 yerel veya BYOK.** Ollama (`http://localhost:11434`) ile hicbir veri
+  makineden cikmaz; ya da kendi OpenAI, Anthropic, Gemini, DeepSeek anahtarinizi
+  girersiniz. Bitig hicbir veriyi kendi sunucularina iletmez, cunku boyle bir
+  sunucu yoktur.
+- **Dogal dilden komuta.** `Ctrl+I` basip *"100MB'tan buyuk tum .log dosyalarini
+  bul ve sil"* yazildiginda aktif shell'e uygun komut uretilir. `Enter` aninda
+  calistirir, `Tab` duzenlemek uzere terminale aktarir.
+- **Akilli hata cozucu.** Son komut ve ilgili hata satirlari analiz edilerek
+  uygulanabilir bir cozum uretilir.
+- **Anahtar yonetimi.** API anahtarlari yalnizca `%APPDATA%/Bitig/settings.json`
+  icinde saklanir, ayarlar panelinde maskeli girilir ve canli baglanti testi
+  butonu vardir.
 
 ---
 
-*Bitig — Eski Türkçede "Yazı, Betik, Yazılı Metin". Geleceğin komut satırı deneyimi.*
+## 6. Quake / Dropdown HUD Modu
+
+`Win+~` veya `Ctrl+~` · Shipped v0.9.5
+
+**Problem.** Hizli bir Git komutu icin acik olan onlarca pencere arasindan
+terminali bulup one getirmek zaman kaybidir.
+
+**Cozum.** Kisayola basildigi an Bitig, ana ekranin ust kenarindan yari saydam,
+her zaman ustte bir HUD penceresi olarak iner. `quake:toggle` ve
+`quake:set-hotkey` kanallariyla calisma zamaninda kontrol edilir; `autoHideOnBlur`
+ile odak kaybedildiginde otomatik gizlenir.
+
+---
+
+## 7. Broadcast Input: Es Zamanli Komut Yayini
+
+`Alt+Shift+I` · Shipped v0.9.5
+
+**Problem.** Bir sekmede dort split pane acip farkli sunuculara baglandiginizda
+`git pull` veya `systemctl restart` gibi ayni komutu tek tek yazmak gerekir.
+
+**Cozum.** Broadcast modu acikken odakli pane'de yazilan her tus, ayni sekmedeki
+tum pane'lerin PTY oturumlarina es zamanli iletilir. Pencere cevresinde nabiz
+atan kirmizi bir cerceve ve ust kenardan inen bir uyari banner'i, yanlislikla
+komut calistirmayi engelleyecek kadar belirgindir. Mod kapatilinca panel'ler
+tekrar bagimsiz calisir.
+
+---
+
+## 8. Korumali Eklenti Sistemi
+
+Shipped v1.0.0
+
+**Problem.** Eklenti destegi genellikle ya hic yoktur ya da eklentilere tam Node
+erisimi verir; bu da her eklentiyi potansiyel bir guvenlik acigi haline getirir.
+
+**Cozum.** Her eklenti `%APPDATA%/Bitig/plugins/<id>/` altinda bir `plugin.json`
+manifesti ve bir giris betiginden olusur. Betik, `require`, `process` ve `fs`
+gibi global'lerin bulunmadigi izole bir Node `vm` baglaminda calisir. Erisilebilen
+tek yuzey, acikca izin verilen `bitig` nesnesidir:
+
+| API | Amac |
+|---|---|
+| `bitig.ui.setStatusBarWidget` | Durum cubuguna canli bir bilesen ekler |
+| `bitig.actions.register` | Komut paletine ve kisayol sistemine aksiyon ekler |
+| `bitig.getGitBranch` | Aktif dizindeki Git dalini doner |
+| `bitig.getSystemMemory` | Sistem bellek kullanimini doner |
+| `bitig.openUrl` | Varsayilan tarayicida bir URL acar |
+| `bitig.setInterval` | Eklenti kapatilinca otomatik temizlenen zamanlayici |
+
+Uc referans eklenti hazir gelir: `git-status` (aktif dal), `system-monitor`
+(canli RAM kullanimi) ve `quick-web-search` (Google ve Stack Overflow aramasi
+icin evrensel aksiyonlar).
+
+---
+
+## Mimari Prensipler
+
+Bitig'e eklenen her yeni ozellik su dort kurala uymak zorundadir.
+
+1. **Sifir gecikme.** Terminal metin akisi PTY ile xterm.js arasinda dogrudan
+   akar. Ek analizler (port sniffer, secret shield, telemetri) asenkron calisir
+   ve klavye girisinde en ufak bir gecikme yaratamaz.
+2. **Once klavye.** Her eylem bir `actionId`'ye baglanir, yeniden atanabilir ve
+   Komut Paleti (`Ctrl+Shift+P`) uzerinden erisilebilir.
+3. **Veri egemenligi.** Kullanici verileri (sablonlar, gecmis, ayarlar, API
+   anahtarlari) yalnizca kullanicinin kendi makinesinde, duz JSON olarak durur.
+4. **Izole eklenti mimarisi.** Eklentiler Node `vm` icinde, yalnizca izin verilen
+   Bitig API'lerine erisir; isletim sistemine dogrudan yetkisiz erisim saglayamaz.
+
+---
+
+<div align="center">
+<sub><b>Bitig</b> · Eski Turkcede "yazi, betik, yazili metin".</sub>
+</div>

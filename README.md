@@ -1,21 +1,40 @@
 <div align="center">
 
-<img src="assets/banner.svg" alt="Bitig terminal preview" width="100%" />
+<img src="assets/banner.svg" alt="Bitig" width="100%" />
 
-# Bitig
+<h1>Bitig</h1>
 
-**A terminal emulator for Windows, built from scratch.**  
-**Sifirdan yazilan, Windows icin bir terminal emulatoru.**
+<p>
+<b>A terminal emulator for Windows, built from scratch.</b><br />
+<sub>Sifirdan yazilan, Windows icin bir terminal emulatoru.</sub>
+</p>
 
-[![Version](https://img.shields.io/badge/version-0.9.8-7dd3fc?style=flat-square)](#)
-[![Platform](https://img.shields.io/badge/platform-Windows%2011-0f1117?style=flat-square&logo=windows&logoColor=white)](#)
-[![Electron](https://img.shields.io/badge/Electron-43-47848F?style=flat-square&logo=electron&logoColor=white)](#)
-[![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178C6?style=flat-square&logo=typescript&logoColor=white)](#)
-[![xterm.js](https://img.shields.io/badge/xterm.js-%40xterm%2Fxterm-2ea44f?style=flat-square)](#)
-[![Status](https://img.shields.io/badge/status-active%20development-e3b341?style=flat-square)](#)
-[![License](https://img.shields.io/badge/license-ISC-8b93a7?style=flat-square)](#license--lisans)
+[![Version](https://img.shields.io/badge/version-1.0.0-7dd3fc?style=for-the-badge&labelColor=0f1117)](CHANGELOG.md)
+[![Platform](https://img.shields.io/badge/Windows%2011-x64-0f1117?style=for-the-badge&logo=windows&logoColor=7dd3fc&labelColor=0f1117)](#installation)
+[![Electron](https://img.shields.io/badge/Electron-43-47848F?style=for-the-badge&logo=electron&logoColor=white&labelColor=0f1117)](https://www.electronjs.org/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178C6?style=for-the-badge&logo=typescript&logoColor=white&labelColor=0f1117)](tsconfig.json)
+[![License](https://img.shields.io/badge/license-ISC-a78bfa?style=for-the-badge&labelColor=0f1117)](#license)
 
-**[English](#english)** &nbsp;|&nbsp; **[Turkce](#turkce)** &nbsp;|&nbsp; [Changelog](CHANGELOG.md) &nbsp;|&nbsp; [Roadmap](ROADMAP.md) &nbsp;|&nbsp; [Features](FEATURES.md)
+<p>
+<a href="#english"><b>English</b></a>
+&nbsp;·&nbsp;
+<a href="#turkce"><b>Turkce</b></a>
+&nbsp;·&nbsp;
+<a href="CHANGELOG.md">Changelog</a>
+&nbsp;·&nbsp;
+<a href="ROADMAP.md">Roadmap</a>
+&nbsp;·&nbsp;
+<a href="FEATURES.md">Features</a>
+</p>
+
+<table>
+<tr>
+<td align="center" width="25%"><sub><b>Developer Cockpit</b></sub><br /><sub>Live ports, smart links,<br />secret masking</sub></td>
+<td align="center" width="25%"><sub><b>Local AI</b></sub><br /><sub>Ollama or BYOK,<br />zero telemetry</sub></td>
+<td align="center" width="25%"><sub><b>Plugin Runtime</b></sub><br /><sub>Sandboxed Node VM,<br />manifest based</sub></td>
+<td align="center" width="25%"><sub><b>Keyboard First</b></sub><br /><sub>Every action is<br />rebindable</sub></td>
+</tr>
+</table>
 
 </div>
 
@@ -23,188 +42,172 @@
 
 <a id="english"></a>
 
-# English
+## English
 
-## Table of Contents
+### Contents
 
-- [About](#about)
-- [Features](#features)
-- [Tech Stack](#tech-stack)
-- [Architecture](#architecture)
-- [IPC Channel Reference](#ipc-channel-reference)
-- [Getting Started](#getting-started)
-- [Keyboard Shortcuts](#keyboard-shortcuts)
-- [Customization](#customization)
-- [Project Structure](#project-structure)
-- [Roadmap](#roadmap)
-- [Contributing](#contributing)
-- [Naming](#naming)
+| | |
+|---|---|
+| [About](#about) | What Bitig is and is not |
+| [Installation](#installation) | Setup installer and portable build |
+| [Feature Overview](#feature-overview) | Everything shipped in 1.0.0 |
+| [Tech Stack](#tech-stack) | Layers and why each was chosen |
+| [Architecture](#architecture) | Process boundaries and data flow |
+| [IPC Channel Reference](#ipc-channel-reference) | The full typed contract |
+| [Keyboard Shortcuts](#keyboard-shortcuts) | Default bindings |
+| [Customization](#customization) | Settings, themes, snippets, plugins |
+| [Building From Source](#building-from-source) | Dev and release builds |
+| [Project Structure](#project-structure) | Where everything lives |
+| [Contributing](#contributing) | Working on the project |
 
-## About
+### About
 
-Bitig is a desktop terminal emulator built for Windows 11 from the ground
-up, as an alternative to Windows Terminal. It is not a fork or a skin on top
-of an existing terminal; it is its own Electron application with its own
-window chrome, its own rendering pipeline, and its own settings format.
+Bitig is a desktop terminal emulator written from the ground up for Windows 11
+as an alternative to Windows Terminal. It is not a fork, a theme, or a shell
+on top of an existing terminal. It is its own Electron application with its
+own window chrome, its own rendering pipeline, its own settings format, and
+its own plugin runtime.
 
-The goal is a **Developer Cockpit** — a terminal that goes beyond plain text
-streaming and becomes an intelligent, interactive workstation: clickable port
-badges, smart file hyperlinks, secret masking, parametric runbooks, fuzzy
-command history, customizable keyboard shortcuts, and a Quake-style HUD mode.
-All of it 100% local, zero cloud, zero telemetry.
+The goal is a **Developer Cockpit**: a terminal that stops being a passive text
+stream and becomes an interactive workstation. Clickable port badges, smart
+file hyperlinks, automatic secret masking, parametric runbooks, frecency
+ranked command history, a sandboxed plugin system, and a Quake style HUD mode.
 
-## Features
+Everything runs locally. Zero cloud dependency, zero telemetry, no account.
+All state lives in plain JSON under `%APPDATA%/Bitig/`.
 
-### Shipped (v0.9.8)
+### Installation
 
-- **Real shell process** (PowerShell, CMD, Git Bash, WSL distributions)
-  spawned through ConPTY via `node-pty`, with full keyboard input and live
-  output streaming.
-- **xterm.js rendering** with four built-in themes (Bitig Dark, Bitig Light,
-  Dracula, Nord), custom user themes, font picker with *measured* Nerd Font
-  detection, transparency, and background image support.
-- **Multiple tabs** with drag-to-reorder, middle-click close, and profile
-  shortcuts (`Ctrl+Shift+1..9`). Shell profiles (PowerShell, CMD, Git Bash,
-  WSL) are auto-discovered at startup.
-- **Split panes** — divide horizontally or vertically, nest arbitrarily, drag
-  the divider, close a pane, zoom a pane to full width (`Ctrl+Shift+Z`), and
-  navigate between panes with `Alt+Arrow / Alt+H/J/K/L`.
-- **Settings panel** (gear icon in the title bar) covering appearance, font,
-  themes, profiles, keyboard shortcuts, telemetry, and the Developer Cockpit
-  section — all without touching JSON.
-- **Customizable keyboard shortcuts** — central action registry, live conflict
-  detection, click-to-rebind in the settings panel, persisted to
-  `settings.json`.
-- **Universal Command Palette** (`Ctrl+Shift+P`) — fuzzy search across all
-  actions, open tabs, shell profiles, themes, and settings.
-- **"Bitig Betik" Snippet Manager** (`Ctrl+Shift+B`) — parametric runbook
-  with `{{variable}}` placeholders, dynamic form UI, live command preview,
-  local JSON persistence. Ships with 10 built-in multi-parameter snippets
-  (Docker, Git, kubectl, FFmpeg, ...).
-- **Cross-session Command History** (`Ctrl+R`) — frecency-sorted fuzzy search
-  overlay, execution count badges, duration badges, relative timestamps, and
-  direct terminal injection.
-- **Command Execution Telemetry** — measures command runtimes; fires a native
-  Windows desktop notification when a long-running task finishes while Bitig
-  is in the background.
-- **Live Port Sniffer** — detects dev servers (`localhost:5173`,
-  `0.0.0.0:8080`, ...) from PTY output in real time, renders clickable green
-  pulsing badges in tab headers. Clicking opens the URL in the default
-  browser. ANSI escape codes are stripped before matching; a per-leaf rolling
-  buffer handles chunked PTY data.
-- **Smart File / Line Hyperlinks** — custom xterm.js link provider matches
-  stack trace patterns (`src/main.ts:42:15`, `C:\...\file.py:102`); opens the
-  file in VS Code / Cursor at the exact line with one Ctrl+Click.
-- **Secret Shield** — automatic pattern matching for sensitive tokens
-  (`sk-...`, `ghp_...`, `AKIA...`, bearer tokens, private keys); sanitizes
-  and masks credentials when saving to command history.
-- **In-terminal Search** (`Ctrl+F`) — floating glassmorphic search overlay
-  with incremental match highlighting, previous/next navigation, case, regex,
-  and whole-word toggles.
-- **Dynamic Tab Titles & OSC 7 CWD Tracking** — tab titles follow the
-  foreground process; splits and new tabs inherit the working directory.
-- **Quake / Dropdown HUD Mode** (`Win+~` / `Ctrl+~`) — instant access terminal
-  sliding from the top edge of the primary monitor via global OS shortcut.
-- **Broadcast Input Mode** (`Alt+Shift+I`) — synchronized keystroke input
-  mirrored simultaneously to all split panes in the active tab with visual red HUD banner.
-- **"Bitig Bilge" Local & BYOK AI Companion** (`Ctrl+I`) — natural language
-  prompting to executable shell commands and error explanation. Supports
-  Ollama (100% local), OpenAI, Anthropic, Gemini, DeepSeek, and custom endpoints.
-- **Frameless custom window** — draggable title bar, minimize / maximize /
-  close, rounded corners, drop shadow.
+Download the latest release for Windows 11 x64:
 
-### Planned
+| Build | File | Notes |
+|---|---|---|
+| **Setup** | `Bitig-Setup-1.0.0.exe` | NSIS installer. Choose install directory, creates Start Menu and desktop shortcuts. |
+| **Portable** | `Bitig-Portable-1.0.0.exe` | Single self contained executable. No installation, no registry writes. |
 
-- [ ] Lightweight plugin system & sandboxing
-- [ ] Packaging (`electron-builder` installer)
+Both builds are x64 only and require Windows 11. No runtime prerequisites:
+Node.js, Electron and the native ConPTY bindings are bundled.
 
-## Tech Stack
+### Feature Overview
+
+<table>
+<tr><th align="left" width="34%">Area</th><th align="left">Capability</th></tr>
+<tr>
+<td valign="top"><b>Terminal core</b></td>
+<td>Real shell processes (PowerShell, CMD, Git Bash, WSL distributions) spawned through ConPTY via <code>node-pty</code>. Auto discovery of installed shells at startup. Configurable scrollback depth up to 50,000 lines. Copy on select, paste on right click, and a glassmorphic right click context menu.</td>
+</tr>
+<tr>
+<td valign="top"><b>Tabs and panes</b></td>
+<td>Drag to reorder, middle click to close, inline double click rename, per tab context menu, confirm before closing an active session, and session restore on launch. Split panes nest arbitrarily, the divider is draggable, and any pane can be zoomed to full area.</td>
+</tr>
+<tr>
+<td valign="top"><b>Appearance</b></td>
+<td>Four built in themes (Bitig Dark, Bitig Light, Dracula, Nord) plus hot reloaded user themes. Window transparency, background image with independent opacity and fit, and a font picker that <i>measures</i> Nerd Font glyph coverage on a canvas instead of guessing from the family name.</td>
+</tr>
+<tr>
+<td valign="top"><b>Developer Cockpit</b></td>
+<td>Live Port Sniffer detects dev servers in the PTY stream and renders clickable badges. Smart Links turn <code>src/main.ts:42:15</code> into a one click jump into VS Code or Cursor at the exact line. Secret Shield masks tokens (<code>sk-</code>, <code>ghp_</code>, <code>AKIA</code>, bearer tokens, private keys) before anything reaches the history store.</td>
+</tr>
+<tr>
+<td valign="top"><b>Command surfaces</b></td>
+<td>Universal Command Palette with fuzzy search across actions, tabs, profiles and themes. Bitig Betik parametric runbooks with <code>{{variable}}</code> placeholders and a generated form. Cross session command history ranked by frecency. In terminal incremental search with regex, case and whole word toggles.</td>
+</tr>
+<tr>
+<td valign="top"><b>Bitig Bilge (AI)</b></td>
+<td>Natural language to shell command, plus error explanation. Runs fully local against Ollama, or bring your own key for OpenAI, Anthropic, Gemini, DeepSeek, and any OpenAI compatible endpoint. Keys never leave <code>settings.json</code>.</td>
+</tr>
+<tr>
+<td valign="top"><b>Power modes</b></td>
+<td>Quake / dropdown HUD window bound to a global OS shortcut. Broadcast Input mirrors keystrokes into every split pane of the active tab, with an unmistakable synchronization banner.</td>
+</tr>
+<tr>
+<td valign="top"><b>Extensibility</b></td>
+<td>Manifest based plugins loaded from <code>%APPDATA%/Bitig/plugins/</code>, executed inside an isolated Node <code>vm</code> context with an explicitly allowlisted <code>bitig</code> API. Plugins can contribute status bar widgets and rebindable actions. Three reference plugins ship out of the box.</td>
+</tr>
+<tr>
+<td valign="top"><b>Chrome</b></td>
+<td>Frameless custom window with rounded corners, a compact 36px title bar that hosts the tab strip inline, and a bottom status bar with profile, pane index, live ports, encoding, cursor position and plugin widgets.</td>
+</tr>
+</table>
+
+### Tech Stack
 
 | Layer | Choice | Why |
 |---|---|---|
-| App shell | [Electron](https://www.electronjs.org/) 43 | Mature desktop packaging, native OS integration on Windows |
-| Build tooling | [electron-vite](https://electron-vite.org/) | Separate, sane build pipelines for main, preload, and renderer |
-| Terminal rendering | `@xterm/xterm` + fit, web-links, search addons | De facto standard terminal renderer for web/Electron apps |
-| Shell process management | `node-pty` | Real ConPTY-backed shell processes on Windows, N-API prebuilt binaries |
+| App shell | [Electron](https://www.electronjs.org/) 43 | Mature desktop packaging and native OS integration on Windows |
+| Build tooling | [electron-vite](https://electron-vite.org/) | Separate, sane build pipelines for main, preload and renderer |
+| Terminal rendering | `@xterm/xterm` + fit, web-links, search | De facto standard terminal renderer for web and Electron apps |
+| Shell processes | `node-pty` | Real ConPTY backed shells on Windows, N-API prebuilt binaries |
 | Language | TypeScript (strict) | Type safety across process boundaries, catches IPC contract drift |
-| Package manager | npm | Standard, no extra tooling required |
+| Packaging | `electron-builder` | NSIS installer and portable target from one config |
 
-## Architecture
+### Architecture
 
-Three isolated processes, talking only through a narrow, typed IPC surface.
+Three isolated processes, talking only through a narrow typed IPC surface.
 The renderer never touches Node or native modules directly.
 
 ```mermaid
 flowchart LR
     subgraph Main["Main process (Node, full OS access)"]
         PM[PtyManager]
-        TS[ThemeStore]
-        SS[SettingsStore]
-        SN[SnippetStore]
-        HS[HistoryStore]
-        PH["pty:* handlers"]
-        WH["window:* handlers"]
-        OH["theme:* / settings:* handlers"]
-        CH["cockpit:* handlers"]
-        HH["history:* handlers"]
-        PM --> PH
-        TS --> OH
-        SS --> OH
-        SN --> CH
-        HS --> HH
+        ST[SettingsStore / ThemeStore]
+        SH[SnippetStore / HistoryStore]
+        PL[PluginManager<br/>Node vm sandbox]
+        AI[AiService]
+        H["IPC handlers<br/>pty / window / theme / settings<br/>fonts / snippets / history<br/>cockpit / quake / ai / plugins"]
+        PM --> H
+        ST --> H
+        SH --> H
+        PL --> H
+        AI --> H
     end
 
     subgraph Preload["Preload (contextBridge, sandboxed)"]
-        API["window.bitig API (pty, windowControls, theme, settings, fonts, snippets, history, cockpit)"]
+        API["window.bitig"]
     end
 
     subgraph Renderer["Renderer (no Node access)"]
-        UI["xterm.js terminal"]
-        TB["Custom title bar"]
-        AC["AppearanceController"]
-        TA["TabStore + PortSniffer"]
-        KB["KeybindingManager"]
-        SP["SettingsPanel"]
+        TA["TabStore + pane tree"]
+        UI["xterm.js instances"]
+        KB[KeybindingManager]
+        SP[SettingsPanel]
+        SB[StatusBar]
+        PR[PluginRuntime]
     end
 
-    Shell["Real shell process (PowerShell / CMD / WSL via ConPTY)"]
-    FS["%APPDATA%/Bitig/ (settings.json + themes/ + snippets.json + history.json)"]
+    Shell["Shell process<br/>PowerShell / CMD / Git Bash / WSL"]
+    FS["%APPDATA%/Bitig/<br/>settings.json · themes/ · snippets.json<br/>history.json · plugins/"]
 
     PM <--> Shell
-    SS <--> FS
-    TS <--> FS
-    SN <--> FS
-    HS <--> FS
-    UI -- keyboard input --> API
-    API -- ipcRenderer --> PH
-    PH -- webContents.send --> API
-    API -- shell output --> TA
-    TA -- port events --> UI
-    TB -- window controls --> API
-    API -- ipcRenderer --> WH
-    AC -- ipcRenderer --> OH
-    OH -- webContents.send --> API
-    API -- theme + appearance --> AC
-    AC -- applies theme --> UI
-    KB -- action dispatch --> TA
-    SP -- settings:set --> API
+    ST <--> FS
+    SH <--> FS
+    PL <--> FS
+    H <--> API
+    API <--> TA
+    TA --> UI
+    KB --> TA
+    SP --> API
+    PR --> SB
+    PR --> KB
 ```
 
 Every tab owns a pane tree (`src/renderer/src/panes.ts`): a single leaf by
 default, or a nested tree of splits. Every leaf maps to exactly one
-`PtyManager` session and one `xterm.js` instance. `TabStore`
-(`src/renderer/src/tabs.ts`) manages tabs, dispatches PTY events to the
-correct leaf, feeds output to `PortSniffer` for port badge rendering, and
-routes it through `ExecutionTelemetry` for command duration tracking.
-`KeybindingManager` (`src/renderer/src/keybindings.ts`) owns a central action
-registry and resolves all shortcuts, making every action rebindable without
+`PtyManager` session and one `xterm.js` instance. `TabStore` dispatches PTY
+events to the correct leaf, feeds output into `PortSniffer` and
+`ExecutionTelemetry`, and keeps the status bar in sync. `KeybindingManager`
+owns a central action registry and resolves every shortcut, which is what
+makes both user rebinding and plugin contributed actions possible without
 touching the calling code.
 
-## IPC Channel Reference
+### IPC Channel Reference
 
-Naming convention: `<domain>:<action>`. Defined once in `src/shared/*.ts`,
-consumed by main, preload, and renderer alike so the contract cannot silently
-drift between processes.
+Naming convention is `<domain>:<action>`. Each channel is declared once in
+`src/shared/*.ts` and consumed by main, preload and renderer alike, so the
+contract cannot silently drift between processes.
+
+<details>
+<summary><b>PTY and window</b></summary>
 
 | Channel | Direction | Kind | Purpose |
 |---|---|---|---|
@@ -220,105 +223,122 @@ drift between processes.
 | `window:is-maximized` | renderer to main | invoke | Query current maximize state |
 | `window:maximize-change` | main to renderer | event | Maximize state changed |
 | `window:notify` | renderer to main | send | Fire a native Windows desktop notification |
-| `theme:list` | renderer to main | invoke | Return every built-in + user theme |
-| `theme:list-changed` | main to renderer | event | A file in themes/ was added, removed, or edited |
+
+</details>
+
+<details>
+<summary><b>Appearance and settings</b></summary>
+
+| Channel | Direction | Kind | Purpose |
+|---|---|---|---|
+| `theme:list` | renderer to main | invoke | Return every built in and user theme |
+| `theme:list-changed` | main to renderer | event | A file in `themes/` was added, removed or edited |
 | `settings:get` | renderer to main | invoke | Return the current settings object |
-| `settings:set` | renderer to main | send | Apply a partial update (deep-merged) |
+| `settings:set` | renderer to main | send | Apply a partial update (deep merged) |
 | `settings:changed` | main to renderer | event | Broadcast full settings after any change |
-| `settings:read-background-image` | renderer to main | invoke | Return background image as data: URL |
-| `settings:pick-background-image` | renderer to main | invoke | Open native file picker |
+| `settings:read-background-image` | renderer to main | invoke | Return background image as a `data:` URL |
+| `settings:pick-background-image` | renderer to main | invoke | Open the native file picker |
 | `settings:reset` | renderer to main | send | Reset all settings to defaults |
 | `fonts:list` | renderer to main | invoke | List installed font families (cached) |
-| `snippets:list` | renderer to main | invoke | List all snippets |
+
+</details>
+
+<details>
+<summary><b>Productivity surfaces</b></summary>
+
+| Channel | Direction | Kind | Purpose |
+|---|---|---|---|
+| `snippets:list` | renderer to main | invoke | List all runbook snippets |
 | `snippets:save` | renderer to main | invoke | Create or update a snippet |
 | `snippets:delete` | renderer to main | invoke | Delete a snippet by id |
-| `snippets:reset` | renderer to main | invoke | Reset to built-in snippet library |
-| `history:list` | renderer to main | invoke | List command history (frecency-sorted) |
+| `snippets:reset` | renderer to main | invoke | Reset to the built in snippet library |
+| `history:list` | renderer to main | invoke | List command history, frecency sorted |
 | `history:add` | renderer to main | invoke | Record a completed command |
 | `history:clear` | renderer to main | invoke | Clear all history |
 | `cockpit:open-url` | renderer to main | invoke | Open a URL in the default browser |
-| `cockpit:open-file` | renderer to main | invoke | Open a file in VS Code / default editor |
-| `quake:toggle` | renderer to main | invoke | Toggle Quake HUD dropdown window |
-| `quake:set-hotkey` | renderer to main | invoke | Rebind global Quake OS shortcut |
-| `ai:prompt` | renderer to main | invoke | Generate CLI command from natural language prompt |
-| `ai:explain-error` | renderer to main | invoke | Explain terminal error and suggest resolution |
-| `ai:test-connection` | renderer to main | invoke | Test connection to configured AI endpoint |
+| `cockpit:open-file` | renderer to main | invoke | Open a file in the configured editor at a line |
 
-## Getting Started
+</details>
 
-### Prerequisites
+<details>
+<summary><b>Modes, AI and plugins</b></summary>
 
-- Windows 11
-- [Node.js](https://nodejs.org/) 20 or newer
-- npm (bundled with Node.js)
+| Channel | Direction | Kind | Purpose |
+|---|---|---|---|
+| `quake:toggle` | renderer to main | invoke | Toggle the Quake HUD dropdown window |
+| `quake:set-hotkey` | renderer to main | invoke | Rebind the global Quake OS shortcut |
+| `ai:prompt` | renderer to main | invoke | Generate a CLI command from a natural language prompt |
+| `ai:explain-error` | renderer to main | invoke | Explain a terminal error and suggest a resolution |
+| `ai:test-connection` | renderer to main | invoke | Test connectivity to the configured AI endpoint |
+| `plugin:list` | renderer to main | invoke | List discovered plugins with state and errors |
+| `plugin:toggle` | renderer to main | invoke | Enable or disable a plugin |
+| `plugin:reload` | renderer to main | invoke | Rescan and hot reload the plugins directory |
+| `plugin:get-contributions` | renderer to main | invoke | Return status bar widgets and actions contributed by plugins |
+| `plugin:contributions` | main to renderer | event | Broadcast contributions after a plugin updates a widget |
+| `plugin:open-dir` | renderer to main | send | Open the plugins folder in Explorer |
+| `plugin:execute-action` | renderer to main | send | Run a plugin registered action by id |
 
-### Install
+</details>
 
-```
-git clone https://github.com/sametgurtuna/bitig.git
-cd bitig
-npm install
-```
+### Keyboard Shortcuts
 
-### Run in development
+Every binding below is rebindable from **Settings > Keyboard**, with live
+conflict detection and a per shortcut reset.
 
-```
-npm run dev
-```
+<table>
+<tr><td valign="top" width="50%">
 
-Builds main and preload bundles, starts a Vite dev server for the renderer,
-and launches the Electron window with hot reload.
-
-### Build
-
-```
-npm run build
-```
-
-Produces production bundles under `out/`.
-
-## Keyboard Shortcuts
-
-All shortcuts are configurable from **Settings > Klavye Kisayollari**.
+**Tabs and panes**
 
 | Shortcut | Action |
 |---|---|
 | `Ctrl+Shift+T` | New tab |
 | `Ctrl+Shift+W` | Close active tab |
 | `Ctrl+Tab` / `Ctrl+Shift+Tab` | Next / previous tab |
-| `Ctrl+Shift+1..9` | Open tab with profile 1-9 |
-| Middle-click a tab | Close that tab |
-| Drag a tab | Reorder tabs |
+| `Ctrl+Shift+1..9` | Open tab with profile 1 to 9 |
 | `Alt+Shift+D` | Split focused pane right |
 | `Alt+Shift+E` | Split focused pane down |
 | `Ctrl+Shift+X` | Close focused pane |
 | `Ctrl+Shift+Z` | Zoom / unzoom focused pane |
 | `Alt+Arrow` / `Alt+H/J/K/L` | Navigate between panes |
-| `Ctrl+F` | In-terminal search |
-| `Ctrl+R` | Fuzzy command history search |
+
+</td><td valign="top" width="50%">
+
+**Surfaces and modes**
+
+| Shortcut | Action |
+|---|---|
 | `Ctrl+Shift+P` | Command Palette |
-| `Ctrl+Shift+B` | Bitig Betik (Snippet Manager) |
+| `Ctrl+Shift+B` | Bitig Betik (runbooks) |
+| `Ctrl+R` | Fuzzy command history |
+| `Ctrl+F` | In terminal search |
+| `Ctrl+I` | Bitig Bilge (AI) |
 | `Ctrl+,` | Toggle settings panel |
 | `Alt+Shift+T` | Cycle themes |
-| Click a port badge | Open localhost:PORT in browser |
+| `Alt+Shift+I` | Toggle Broadcast Input |
+| `Win+~` / `Ctrl+~` | Quake HUD window |
 
-## Customization
+</td></tr>
+</table>
 
-### Settings panel
+Mouse conveniences: middle click a tab to close it, drag to reorder, double
+click a tab title to rename inline, right click the terminal for the context
+menu, and click a port badge to open `localhost:PORT` in the browser.
 
-Click the gear icon (or press `Ctrl+,`) for full GUI access to: **Appearance**
-(theme grid, opacity, background image), **Font** (family with Nerd Font
-detection, size, live preview), **Profiles** (default shell, custom command +
-working directory), **Klavye Kisayollari** (click-to-rebind, conflict
-detection, reset per shortcut), **Telemetry** (notification toggle,
-threshold), **Developer Cockpit** (live port sniffer, secret shield, editor
-link).
+### Customization
 
-### Settings file
+#### Settings panel
 
-`%APPDATA%/Bitig/settings.json` is the source of truth; the panel reads and
-writes it. Hand-editing works identically - changes are picked up within
-milliseconds via `fs.watch` (debounced to avoid reading a half-written file).
+Press `Ctrl+,` or click the gear in the title bar. Seven sections:
+**Appearance**, **Terminal**, **Keyboard**, **Bitig Bilge**, **Cockpit**,
+**Notifications**, and **Plugins**. Everything the panel writes is plain JSON,
+so nothing is locked behind the GUI.
+
+#### Settings file
+
+`%APPDATA%/Bitig/settings.json` is the source of truth. Hand editing works
+identically to using the panel: changes are picked up within milliseconds via
+`fs.watch`, debounced so a half written file never clobbers in memory state.
 
 ```jsonc
 {
@@ -333,7 +353,13 @@ milliseconds via `fs.watch` (debounced to avoid reading a half-written file).
   },
   "terminal": {
     "fontFamily": "MesloLGS Nerd Font",
-    "fontSize": 14
+    "fontSize": 14,
+    "scrollback": 10000,
+    "copyOnSelect": true,
+    "pasteOnRightClick": false,
+    "confirmBeforeClose": true,
+    "restoreSession": true,
+    "showStatusBar": true
   },
   "telemetry": {
     "enableNotifications": true,
@@ -347,245 +373,62 @@ milliseconds via `fs.watch` (debounced to avoid reading a half-written file).
 }
 ```
 
-### Themes
+#### Themes
 
 Four themes ship built in: `bitig-dark` (default), `bitig-light`, `dracula`,
-`nord`. Drop a custom JSON into `%APPDATA%/Bitig/themes/` - it becomes
-available immediately with no restart. The schema mirrors xterm.js's own theme
-fields (all 16 ANSI colors plus background/foreground/cursor/selection) plus a
-`ui` block for the title bar and chrome.
+`nord`. Drop a custom JSON file into `%APPDATA%/Bitig/themes/` and it appears
+immediately, no restart. The schema mirrors the xterm.js theme fields (all 16
+ANSI colors plus background, foreground, cursor and selection) plus a `ui`
+block for the window chrome.
 
-### Snippets
+#### Snippets
 
-Built-in snippets live in the app bundle; your additions are stored in
+Built in runbooks live in the app bundle; your own are stored in
 `%APPDATA%/Bitig/snippets.json`. Use `{{variable_name}}` placeholders in the
-`template` field - the Bitig Betik modal renders them as an interactive form.
+`template` field and the Bitig Betik modal renders them as an interactive form
+with a live command preview.
 
-## Project Structure
+#### Plugins
 
-```
-Bitig/
-  package.json               # version 0.9.0
-  electron.vite.config.ts    # Build config for main/preload/renderer
-  src/
-    shared/
-      ptyTypes.ts             # PTY IPC contract
-      windowTypes.ts          # Window control IPC contract
-      themeTypes.ts           # BitigTheme schema + theme:* IPC
-      settingsTypes.ts        # BitigSettings schema + settings:* IPC
-      fontTypes.ts            # fonts:* IPC
-      snippetTypes.ts         # Snippet schema + snippets:* IPC + built-in library
-      historyTypes.ts         # HistoryEntry + history:* IPC
-      cockpitTypes.ts         # DiscoveredPort, CockpitSettings + cockpit:* IPC
-      actionTypes.ts          # Central action registry (all rebindable actions)
-      profileTypes.ts         # ShellProfile schema + default profiles
-      quakeTypes.ts           # Quake HUD settings (planned)
-      builtinThemes/          # bitigDark / bitigLight / dracula / nord + index
-    main/
-      index.ts                # App lifecycle, BrowserWindow creation
-      pty/
-        ptyManager.ts         # PTY session lifecycle (create/write/resize/dispose)
-        profileDiscovery.ts   # Auto-detects installed shells (pwsh, cmd, bash, WSL)
-      theme/themeStore.ts     # Merges built-in + user themes, watches themes/
-      settings/settingsStore.ts # Loads/merges/watches settings.json
-      snippets/snippetStore.ts  # Loads/saves snippets.json, seeds built-in library
-      history/historyStore.ts   # Frecency command history store + secret shield
-      ipc/ptyHandlers.ts      # pty:* channel handlers
-      ipc/windowHandlers.ts   # window:* channel handlers
-      ipc/themeHandlers.ts    # theme:* channel handlers
-      ipc/settingsHandlers.ts # settings:* channel handlers
-      ipc/fontHandlers.ts     # fonts:list
-      ipc/snippetHandlers.ts  # snippets:* channel handlers
-      ipc/historyHandlers.ts  # history:* channel handlers
-      ipc/cockpitHandlers.ts  # cockpit:open-url / cockpit:open-file
-    preload/
-      index.ts                # contextBridge surface: window.bitig (all APIs)
-    renderer/
-      index.html
-      src/
-        main.ts               # Bootstrap: wires all top-level modules
-        tabs.ts               # TabStore: tabs, pane routing, port sniffer integration
-        panes.ts              # Pane tree: split/close/render, divider drag, ResizeObserver
-        appearance.ts         # Applies theme / opacity / background image
-        settingsPanel.ts      # Settings GUI (gear button)
-        keybindings.ts        # KeybindingManager: action registry, conflict detection
-        commandPalette.ts     # Ctrl+Shift+P fuzzy palette
-        betikModal.ts         # Ctrl+Shift+B snippet manager
-        historyModal.ts       # Ctrl+R command history search
-        portSniffer.ts        # Live port detection (ANSI-stripped, per-leaf buffered)
-        smartLinks.ts         # xterm.js link provider for file:line:col patterns
-        secretShield.ts       # Sensitive token detection + history sanitization
-        telemetry.ts          # Command duration tracking + desktop notifications
-        searchBar.ts          # Ctrl+F in-terminal search overlay
-        fonts.ts              # Monospace filtering + Nerd Font glyph probing
-        fuzzy.ts              # Tiny fuzzy-match utility
-        titlebar.ts           # Custom title bar behavior
-        style.css             # All UI styles (glassmorphism, animations, port badges)
-        bitig.d.ts            # window.bitig type declaration for the renderer
+Each plugin is a folder under `%APPDATA%/Bitig/plugins/<id>/` containing a
+`plugin.json` manifest and an entry script. The script runs inside an isolated
+Node `vm` context with no filesystem or process globals; only the declared
+`bitig` API is reachable.
+
+```jsonc
+{
+  "id": "git-status",
+  "name": "Git Branch Sentinel",
+  "version": "1.0.0",
+  "description": "Shows the active Git branch in the status bar.",
+  "author": "Bitig Team",
+  "main": "main.js",
+  "permissions": ["statusbar"]
+}
 ```
 
-## Roadmap
+```js
+function updateGit() {
+  const branch = bitig.getGitBranch();
+  bitig.ui.setStatusBarWidget({
+    id: 'git-branch',
+    label: branch || 'Git',
+    tooltip: 'Active Git branch',
+    color: '#86efac'
+  });
+}
 
-A detailed, milestone-by-milestone plan lives in [`ROADMAP.md`](ROADMAP.md).
-Progress and notable changes are tracked in [`CHANGELOG.md`](CHANGELOG.md).
+updateGit();
+bitig.setInterval(updateGit, 2500);
+```
 
-## Contributing
+Available surface: `bitig.ui.setStatusBarWidget`, `bitig.actions.register`,
+`bitig.getGitBranch`, `bitig.getSystemMemory`, `bitig.openUrl`,
+`bitig.setInterval`.
 
-The project is in active, fast-moving development. If you want to experiment
-locally: fork the repo, keep changes to one concern per commit, and write
-commit messages in English following the existing style.
+### Building From Source
 
-## Naming
-
-"Bitig" is an Old Turkic word meaning "writing" or "written text". The name
-follows the same naming tradition as the author's other projects, which draw
-on Turkic mythology and Old Turkic vocabulary.
-
-<div align="right">
-
-[Back to top](#bitig)
-
-</div>
-
----
-
-<a id="turkce"></a>
-
-# Turkce
-
-## Icindekiler
-
-- [Proje Hakkinda](#proje-hakkinda)
-- [Ozellikler](#ozellikler)
-- [Teknik Yigin](#teknik-yigin)
-- [IPC Kanal Referansi](#ipc-kanal-referansi)
-- [Baslarken](#baslarken)
-- [Klavye Kisayollari](#klavye-kisayollari)
-- [Ozellestirme](#ozellestirme)
-- [Yol Haritasi](#yol-haritasi)
-- [Katkida Bulunma](#katkida-bulunma)
-- [Isim Hakkinda](#isim-hakkinda)
-
-## Proje Hakkinda
-
-Bitig, Windows 11 icin sifirdan yazilan, Windows Terminal'e alternatif bir
-masaustu terminal emulatoru. Var olan bir terminale eklenen bir tema ya da
-fork degil; kendi pencere govdesi, kendi render hatti ve kendi ayar
-formatiyla bagimsiz bir Electron uygulamasi.
-
-Hedef bir **Gelistirici Kokpiti**: canli port rozetleri, akilli dosya
-hiperlinleri, sifre maskeleme, parametrik snippet yoneticisi, fuzzy komut
-gecmisi, ozellestirilebilir kisayollar ve Quake-stili HUD modu. Tamamiyla
-yerel; sifir bulut, sifir telemetri.
-
-## Ozellikler
-
-### Tamamlananlar (v0.9.8)
-
-- **Gercek shell prosesi** (PowerShell, CMD, Git Bash, WSL) - `node-pty`
-  uzerinden ConPTY ile; tam klavye girisi ve canli cikti akisi.
-- **xterm.js render motoru** - dort hazir tema, ozel kullanici temalari, font
-  secici (olcumlu Nerd Font tespiti), seffaflik, arkaplan gorseli.
-- **Birden fazla sekme** - surukle-sirala, orta tikla-kapat, profil kisayollari
-  (`Ctrl+Shift+1..9`). Shell profilleri baslaticta otomatik tespit edilir.
-- **Split pane** - yatay/dikey bolme, ic ice bolme, divider surukle, pane
-  kapat, pane zoomla (`Ctrl+Shift+Z`), pane'ler arasi `Alt+Yon/HJKL` gecis.
-- **Ayarlar paneli** - gorunum, font, temalar, profiller, klavye kisayollari,
-  telemetri ve Gelistirici Kokpit; JSON duzenlemeden.
-- **Ozellestirilebilir klavye kisayollari** - merkezi aksiyon kayit defteri,
-  canli catisma tespiti, tikla-yeniden-bagla.
-- **Evrensel Komut Paleti** (`Ctrl+Shift+P`) - tum aksiyonlar, sekmeler,
-  profiller ve ayarlar uzerinde fuzzy arama.
-- **Bitig Betik Snippet Yoneticisi** (`Ctrl+Shift+B`) - `{{degisken}}`
-  yer tutuculu parametrik runbook, dinamik form, canli komut onizleme, 10
-  hazir snippet.
-- **Capraz-oturum Komut Gecmisi** (`Ctrl+R`) - frecency sirali fuzzy arama,
-  calistirma/sure rozetleri, dogrudan terminal enjeksiyonu.
-- **Komut Suresi Telemetrisi** - uzun komutlar tamamlaninca native bildirim.
-- **Canli Port Dinleyicisi** - PTY ciktisindaki dev sunucularini gercek
-  zamanli tespit eder, sekme basliginda tiklanabilir yesil rozetler gosterir.
-  Tiklamak URL'yi varsayilan tarayicida acar. ANSI kodlari temizlenir.
-- **Akilli Dosya/Satir Hiperlinleri** - yigin izi desenlerini eslestirerek
-  VS Code'da tam satira `Ctrl+Click` ile acar.
-- **Secret Shield** - hassas token desenlerini otomatik tanir ve gecmiste maskeler.
-- **Terminal ici Arama** (`Ctrl+F`) - glassmorphic yuzen arama paneli.
-- **Dinamik Sekme Basliklari ve OSC 7 CWD Takibi**.
-- **Quake / Dropdown HUD Modu** (`Win+~` / `Ctrl+~`) - global sistem kisayoluyla
-  ekranin ustunden kayarak inen hizli erisim terminali.
-- **Broadcast Input (Giris Yayini)** (`Alt+Shift+I`) - aktif sekmedeki tum split
-  pane'lere ayni anda karakter yayini ve kirmizi senkronizasyon cercevesi.
-- **"Bitig Bilge" Yerel & BYOK AI Asistani** (`Ctrl+I`) - dogal dille yazilan
-  isteklerden terminal komutu uretme ve hata analiz motoru (Ollama, OpenAI,
-  Claude, Gemini, DeepSeek).
-- **Cercevesiz ozel pencere** - suruklenebilir title bar, rounded corners.
-
-### Planlananlar
-
-- [ ] Hafif eklenti sistemi ve sandbox
-- [ ] Paketleme (`electron-builder` ile installer)
-
-## Teknik Yigin
-
-| Katman | Secim | Neden |
-|---|---|---|
-| Uygulama kabugu | Electron 43 | Olgun masaustu paketleme, Windows'ta native entegrasyon |
-| Build araci | electron-vite | Main/preload/renderer icin ayri build hatlari |
-| Terminal render | @xterm/xterm + eklentiler | Fiili standart terminal render motoru |
-| Shell proses yonetimi | node-pty | Windows'ta gercek ConPTY tabanli shell prosesleri |
-| Dil | TypeScript (strict) | Proses sinirlari arasinda tip guvenligi |
-| Paket yoneticisi | npm | Standart, ekstra arac gerektirmiyor |
-
-## IPC Kanal Referansi
-
-Isimlendirme kurali: `<alan>:<eylem>`. Detaylar icin [English](#ipc-channel-reference) bolumune bak.
-
-| Kanal | Yon | Tip | Amac |
-|---|---|---|---|
-| `pty:create` | renderer to main | invoke | Yeni PTY oturumu baslatir |
-| `pty:write` | renderer to main | send | Klavye girisini shell'e iletir |
-| `pty:resize` | renderer to main | send | PTY'yi yeniden boyutlandirir |
-| `pty:dispose` | renderer to main | send | PTY oturumunu sonlandirir |
-| `pty:data` | main to renderer | event | Shell ciktisi |
-| `pty:exit` | main to renderer | event | Shell prosesi sonlandi |
-| `window:minimize` | renderer to main | send | Pencereyi kuculttur |
-| `window:toggle-maximize` | renderer to main | send | Buyut / geri yukle |
-| `window:close` | renderer to main | send | Pencereyi kapat |
-| `window:is-maximized` | renderer to main | invoke | Maximize durumunu sorgula |
-| `window:maximize-change` | main to renderer | event | Maximize durumu degisti |
-| `window:notify` | renderer to main | send | Native Windows bildirimi gonder |
-| `theme:list` | renderer to main | invoke | Tum hazir + kullanici temalarini doner |
-| `theme:list-changed` | main to renderer | event | Tema klasoru degisti |
-| `settings:get` | renderer to main | invoke | Guncel ayarlar objesini doner |
-| `settings:set` | renderer to main | send | Kismi guncelleme uygular |
-| `settings:changed` | main to renderer | event | Ayarlar degisince tam objeyi yayinlar |
-| `settings:read-background-image` | renderer to main | invoke | Arkaplan gorselini data: URL doner |
-| `settings:pick-background-image` | renderer to main | invoke | Native dosya secici acar |
-| `settings:reset` | renderer to main | send | Ayarlari varsayilanlara sifirlar |
-| `fonts:list` | renderer to main | invoke | Kurulu fontlari listeler |
-| `snippets:list` | renderer to main | invoke | Tum snippet'leri listeler |
-| `snippets:save` | renderer to main | invoke | Snippet olusturur / gunceller |
-| `snippets:delete` | renderer to main | invoke | Snippet siler |
-| `snippets:reset` | renderer to main | invoke | Hazir snippet kutuphanesine sifirlar |
-| `history:list` | renderer to main | invoke | Komut gecmisini listeler |
-| `history:add` | renderer to main | invoke | Komut kaydeder |
-| `history:clear` | renderer to main | invoke | Gecmisi temizler |
-| `cockpit:open-url` | renderer to main | invoke | URL'yi varsayilan tarayicida acar |
-| `cockpit:open-file` | renderer to main | invoke | Dosyayi VS Code'da acar |
-| `quake:toggle` | renderer to main | invoke | Quake HUD penceresini acar/kapatir |
-| `quake:set-hotkey` | renderer to main | invoke | Global Quake kisayolunu gunceller |
-| `ai:prompt` | renderer to main | invoke | Dogal dilden terminal komutu uretir |
-| `ai:explain-error` | renderer to main | invoke | Terminal hatasini Turkce analiz eder |
-| `ai:test-connection` | renderer to main | invoke | AI sunucu baglantisini test eder |
-
-## Baslarken
-
-### On kosullar
-
-- Windows 11
-- Node.js 20 ya da uzeri
-- npm (Node.js ile birlikte gelir)
-
-### Kurulum
+Requires Windows 11, Node.js 20 or newer, and npm.
 
 ```
 git clone https://github.com/sametgurtuna/bitig.git
@@ -593,21 +436,176 @@ cd bitig
 npm install
 ```
 
-### Gelistirme modunda calistirma
+| Command | Result |
+|---|---|
+| `npm run dev` | Vite dev server for the renderer plus a hot reloading Electron window |
+| `npm run typecheck` | Strict TypeScript check across main, preload and renderer |
+| `npm run build` | Production bundles under `out/` |
+| `npm run pack` | Unpacked app directory under `dist/win-unpacked/` |
+| `npm run dist` | Both Windows targets: NSIS setup and portable executable |
+| `npm run dist:portable` | Portable executable only |
+
+### Project Structure
 
 ```
-npm run dev
+Bitig/
+  electron-builder.yml        Windows packaging targets (nsis + portable)
+  electron.vite.config.ts     Build config for main / preload / renderer
+  assets/                     App icon set and README banner
+  src/
+    shared/                   Typed IPC contracts, shared by all processes
+      ptyTypes.ts               PTY channels
+      windowTypes.ts            Window control channels
+      themeTypes.ts             BitigTheme schema + theme channels
+      settingsTypes.ts          BitigSettings schema + settings channels
+      fontTypes.ts              Font enumeration channel
+      snippetTypes.ts           Snippet schema + built in runbook library
+      historyTypes.ts           History entry schema
+      cockpitTypes.ts           DiscoveredPort + cockpit settings
+      actionTypes.ts            Central action registry, default keybindings
+      profileTypes.ts           ShellProfile schema + defaults
+      quakeTypes.ts             Quake HUD settings
+      aiTypes.ts                AI provider settings + prompt contracts
+      pluginTypes.ts            Plugin manifest + contribution contracts
+      builtinThemes/            bitigDark / bitigLight / dracula / nord
+    main/
+      index.ts                  App lifecycle, BrowserWindow, single instance lock
+      pty/                      PTY session manager, shell auto discovery
+      theme/                    Theme store, watches themes/
+      settings/                 Settings store, watches settings.json
+      snippets/ history/        Runbook and command history stores
+      plugins/pluginManager.ts  Discovery, vm sandbox, reference plugin seeding
+      ai/aiService.ts           Multi provider AI client (fetch based)
+      ipc/                      One handler module per domain
+    preload/
+      index.ts                  contextBridge surface: window.bitig
+    renderer/
+      index.html
+      src/
+        main.ts                 Bootstrap, wires every top level module
+        tabs.ts                 TabStore: tabs, pane routing, context menus
+        panes.ts                Pane tree: split / close / render, divider drag
+        appearance.ts           Applies theme, opacity, background image
+        settingsPanel.ts        Settings GUI
+        statusBar.ts            Bottom status bar and plugin widget host
+        keybindings.ts          Action registry resolution, conflict detection
+        commandPalette.ts       Ctrl+Shift+P
+        betikModal.ts           Ctrl+Shift+B runbooks
+        historyModal.ts         Ctrl+R history search
+        bilgeModal.ts           Ctrl+I AI companion
+        searchBar.ts            Ctrl+F in terminal search
+        contextMenu.ts          Right click menu
+        confirmModal.ts         Confirm before destructive close
+        sessionManager.ts       Session persistence and restore
+        pluginRuntime.ts        Bridges plugin contributions into the UI
+        portSniffer.ts          Live port detection from the PTY stream
+        smartLinks.ts           file:line:col link provider
+        secretShield.ts         Sensitive token detection and masking
+        telemetry.ts            Command duration tracking and notifications
+        fonts.ts                Monospace filtering and Nerd Font glyph probing
+        fuzzy.ts                Fuzzy match scoring
+        icons.ts                Single stroke SVG icon set
+        titlebar.ts             Custom title bar behavior
+        style.css               All UI styles
 ```
 
-### Build alma
+### Contributing
 
-```
-npm run build
-```
+Fork the repository, keep each commit focused on one concern, and write commit
+messages in English following the existing style. Run `npm run typecheck`
+before opening a pull request. Architectural notes and per milestone design
+records live in [`ROADMAP.md`](ROADMAP.md) and `CLAUDE.md`.
 
-## Klavye Kisayollari
+### Naming
 
-Tum kisayollar **Ayarlar > Klavye Kisayollari** bolumunden degistirilebilir.
+"Bitig" is an Old Turkic word meaning "writing" or "written text". The name
+follows the same tradition as the author's other projects, which draw on
+Turkic mythology and Old Turkic vocabulary.
+
+<div align="right"><a href="#bitig">Back to top</a></div>
+
+---
+
+<a id="turkce"></a>
+
+## Turkce
+
+### Icindekiler
+
+| | |
+|---|---|
+| [Proje Hakkinda](#proje-hakkinda) | Bitig ne, ne degil |
+| [Kurulum](#kurulum) | Setup ve portable dagitimlari |
+| [Ozellikler](#ozellikler) | 1.0.0 ile gelen her sey |
+| [Teknik Yigin](#teknik-yigin) | Katmanlar ve tercih gerekceleri |
+| [Klavye Kisayollari](#klavye-kisayollari-1) | Varsayilan kisayollar |
+| [Ozellestirme](#ozellestirme) | Ayarlar, temalar, betikler, eklentiler |
+| [Kaynaktan Derleme](#kaynaktan-derleme) | Gelistirme ve surum derlemeleri |
+
+### Proje Hakkinda
+
+Bitig, Windows 11 icin sifirdan yazilan, Windows Terminal'e alternatif bir
+masaustu terminal emulatoru. Var olan bir terminale eklenen tema ya da fork
+degil; kendi pencere govdesi, kendi render hatti, kendi ayar formati ve kendi
+eklenti calisma ortamiyla bagimsiz bir Electron uygulamasi.
+
+Hedef bir **Gelistirici Kokpiti**: pasif bir metin akisi olmaktan cikip
+etkilesimli bir calisma istasyonuna donusen bir terminal. Tiklanabilir port
+rozetleri, akilli dosya hiperlinkleri, otomatik sifre maskeleme, parametrik
+runbook'lar, frecency sirali komut gecmisi, korumali alanda calisan bir
+eklenti sistemi ve Quake tarzi HUD modu.
+
+Her sey yerelde calisir. Sifir bulut bagimliligi, sifir telemetri, hesap yok.
+Tum durum `%APPDATA%/Bitig/` altinda duz JSON olarak tutulur.
+
+### Kurulum
+
+Windows 11 x64 icin son surum:
+
+| Dagitim | Dosya | Not |
+|---|---|---|
+| **Setup** | `Bitig-Setup-1.0.0.exe` | NSIS kurulum sihirbazi. Kurulum dizini secilebilir, Baslat menusu ve masaustu kisayolu olusturur. |
+| **Portable** | `Bitig-Portable-1.0.0.exe` | Tek dosyalik bagimsiz calistirilabilir. Kurulum yok, kayit defterine yazmaz. |
+
+Iki dagitim da yalnizca x64 ve Windows 11 icindir. On kosul yoktur: Node.js,
+Electron ve native ConPTY baglayicilari paketin icinde gelir.
+
+### Ozellikler
+
+| Alan | Yetenek |
+|---|---|
+| **Terminal cekirdegi** | `node-pty` uzerinden ConPTY ile gercek shell prosesleri (PowerShell, CMD, Git Bash, WSL). Kurulu kabuklarin baslangicta otomatik tespiti. 50.000 satira kadar ayarlanabilir gecmis tamponu. Secince kopyala, sag tikla yapistir ve cam efektli sag tik menusu. |
+| **Sekmeler ve pane'ler** | Surukle-sirala, orta tikla-kapat, cift tiklayip yerinde yeniden adlandirma, sekme baglam menusu, aktif oturum kapatilirken onay ve acilista oturum geri yukleme. Split pane'ler ic ice bolunebilir, divider suruklenebilir, herhangi bir pane tam alana buyutulebilir. |
+| **Gorunum** | Dort hazir tema (Bitig Dark, Bitig Light, Dracula, Nord) ve aninda yuklenen kullanici temalari. Pencere seffafligi, bagimsiz opaklik ve yerlesime sahip arkaplan gorseli, font ailesinin adina bakmak yerine canvas uzerinde Nerd Font glyph kapsamini *olcen* font secici. |
+| **Gelistirici Kokpiti** | Canli Port Dinleyicisi PTY akisindaki dev sunucularini tespit edip tiklanabilir rozetler cizer. Akilli Linkler `src/main.ts:42:15` ifadesini tek tikla VS Code veya Cursor'da tam satira atlayan bir baglantiya cevirir. Secret Shield token'lari (`sk-`, `ghp_`, `AKIA`, bearer, ozel anahtarlar) gecmise yazilmadan once maskeler. |
+| **Komut yuzeyleri** | Aksiyonlar, sekmeler, profiller ve temalar uzerinde fuzzy arama yapan Evrensel Komut Paleti. `{{degisken}}` yer tutuculu ve otomatik form ureten Bitig Betik runbook'lari. Oturumlar arasi, frecency sirali komut gecmisi. Regex, buyuk/kucuk harf ve tam kelime secenekli terminal ici artimli arama. |
+| **Bitig Bilge (AI)** | Dogal dilden shell komutu uretme ve hata analizi. Ollama ile tamamen yerel calisir; ya da OpenAI, Anthropic, Gemini, DeepSeek ve OpenAI uyumlu herhangi bir uc nokta icin kendi anahtarinizi kullanin. Anahtarlar `settings.json` disina cikmaz. |
+| **Guc modlari** | Global sistem kisayoluna bagli Quake / acilir HUD penceresi. Broadcast Input, aktif sekmedeki tum split pane'lere ayni tuslari yansitir ve goz ardi edilemeyecek bir senkronizasyon banner'i gosterir. |
+| **Genisletilebilirlik** | `%APPDATA%/Bitig/plugins/` altindan yuklenen manifest tabanli eklentiler, izole bir Node `vm` baglaminda ve yalnizca acikca izin verilen `bitig` API'siyle calisir. Eklentiler durum cubugu bileseni ve yeniden atanabilir aksiyon ekleyebilir. Uc referans eklenti hazir gelir. |
+| **Pencere govdesi** | Yuvarlatilmis koseli cercevesiz pencere, sekme seridini icinde barindiran 36px'lik kompakt title bar ve profil, pane indeksi, canli portlar, kodlama, imlec konumu ve eklenti bilesenlerini gosteren alt durum cubugu. |
+
+### Teknik Yigin
+
+| Katman | Secim | Neden |
+|---|---|---|
+| Uygulama kabugu | Electron 43 | Olgun masaustu paketleme, Windows'ta native entegrasyon |
+| Build araci | electron-vite | Main / preload / renderer icin ayri build hatlari |
+| Terminal render | `@xterm/xterm` + eklentiler | Web ve Electron'da fiili standart terminal render motoru |
+| Shell proses yonetimi | `node-pty` | Windows'ta gercek ConPTY tabanli prosesler, hazir N-API binary'leri |
+| Dil | TypeScript (strict) | Proses sinirlari arasinda tip guvenligi, IPC sozlesmesi kaymasini yakalar |
+| Paketleme | `electron-builder` | Tek konfigurasyondan NSIS kurulum ve portable hedefi |
+
+IPC kanallarinin tam listesi icin [English](#ipc-channel-reference) bolumune bakin.
+
+### Klavye Kisayollari
+
+Asagidaki tum kisayollar **Ayarlar > Klavye** bolumunden, canli catisma
+tespiti ve kisayol basina sifirlama ile yeniden atanabilir.
+
+<table>
+<tr><td valign="top" width="50%">
+
+**Sekmeler ve pane'ler**
 
 | Kisayol | Eylem |
 |---|---|
@@ -615,66 +613,95 @@ Tum kisayollar **Ayarlar > Klavye Kisayollari** bolumunden degistirilebilir.
 | `Ctrl+Shift+W` | Aktif sekmeyi kapat |
 | `Ctrl+Tab` / `Ctrl+Shift+Tab` | Sonraki / onceki sekme |
 | `Ctrl+Shift+1..9` | 1-9 numarali profille sekme ac |
-| Sekmeye orta tikla | O sekmeyi kapat |
-| Sekmeyi surukle | Sekmeleri yeniden sirala |
 | `Alt+Shift+D` | Odakli pane'i saga bol |
 | `Alt+Shift+E` | Odakli pane'i asagiya bol |
 | `Ctrl+Shift+X` | Odakli pane'i kapat |
-| `Ctrl+Shift+Z` | Odakli pane'i zoomla / geri al |
+| `Ctrl+Shift+Z` | Odakli pane'i buyut / geri al |
 | `Alt+Yon` / `Alt+H/J/K/L` | Pane'ler arasi gecis |
-| `Ctrl+F` | Terminal ici arama |
-| `Ctrl+R` | Fuzzy komut gecmisi aramasi |
+
+</td><td valign="top" width="50%">
+
+**Yuzeyler ve modlar**
+
+| Kisayol | Eylem |
+|---|---|
 | `Ctrl+Shift+P` | Komut Paleti |
-| `Ctrl+Shift+B` | Bitig Betik (Snippet Yoneticisi) |
+| `Ctrl+Shift+B` | Bitig Betik (runbook'lar) |
+| `Ctrl+R` | Fuzzy komut gecmisi |
+| `Ctrl+F` | Terminal ici arama |
+| `Ctrl+I` | Bitig Bilge (AI) |
 | `Ctrl+,` | Ayarlar panelini ac/kapat |
-| `Alt+Shift+T` | Tema dongusunu calistir |
-| Sekmedeki port rozetine tikla | localhost:PORT tarayicida acar |
+| `Alt+Shift+T` | Tema dongusu |
+| `Alt+Shift+I` | Broadcast Input ac/kapat |
+| `Win+~` / `Ctrl+~` | Quake HUD penceresi |
 
-## Ozellestirme
+</td></tr>
+</table>
 
-### Ayarlar paneli
+Fare kolayliklari: sekmeye orta tiklayarak kapatma, surukleyerek siralama,
+sekme basligina cift tiklayip yerinde yeniden adlandirma, terminale sag
+tiklayarak baglam menusu ve port rozetine tiklayarak `localhost:PORT`
+adresini tarayicida acma.
 
-Disli ikonu (`Ctrl+,`) ile tam GUI erisimi: Gorunum, Font, Profiller, Klavye
-Kisayollari, Telemetri ve Gelistirici Kokpit.
+### Ozellestirme
 
-### Ayarlar dosyasi
+**Ayarlar paneli.** `Ctrl+,` ya da title bar'daki disli. Yedi bolum:
+Gorunum, Terminal, Klavye, Bitig Bilge, Kokpit, Bildirimler ve Eklentiler.
+Panelin yazdigi her sey duz JSON'dur, hicbir sey GUI'nin arkasinda kilitli
+degildir.
 
-`%APPDATA%/Bitig/settings.json` gercek kaynaktir. Elle duzenleme de aynen
-calisir, degisiklik milisaniyeler icinde alinir.
+**Ayarlar dosyasi.** `%APPDATA%/Bitig/settings.json` gercek kaynaktir. Elle
+duzenleme paneli kullanmakla ayni sekilde calisir: degisiklikler `fs.watch`
+ile milisaniyeler icinde alinir, yarim yazilmis bir dosyanin bellekteki
+durumu bozmamasi icin debounce edilir. Ornek icin
+[English](#settings-file) bolumune bakin.
 
-### Temalar
+**Temalar.** `%APPDATA%/Bitig/themes/` altina ozel bir JSON birakin, yeniden
+baslatmadan aninda gorunur.
 
-Dort hazir tema: `bitig-dark` (varsayilan), `bitig-light`, `dracula`, `nord`.
-`%APPDATA%/Bitig/themes/` altina ozel JSON birak, restart gerekmez.
+**Betikler.** `%APPDATA%/Bitig/snippets.json` icinde saklanir. `template`
+alanina `{{degisken_adi}}` yer tutuculari ekleyin; Bitig Betik bunlari canli
+onizlemeli etkilesimli bir forma cevirir.
 
-### Snippet'lar
+**Eklentiler.** Her eklenti `%APPDATA%/Bitig/plugins/<id>/` altinda bir
+`plugin.json` manifesti ve bir giris betiginden olusur. Betik, dosya sistemi
+ve proses global'leri olmayan izole bir Node `vm` baglaminda calisir; yalnizca
+tanimli `bitig` API'sine erisebilir.
 
-`%APPDATA%/Bitig/snippets.json`'a kaydedilir. `{{degisken}}` yer tutucular
-ekle - Bitig Betik bunlari otomatik forma donusturur.
+### Kaynaktan Derleme
 
-## Yol Haritasi
+Windows 11, Node.js 20 veya uzeri ve npm gerekir.
 
-[`ROADMAP.md`](ROADMAP.md) dosyasinda detayli milestone plani;
-[`CHANGELOG.md`](CHANGELOG.md) dosyasinda ilerleme ve onemli degisiklikler.
+```
+git clone https://github.com/sametgurtuna/bitig.git
+cd bitig
+npm install
+```
 
-## Katkida Bulunma
+| Komut | Sonuc |
+|---|---|
+| `npm run dev` | Renderer icin Vite dev sunucusu ve sicak yeniden yuklemeli Electron penceresi |
+| `npm run typecheck` | Main, preload ve renderer icin strict TypeScript denetimi |
+| `npm run build` | `out/` altinda uretim paketleri |
+| `npm run pack` | `dist/win-unpacked/` altinda paketlenmemis uygulama dizini |
+| `npm run dist` | Iki Windows hedefi: NSIS kurulum ve portable calistirilabilir |
+| `npm run dist:portable` | Yalnizca portable calistirilabilir |
 
-Proje aktif ve hizla gelisiyor. Denemek istersen reposu fork'la, her commit'i
-tek konuya odakla ve commit mesajlarini Ingilizce yaz.
+### Katkida Bulunma
 
-## Isim Hakkinda
+Repoyu fork'layin, her commit'i tek bir konuya odaklayin ve commit
+mesajlarini Ingilizce yazin. Pull request acmadan once `npm run typecheck`
+calistirin.
+
+### Isim Hakkinda
 
 "Bitig", Eski Turkce'de "yazi" ya da "yazili metin" anlamina gelir.
 
-<div align="right">
-
-[Basa don / Back to top](#bitig)
-
-</div>
+<div align="right"><a href="#bitig">Basa don</a></div>
 
 ---
 
-<div align="center" id="license--lisans">
+<div align="center" id="license">
 
 **License / Lisans:** [ISC](package.json)
 

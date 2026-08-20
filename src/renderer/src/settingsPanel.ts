@@ -10,6 +10,7 @@ import {
 } from '../../shared/actionTypes';
 import { DEFAULT_AI_SETTINGS, type AiProviderType } from '../../shared/aiTypes';
 import type { KeybindingManager } from './keybindings';
+import { icon } from './icons';
 
 const FIT_LABELS: Record<BackgroundImageFit, string> = {
   cover: 'Cover',
@@ -26,6 +27,17 @@ const NERD_FONT_SAMPLE_ICONS = '\uE0B0  \uE706  \uF09B  \uF07B  \uE62B  \uF120';
  * button in the title bar, replaces #terminal-shell in place. Covers
  * Appearance, Shell Profiles, Font, and Keyboard Shortcuts sections.
  */
+/** Left-rail navigation groups; order here is the order shown in the sidebar. */
+const NAV_GROUPS: { id: string; label: string; icon: string }[] = [
+  { id: 'appearance', label: 'Appearance', icon: icon('palette') },
+  { id: 'terminal', label: 'Terminal', icon: icon('terminal') },
+  { id: 'keyboard', label: 'Keyboard', icon: icon('keyboard') },
+  { id: 'ai', label: 'Bitig Bilge', icon: icon('sparkle') },
+  { id: 'cockpit', label: 'Cockpit', icon: icon('radar') },
+  { id: 'notifications', label: 'Notifications', icon: icon('bell') },
+  { id: 'plugins', label: 'Plugins', icon: icon('plug') }
+];
+
 export class SettingsPanel {
   private isOpen = false;
   // The font list requires spawning PowerShell + hundreds of canvas
@@ -33,6 +45,9 @@ export class SettingsPanel {
   private fonts: FontInfo[] | null = null;
   private fontsLoading = false;
   private recordingActionId: ActionId | null = null;
+  // Which nav group is showing; persists across re-renders (theme changes,
+  // slider drags, etc.) so the panel doesn't jump back to the top.
+  private activeGroup: string = NAV_GROUPS[0].id;
 
   constructor(
     private readonly panelEl: HTMLElement,
@@ -120,19 +135,59 @@ export class SettingsPanel {
     if (!state) return;
     const { themes, settings } = state;
 
-    this.panelEl.replaceChildren(
-      this.buildHeader(),
-      this.buildProfileSection(settings),
-      this.buildKeybindingsSection(settings),
-      this.buildBilgeAiSection(settings),
-      this.buildCockpitSection(settings),
-      this.buildTelemetrySection(settings),
-      this.buildThemeSection(themes, settings),
-      this.buildFontSection(settings),
-      this.buildOpacitySection(settings),
-      this.buildBackgroundImageSection(settings),
-      this.buildResetSection()
-    );
+    const groupSections: Record<string, HTMLElement[]> = {
+      appearance: [
+        this.buildThemeSection(themes, settings),
+        this.buildFontSection(settings),
+        this.buildOpacitySection(settings),
+        this.buildBackgroundImageSection(settings)
+      ],
+      terminal: [this.buildProfileSection(settings), this.buildTerminalAdvancedSection(settings)],
+      keyboard: [this.buildKeybindingsSection(settings)],
+      ai: [this.buildBilgeAiSection(settings)],
+      cockpit: [this.buildCockpitSection(settings)],
+      notifications: [this.buildTelemetrySection(settings)],
+      plugins: [this.buildPluginsSection()]
+    };
+
+    const content = document.createElement('div');
+    content.className = 'settings-content';
+    for (const group of NAV_GROUPS) {
+      const groupEl = document.createElement('div');
+      groupEl.className = 'settings-group';
+      groupEl.dataset.group = group.id;
+      if (group.id !== this.activeGroup) groupEl.classList.add('hidden');
+      groupEl.append(...(groupSections[group.id] || []));
+      content.appendChild(groupEl);
+    }
+    content.appendChild(this.buildResetSection());
+
+    const body = document.createElement('div');
+    body.className = 'settings-body';
+    body.append(this.buildNav(), content);
+
+    this.panelEl.replaceChildren(this.buildHeader(), body);
+  }
+
+  /** The left icon rail; clicking a group swaps the visible section without
+   *  rebuilding the whole panel (`render()` is still called, but each
+   *  group's DOM was already built - only visibility toggles). */
+  private buildNav(): HTMLElement {
+    const nav = document.createElement('nav');
+    nav.className = 'settings-nav';
+    for (const group of NAV_GROUPS) {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'settings-nav-item' + (group.id === this.activeGroup ? ' active' : '');
+      btn.innerHTML = `<span class="settings-nav-icon">${group.icon}</span><span class="settings-nav-label">${group.label}</span>`;
+      btn.addEventListener('click', () => {
+        if (this.activeGroup === group.id) return;
+        this.activeGroup = group.id;
+        this.render();
+      });
+      nav.appendChild(btn);
+    }
+    return nav;
   }
 
   private buildHeader(): HTMLElement {
@@ -206,6 +261,236 @@ export class SettingsPanel {
     return section;
   }
 
+  private buildTerminalAdvancedSection(settings: BitigSettings): HTMLElement {
+    const section = this.buildSection('Terminal & Advanced Settings');
+
+    const desc = document.createElement('p');
+    desc.className = 'settings-desc';
+    desc.textContent = 'Terminal behavior, status bar, copy/paste ergonomics, and session persistence:';
+
+    // 1. Copy on Select
+    const copyRow = document.createElement('div');
+    copyRow.className = 'settings-row settings-toggle-row';
+    const copyLabel = document.createElement('label');
+    copyLabel.className = 'settings-label';
+    copyLabel.textContent = 'Auto-Copy on Selection (PuTTY Style)';
+    const copyToggle = document.createElement('input');
+    copyToggle.type = 'checkbox';
+    copyToggle.checked = Boolean(settings.terminal.copyOnSelect);
+    copyToggle.addEventListener('change', () => {
+      window.bitig.settings.set({ terminal: { copyOnSelect: copyToggle.checked } });
+    });
+    copyRow.append(copyLabel, copyToggle);
+
+    // 2. Paste on Right Click
+    const pasteRow = document.createElement('div');
+    pasteRow.className = 'settings-row settings-toggle-row';
+    const pasteLabel = document.createElement('label');
+    pasteLabel.className = 'settings-label';
+    pasteLabel.textContent = 'Paste Directly on Right-Click (Skip Context Menu)';
+    const pasteToggle = document.createElement('input');
+    pasteToggle.type = 'checkbox';
+    pasteToggle.checked = Boolean(settings.terminal.pasteOnRightClick);
+    pasteToggle.addEventListener('change', () => {
+      window.bitig.settings.set({ terminal: { pasteOnRightClick: pasteToggle.checked } });
+    });
+    pasteRow.append(pasteLabel, pasteToggle);
+
+    // 3. Confirm Before Close
+    const confirmRow = document.createElement('div');
+    confirmRow.className = 'settings-row settings-toggle-row';
+    const confirmLabel = document.createElement('label');
+    confirmLabel.className = 'settings-label';
+    confirmLabel.textContent = 'Show Confirmation When Closing Active Sessions';
+    const confirmToggle = document.createElement('input');
+    confirmToggle.checked = settings.terminal.confirmBeforeClose !== false;
+    confirmToggle.addEventListener('change', () => {
+      window.bitig.settings.set({ terminal: { confirmBeforeClose: confirmToggle.checked } });
+    });
+    confirmRow.append(confirmLabel, confirmToggle);
+
+    // 4. Restore Session on Launch
+    const restoreRow = document.createElement('div');
+    restoreRow.className = 'settings-row settings-toggle-row';
+    const restoreLabel = document.createElement('label');
+    restoreLabel.className = 'settings-label';
+    restoreLabel.textContent = 'Restore Previous Tabs & Panes on Startup';
+    const restoreToggle = document.createElement('input');
+    restoreToggle.checked = Boolean(settings.terminal.restoreSession);
+    restoreToggle.addEventListener('change', () => {
+      window.bitig.settings.set({ terminal: { restoreSession: restoreToggle.checked } });
+    });
+    restoreRow.append(restoreLabel, restoreToggle);
+
+    // 5. Show Status Bar
+    const statusRow = document.createElement('div');
+    statusRow.className = 'settings-row settings-toggle-row';
+    const statusLabel = document.createElement('label');
+    statusLabel.className = 'settings-label';
+    statusLabel.textContent = 'Show Bottom Status Bar';
+    const statusToggle = document.createElement('input');
+    statusToggle.checked = settings.terminal.showStatusBar !== false;
+    statusToggle.addEventListener('change', () => {
+      window.bitig.settings.set({ terminal: { showStatusBar: statusToggle.checked } });
+    });
+    statusRow.append(statusLabel, statusToggle);
+
+    // 6. Scrollback Buffer
+    const scrollRow = document.createElement('div');
+    scrollRow.className = 'settings-row';
+    const scrollLabel = document.createElement('label');
+    scrollLabel.className = 'settings-label';
+    scrollLabel.textContent = 'Scrollback Buffer Size:';
+    const scrollSelect = document.createElement('select');
+    scrollSelect.className = 'settings-select';
+    const scrollOptions = [5000, 10000, 20000, 50000];
+    const currentScroll = settings.terminal.scrollback ?? 10000;
+    for (const val of scrollOptions) {
+      const opt = document.createElement('option');
+      opt.value = String(val);
+      opt.textContent = `${val.toLocaleString()} lines`;
+      if (val === currentScroll) opt.selected = true;
+      scrollSelect.appendChild(opt);
+    }
+    scrollSelect.addEventListener('change', () => {
+      window.bitig.settings.set({ terminal: { scrollback: Number(scrollSelect.value) } });
+    });
+    scrollRow.append(scrollLabel, scrollSelect);
+
+    section.append(desc, copyRow, pasteRow, confirmRow, restoreRow, statusRow, scrollRow);
+    return section;
+  }
+
+  private buildPluginsSection(): HTMLElement {
+    const section = this.buildSection('Plugins');
+
+    const desc = document.createElement('p');
+    desc.className = 'settings-desc';
+    desc.textContent =
+      'Extend Bitig with lightweight, sandboxed plugins located in %APPDATA%/Bitig/plugins/.';
+
+    const actionRow = document.createElement('div');
+    actionRow.className = 'settings-actions-row';
+
+    const openDirBtn = document.createElement('button');
+    openDirBtn.type = 'button';
+    openDirBtn.className = 'settings-btn-secondary';
+    openDirBtn.innerHTML = icon('folder') + '<span>Open Plugins Folder</span>';
+    openDirBtn.addEventListener('click', () => {
+      window.bitig.plugins.openDir();
+    });
+
+    const reloadBtn = document.createElement('button');
+    reloadBtn.type = 'button';
+    reloadBtn.className = 'settings-btn-secondary';
+    reloadBtn.innerHTML = icon('refresh') + '<span>Reload Plugins</span>';
+
+    actionRow.append(openDirBtn, reloadBtn);
+
+    const pluginListContainer = document.createElement('div');
+    pluginListContainer.className = 'plugin-list-container';
+    pluginListContainer.innerHTML = '<span class="plugin-loading">Loading plugins...</span>';
+
+    const renderPlugins = async (): Promise<void> => {
+      try {
+        const plugins = await window.bitig.plugins.list();
+        pluginListContainer.replaceChildren();
+
+        if (plugins.length === 0) {
+          pluginListContainer.innerHTML = '<span class="plugin-empty">No plugins installed.</span>';
+          return;
+        }
+
+        for (const p of plugins) {
+          const card = document.createElement('div');
+          card.className = 'plugin-card';
+          if (!p.enabled) card.classList.add('disabled');
+
+          const left = document.createElement('div');
+          left.className = 'plugin-card-left';
+
+          const titleWrap = document.createElement('div');
+          titleWrap.className = 'plugin-title-wrap';
+
+          const name = document.createElement('span');
+          name.className = 'plugin-name';
+          name.textContent = p.manifest.name;
+
+          const ver = document.createElement('span');
+          ver.className = 'plugin-version';
+          ver.textContent = `v${p.manifest.version}`;
+
+          titleWrap.append(name, ver);
+
+          const descEl = document.createElement('p');
+          descEl.className = 'plugin-desc';
+          descEl.textContent = p.manifest.description || 'No description provided.';
+
+          const meta = document.createElement('div');
+          meta.className = 'plugin-meta';
+
+          if (p.manifest.author) {
+            const author = document.createElement('span');
+            author.className = 'plugin-author';
+            author.textContent = `Author: ${p.manifest.author}`;
+            meta.appendChild(author);
+          }
+
+          if (p.manifest.permissions && p.manifest.permissions.length > 0) {
+            for (const perm of p.manifest.permissions) {
+              const pill = document.createElement('span');
+              pill.className = 'plugin-perm-pill';
+              pill.textContent = perm;
+              meta.appendChild(pill);
+            }
+          }
+
+          if (p.error) {
+            const errEl = document.createElement('span');
+            errEl.className = 'plugin-error-badge';
+            errEl.title = p.error;
+            errEl.innerHTML = icon('alert') + `<span>${p.error}</span>`;
+            meta.appendChild(errEl);
+          }
+
+          left.append(titleWrap, descEl, meta);
+
+          const right = document.createElement('div');
+          right.className = 'plugin-card-right';
+
+          const toggle = document.createElement('input');
+          toggle.type = 'checkbox';
+          toggle.checked = p.enabled;
+          toggle.addEventListener('change', async () => {
+            toggle.disabled = true;
+            await window.bitig.plugins.toggle(p.id, toggle.checked);
+            await renderPlugins();
+          });
+
+          right.appendChild(toggle);
+          card.append(left, right);
+          pluginListContainer.appendChild(card);
+        }
+      } catch (err) {
+        pluginListContainer.innerHTML = `<span class="plugin-error">Failed to load plugins: ${String(err)}</span>`;
+      }
+    };
+
+    reloadBtn.addEventListener('click', async () => {
+      reloadBtn.disabled = true;
+      reloadBtn.textContent = 'Reloading...';
+      await window.bitig.plugins.reload();
+      await renderPlugins();
+      reloadBtn.disabled = false;
+      reloadBtn.innerHTML = icon('refresh') + '<span>Reload Plugins</span>';
+    });
+
+    void renderPlugins();
+
+    section.append(desc, actionRow, pluginListContainer);
+    return section;
+  }
+
   private buildKeybindingsSection(settings: BitigSettings): HTMLElement {
     const section = this.buildSection('Keyboard Shortcuts');
 
@@ -259,7 +544,7 @@ export class SettingsPanel {
           const conflictBadge = document.createElement('span');
           conflictBadge.className = 'keybinding-conflict-badge';
           conflictBadge.title = `This shortcut conflicts with another action: ${conflict.name}`;
-          conflictBadge.textContent = `⚠ Conflicts with: ${conflict.name}`;
+          conflictBadge.innerHTML = icon('alert') + `<span>Conflicts with ${conflict.name}</span>`;
           controls.appendChild(conflictBadge);
         }
 
@@ -288,7 +573,7 @@ export class SettingsPanel {
           resetBtn.type = 'button';
           resetBtn.className = 'keybinding-reset-btn';
           resetBtn.title = `Reset to default (${def.defaultKeys})`;
-          resetBtn.innerHTML = '↺';
+          resetBtn.innerHTML = icon('undo');
           resetBtn.addEventListener('click', (e) => {
             e.stopPropagation();
             window.bitig.settings.set({
@@ -866,7 +1151,7 @@ export class SettingsPanel {
     const testBtn = document.createElement('button');
     testBtn.type = 'button';
     testBtn.className = 'settings-btn-secondary';
-    testBtn.textContent = '⚡ Test Connection';
+    testBtn.innerHTML = icon('zap') + '<span>Test Connection</span>';
 
     const testResult = document.createElement('span');
     testResult.className = 'ai-test-result';

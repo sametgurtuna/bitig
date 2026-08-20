@@ -8,11 +8,16 @@ import { CommandPalette } from './commandPalette';
 import { BetikModal } from './betikModal';
 import { HistoryModal } from './historyModal';
 import { BilgeModal } from './bilgeModal';
+import { TerminalContextMenu } from './contextMenu';
+import { ConfirmModal } from './confirmModal';
+import { StatusBar } from './statusBar';
+import { SessionManager } from './sessionManager';
+import { PluginRuntime } from './pluginRuntime';
 
 /**
  * Uygulama girisi: title bar davranisini baglar, gorunum (tema/opaklik/
- * arkaplan) kontrolcusunu, ayarlar panelini ve sekme yonetimini
- * (TabStore) baslatir.
+ * arkaplan) kontrolcusunu, ayarlar panelini, baglam menusunu, durum cubugunu
+ * ve sekme yonetimini (TabStore) baslatir.
  */
 async function bootstrap(): Promise<void> {
   initTitleBar();
@@ -32,11 +37,38 @@ async function bootstrap(): Promise<void> {
 
   const appearance = new AppearanceController();
   const keybindings = new KeybindingManager();
-  const tabStore = new TabStore(rootEl, tabbarListEl, keybindings, undefined, () => appearance.cycleTheme());
+  const contextMenu = new TerminalContextMenu(appEl);
+  const confirmModal = new ConfirmModal(appEl);
+  const sessionManager = new SessionManager();
+
+  let bilgeModalInstance: BilgeModal;
+
+  const statusBar = new StatusBar(appEl, {
+    onOpenPort: (port) => void window.bitig.cockpit.openUrl(`http://localhost:${port}`),
+    onToggleBroadcast: () => tabStore.toggleBroadcast(),
+    onOpenBilge: () => bilgeModalInstance.open()
+  });
+
+  const pluginRuntime = new PluginRuntime(statusBar, keybindings);
+
+  const tabStore = new TabStore(
+    rootEl,
+    tabbarListEl,
+    keybindings,
+    undefined,
+    () => appearance.cycleTheme(),
+    contextMenu,
+    confirmModal,
+    statusBar,
+    sessionManager,
+    () => bilgeModalInstance.open()
+  );
+
   const settingsPanel = new SettingsPanel(settingsPanelEl, terminalShellEl, settingsBtn, appearance, keybindings);
   const betikModal = new BetikModal(appEl, tabStore);
   const historyModal = new HistoryModal(appEl, tabStore);
-  const bilgeModal = new BilgeModal(appEl, tabStore);
+  bilgeModalInstance = new BilgeModal(appEl, tabStore);
+
   const commandPalette = new CommandPalette(
     appEl,
     tabStore,
@@ -45,18 +77,40 @@ async function bootstrap(): Promise<void> {
     () => settingsPanel.open(),
     () => betikModal.open(),
     () => historyModal.open(),
-    () => bilgeModal.open()
+    () => bilgeModalInstance.open(),
+    pluginRuntime
   );
 
   keybindings.registerAction('settings.toggle', () => settingsPanel.toggle());
   keybindings.registerAction('palette.toggle', () => commandPalette.toggle());
   keybindings.registerAction('betik.toggle', () => betikModal.toggle());
   keybindings.registerAction('history.search', () => historyModal.toggle());
-  keybindings.registerAction('ai.prompt', () => bilgeModal.toggle());
+  keybindings.registerAction('ai.prompt', () => bilgeModalInstance.toggle());
 
   // Ilk sekme acilmadan once aktif tema/opaklik/arkaplan uygulanmis olsun;
   // TabStore.createTab() zaten guncel temayla (currentTerminalTheme) acar.
   await appearance.init(tabStore);
+
+  // Oturum Kurtarma (Session Restore) kontrolu
+  const currentSettings = appearance.getState()?.settings;
+  let restored = false;
+  if (currentSettings?.terminal.restoreSession) {
+    const savedSession = sessionManager.loadSession();
+    if (savedSession && savedSession.tabs.length > 0) {
+      for (const tabInfo of savedSession.tabs) {
+        await tabStore.createTab(tabInfo.profileId, tabInfo.cwd, tabInfo.title);
+      }
+      if (savedSession.activeTabIndex >= 0 && savedSession.activeTabIndex < tabStore.getTabsInfo().length) {
+        const tabsInfo = tabStore.getTabsInfo();
+        tabStore.switchToTab(tabsInfo[savedSession.activeTabIndex].id);
+      }
+      restored = true;
+    }
+  }
+
+  if (!restored) {
+    void tabStore.createTab();
+  }
 
   newTabBtn.addEventListener('click', () => void tabStore.createTab());
 
@@ -110,9 +164,6 @@ async function bootstrap(): Promise<void> {
   });
 
   window.addEventListener('beforeunload', () => tabStore.disposeAll());
-
-  void tabStore.createTab();
 }
 
 void bootstrap();
-

@@ -1,6 +1,7 @@
 import type { BitigSnippet, SnippetVariable } from '../../shared/snippetTypes';
 import { fuzzyScore } from './fuzzy';
 import type { TabStore } from './tabs';
+import { icon } from './icons';
 
 type ModalView = 'list' | 'form' | 'editor';
 
@@ -101,7 +102,10 @@ export class BetikModal {
     titleWrap.className = 'betik-title-wrap';
 
     const title = document.createElement('h2');
-    title.innerHTML = '📜 Bitig Betik <span class="betik-badge">Runbooks</span>';
+    title.className = 'betik-title';
+    title.innerHTML =
+      `<span class="betik-title-icon">${icon('book')}</span>` +
+      '<span>Bitig Betik</span><span class="betik-badge">Runbooks</span>';
 
     const desc = document.createElement('p');
     desc.className = 'betik-subtitle';
@@ -223,7 +227,7 @@ export class BetikModal {
 
       const runBtn = document.createElement('button');
       runBtn.className = 'betik-btn-run';
-      runBtn.textContent = '🚀 Run / Fill In';
+      runBtn.innerHTML = icon('play') + '<span>Run / Fill In</span>';
       runBtn.addEventListener('click', (e) => {
         e.stopPropagation();
         this.openSnippetForm(snippet);
@@ -259,7 +263,7 @@ export class BetikModal {
 
     const backBtn = document.createElement('button');
     backBtn.className = 'betik-btn-back';
-    backBtn.innerHTML = '← Back (Esc)';
+    backBtn.innerHTML = icon('arrowLeft') + '<span>Back (Esc)</span>';
     backBtn.addEventListener('click', () => this.switchView('list'));
 
     const titleWrap = document.createElement('div');
@@ -351,17 +355,17 @@ export class BetikModal {
 
     const copyBtn = document.createElement('button');
     copyBtn.className = 'betik-btn-secondary';
-    copyBtn.innerHTML = '📋 Copy to Clipboard';
+    copyBtn.innerHTML = icon('copy') + '<span>Copy to Clipboard</span>';
     copyBtn.addEventListener('click', () => {
       const cmd = this.composeCommand(snippet.template, this.formValues);
       void navigator.clipboard.writeText(cmd);
-      copyBtn.textContent = '✓ Copied!';
-      setTimeout(() => (copyBtn.innerHTML = '📋 Copy to Clipboard'), 1500);
+      copyBtn.innerHTML = icon('check') + '<span>Copied</span>';
+      setTimeout(() => (copyBtn.innerHTML = icon('copy') + '<span>Copy to Clipboard</span>'), 1500);
     });
 
     const runBtn = document.createElement('button');
     runBtn.className = 'betik-btn-primary';
-    runBtn.innerHTML = '🚀 Send to Terminal & Run (Enter)';
+    runBtn.innerHTML = icon('play') + '<span>Send to Terminal &amp; Run (Enter)</span>';
     runBtn.addEventListener('click', () => {
       this.executeSnippet(snippet);
     });
@@ -413,7 +417,7 @@ export class BetikModal {
 
     const backBtn = document.createElement('button');
     backBtn.className = 'betik-btn-back';
-    backBtn.innerHTML = '← Back (Esc)';
+    backBtn.innerHTML = icon('arrowLeft') + '<span>Back (Esc)</span>';
     backBtn.addEventListener('click', () => this.switchView('list'));
 
     const title = document.createElement('h2');

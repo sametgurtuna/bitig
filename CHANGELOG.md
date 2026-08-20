@@ -1,21 +1,97 @@
-# Changelog
+<div align="center">
 
-All notable changes to this project are documented here.
+# Bitig Changelog
 
-The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
-and versioning follows [Semantic Versioning](https://semver.org/).
+<sub>Format: <a href="https://keepachangelog.com/en/1.1.0/">Keep a Changelog</a> · Versioning: <a href="https://semver.org/">Semantic Versioning</a></sub>
+
+<sub><a href="README.md">README</a> · <a href="FEATURES.md">Features</a> · <a href="ROADMAP.md">Roadmap</a></sub>
+
+</div>
+
+## Release Index
+
+| Version | Date | Headline |
+|---|---|---|
+| [**1.0.0**](#100---2026-08-20) | 2026-08-20 | Stable release: plugin runtime, Windows installer, compact icon-driven UI |
+| [0.9.8](#098---2026-08-20) | 2026-08-20 | Bitig Bilge, the local and BYOK AI companion |
+| [0.9.5](#095---2026-08-20) | 2026-08-20 | Quake HUD mode and Broadcast Input |
+| [0.9.0](#090---2026-08-19) | 2026-08-19 | Developer Cockpit: port sniffer, smart links, secret shield |
+| [0.8.5](#085---2026-08-19) | 2026-08-19 | Command history, fuzzy search, execution telemetry |
+| [0.8.0](#080---2026-08-19) | 2026-08-19 | Command palette and Bitig Betik runbooks |
+| [0.7.5](#075---2026-08-19) | 2026-08-19 | Rebindable shortcuts and the central action registry |
+| [0.7.0](#070---2026-08-19) | 2026-08-19 | Shell profiles, auto-discovery, in-terminal search |
+| [0.6.x](#06x---2026-08-19) | 2026-08-19 | Settings panel, font picker, Nerd Font detection |
+| [0.1.0](#010---2026-08-19) | 2026-08-19 | First working terminal: window, PTY, xterm.js |
+
+---
+
+## [1.0.0] - 2026-08-20
+
+### Added
+
+- **Compact Icon System (`src/renderer/src/icons.ts`):**
+  - A single-stroke SVG icon set replacing every emoji in the interface. Icons
+    inherit `currentColor`, so they follow the active theme and every
+    hover/active state instead of rendering as fixed-palette platform glyphs.
+  - Applied across the settings navigation, terminal and tab context menus,
+    status bar, plugin manager, keybinding rows, Bitig Betik, and Bitig Bilge.
+  - Bundled reference plugins now emit plain-text status bar labels
+    (`RAM 4.2/16.0 GB`) rather than emoji-prefixed ones.
+- **Lightweight Plugin System & Sandboxing (Module A / Milestone 15):**
+  - `src/main/plugins/pluginManager.ts`: Plugin manager discovering manifest-based plugins in `%APPDATA%/Bitig/plugins/<id>/plugin.json`.
+  - **Secure Node VM Sandboxing:** Isolated execution context with restricted `bitig` API (`bitig.ui.setStatusBarWidget`, `bitig.actions.register`, `bitig.getSystemMemory`, `bitig.openUrl`, `bitig.setInterval`), blocking direct access to raw OS/filesystem globals.
+  - **Pre-packaged Starter Plugins:** Automatically seeds 3 reference plugins:
+    1. `git-status`: Displays the active Git branch in the bottom Status Bar.
+    2. `system-monitor`: Real-time RAM memory usage widget (`RAM 4.2/16.0 GB`) in the Status Bar.
+    3. `quick-web-search`: Registers universal actions for instant Google and StackOverflow developer lookups.
+  - **Settings Panel Plugins Section:** Full GUI manager with enable/disable toggles, version, permission pills, error badges, "Open Plugins Folder" (`shell.openPath`), and hot-reload.
+  - `src/renderer/src/pluginRuntime.ts`: Dynamic bridge injecting plugin widgets into Status Bar and registering actions with `KeybindingManager`.
+- **Windows Production Packaging & Installer Suite (Module B / Milestone 16):**
+  - Configured `electron-builder.yml` for Windows x64 targeting NSIS Setup (`Bitig-Setup-1.0.0.exe`) and standalone Portable (`Bitig-Portable-1.0.0.exe`).
+  - Native `node-pty` C++ ConPTY/WinPTY runtime binaries configured with `asarUnpack` for zero-friction execution.
+  - Multi-resolution Windows application icon set (`assets/icon.ico`, `assets/icon.png`) with crisp 256x256 high-DPI graphics.
+  - Single-instance lock (`app.requestSingleInstanceLock`) with window restore and focus on secondary launch.
+  - New `package.json` scripts: `npm run typecheck`, `npm run pack`, `npm run dist`, `npm run dist:portable`.
+- **Terminal Core Polish & Ergonomics (Module C):**
+  - **Terminal Context Menu (`src/renderer/src/contextMenu.ts`):** Floating glassmorphic right-click menu with Copy (`Ctrl+Shift+C`), Paste (`Ctrl+Shift+V`), Clear (`Ctrl+L`), Split Right (`Ctrl+Shift+E`), Split Down (`Ctrl+Shift+O`), Search (`Ctrl+F`), and Ask Bilge AI (`Ctrl+I`).
+  - **Copy-on-Select (PuTTY / Windows Terminal style):** Selecting terminal text automatically copies it to system clipboard.
+  - **Paste-on-Right-Click:** Option to immediately paste clipboard contents on right-click.
+  - **Confirm-Before-Close Safeguard (`src/renderer/src/confirmModal.ts`):** Confirmation dialog preventing accidental termination when closing tabs with active sessions.
+  - **Session Restore on Launch (`src/renderer/src/sessionManager.ts`):** Automatically restores open tab profiles, titles, and working directories on startup.
+  - **Configurable Scrollback Buffer:** Selectable buffer depth (5,000, 10,000, 20,000, 50,000 lines).
+- **Status Bar & Tab Customization (Module D):**
+  - **Bottom Status Bar (`src/renderer/src/statusBar.ts`):** Real-time bottom bar displaying active shell profile & color dot, active pane index (`Panel 1/2`), live open port badges (`:5173`), broadcast synchronization indicator, encoding (`UTF-8`), cursor coordinates (`Ln X, Col Y`), and quick-access AI Bilge launcher.
+  - **Inline Tab Renaming:** Double-click any tab title to rename inline with Enter/Escape support.
+  - **Tab Context Menu:** Right-click tabs to Rename, Split vertically/horizontally, Close, or Close Other tabs.
+  - **Settings Panel Advanced Terminal Section:** Full GUI controls for Copy on Select, Paste on Right Click, Confirm on Close, Session Restore, and Status Bar visibility.
+
+### Changed
+
+- **Compact UI Pass:** Tightened the chrome so more of the window is terminal.
+  Title bar 42px to 36px, tab height 28px to 25px with narrower min/max widths,
+  terminal shell padding 10/12px to 8/10px, and reduced padding, gaps and type
+  scale throughout the settings panel (navigation rail 190px to 168px).
+- Broadcast banner now uses a pulsing indicator dot and sentence-case copy
+  instead of an emoji and shouted uppercase.
+- Version promoted from `1.0.0-rc.1` to the `1.0.0` stable release; NSIS setup
+  and portable artifacts are published as `Bitig-Setup-1.0.0.exe` and
+  `Bitig-Portable-1.0.0.exe`.
+
+### Fixed
+
+- Fixed Electron main process `TypeError: Object has been destroyed at WebContents.send` on window close by adding `webContents.isDestroyed()` guards across all PTY, theme, settings, and window IPC handlers.
 
 ## [0.9.8] - 2026-08-20
 
 ### Added
 
-- **"Bitig Bilge" — AI Terminal Companion (`Ctrl+I`):**
+- **"Bitig Bilge": AI Terminal Companion (`Ctrl+I`):**
   - `src/main/ai/aiService.ts`: Native fetch-based AI service supporting **Ollama** (`http://localhost:11434` %100 local), **OpenAI**, **Anthropic Claude**, **Google Gemini**, **DeepSeek**, and custom OpenAI-compatible endpoints.
   - `src/renderer/src/bilgeModal.ts`: Glassmorphic interactive modal (`Ctrl+I`) for natural language to shell command generation and error explanation.
   - Press `Enter` to inject & execute the generated command in active terminal, `Tab` to insert without execution for manual editing, `Esc` to close.
   - Privacy-First & BYOK: All API keys stored locally in `%APPDATA%/Bitig/settings.json`, zero cloud telemetry.
 - **Settings Panel AI / Bilge Configuration Section:**
-  - Configurable provider selection, API endpoint URL, BYOK API key input with toggle masking, model selector, and live connection test button (`⚡ Bağlantıyı Test Et`).
+  - Configurable provider selection, API endpoint URL, BYOK API key input with toggle masking, model selector, and live connection test button ("Test Connection").
   - Command Palette integration: `Bitig Bilge (AI Asistan)` listed in universal palette actions.
 
 ## [0.9.5] - 2026-08-20
@@ -38,7 +114,7 @@ and versioning follows [Semantic Versioning](https://semver.org/).
 
 - **Developer Cockpit & Live Port Sniffer:**
   - `src/renderer/src/portSniffer.ts`: Real-time detection of dev servers and listening network ports (`localhost:3000`, `5173`, `8080`, `0.0.0.0:8000`, etc.) from PTY output streams.
-  - Interactive clickable port badges rendered directly inside tab headers (`🟢 :5173`) with pulsing animations.
+  - Interactive clickable port badges rendered directly inside tab headers (`:5173`) with pulsing animations.
   - Clicking any port badge opens `http://localhost:[port]` directly in the default web browser via `window.bitig.cockpit.openUrl`.
 - **Smart File/Line Hyperlinks:**
   - `src/renderer/src/smartLinks.ts`: Integrated custom link provider for xterm.js matching stack traces and compiler error patterns (`src/main.ts:42:15`, `C:\...\server.py:102`).
@@ -63,7 +139,7 @@ and versioning follows [Semantic Versioning](https://semver.org/).
   - Press `Enter` to inject the selected command directly into the active terminal, `Escape` to close, or clear history with confirmation.
 - **Command Execution Telemetry & Long-Running Task Desktop Notifications:**
   - `src/renderer/src/telemetry.ts` measures command runtimes across all panes.
-  - When commands exceed the configured threshold (default: 5 seconds) and Bitig is running in the background or unfocused, triggers native Windows notifications (`windowControls.notify`): `✅ Komut Tamamlandı ("npm run build" (14.2s))`.
+  - When commands exceed the configured threshold (default: 5 seconds) and Bitig is running in the background or unfocused, triggers native Windows notifications (`windowControls.notify`): `Command finished: "npm run build" (14.2s)`.
   - Clicking the notification automatically focuses and restores the Bitig window.
 - **Settings Panel Telemetry Controls:**
   - Toggle for task completion notifications.
@@ -77,7 +153,7 @@ and versioning follows [Semantic Versioning](https://semver.org/).
   - Instant fuzzy search modal powered by `src/renderer/src/fuzzy.ts`.
   - Searches across all Bitig actions, open tabs, discovered shell profiles, themes, and settings.
   - Arrow key navigation with wrap-around, action execution on Enter, keyboard shortcuts and category badges displayed on the right.
-- **"Bitig Betik" — Parametric Runbook / Snippet Manager (`Ctrl+Shift+B`):**
+- **"Bitig Betik": Parametric Runbook / Snippet Manager (`Ctrl+Shift+B`):**
   - Local snippet manager backed by `%APPDATA%/Bitig/snippets.json` and `src/main/snippets/snippetStore.ts`.
   - Built-in library of 10 essential multi-parameter snippets (Docker Run Port & Volume, Docker Compose Up, Git Rebase Interactive, Git Commit, FFmpeg H.264 Convert, Windows Port Kill, Find Large Files, Kubectl Pod Logs, etc.).
   - **Dynamic Parametric Form:** Automatically extracts placeholders (`{{var_name}}`) from command templates and generates visual input fields with Tab navigation.
@@ -95,8 +171,8 @@ and versioning follows [Semantic Versioning](https://semver.org/).
   - Settings panel **Klavye Kısayolları (Keybindings)** section:
     - Categorized table of all shortcuts (Sekmeler, Paneller, Görünüm ve Arama, Uygulama).
     - Interactive key capture: click a keybinding button to enter recording mode with a pulsing animation, press any key combination to rebind.
-    - Live conflict detection: displays a warning badge (`⚠ Çakışıyor: [Action]`) when a key combination is already bound to another action.
-    - Reset to default button per shortcut (`↺`) and global settings reset.
+    - Live conflict detection: displays a warning badge ("Conflicts with [Action]") when a key combination is already bound to another action.
+    - Per-shortcut reset-to-default button and global settings reset.
   - `settings.keybindings` persisted to `settings.json` and hot-reloaded across the app.
   - Added `Ctrl+,` shortcut to toggle the Settings panel.
 
@@ -116,7 +192,7 @@ and versioning follows [Semantic Versioning](https://semver.org/).
   - Escape closes the search bar and returns focus to the terminal.
 - **Directional Split Pane Navigation & Focused Pane Zoom:**
   - Keyboard navigation between split panes: `Alt+Left/Right/Up/Down` and `Alt+H/J/K/L` move focus to adjacent panes using a geometric center-distance calculation.
-  - Pane Zoom (`Ctrl+Shift+Z`): expands the focused pane to 100% full area, temporarily hiding sibling panes, and toggles back to split layout with a visual `[🔍]` badge.
+  - Pane Zoom (`Ctrl+Shift+Z`): expands the focused pane to 100% full area, temporarily hiding sibling panes, and toggles back to split layout with a visual zoom badge.
 - **Dynamic Tab Titles & CWD Tracking (OSC 7):**
   - Tab titles automatically update to match the foreground process or shell title reported via `terminal.onTitleChange`.
   - OSC 7 working directory parser hook tracks the active directory, allowing splits and new tabs to inherit the current directory.

@@ -11,6 +11,8 @@ import { registerHistoryHandlers } from './ipc/historyHandlers';
 import { registerCockpitHandlers } from './ipc/cockpitHandlers';
 import { registerQuakeHandlers, unregisterQuakeHandlers } from './ipc/quakeHandlers';
 import { registerAiHandlers } from './ipc/aiHandlers';
+import { PluginManager } from './plugins/pluginManager';
+import { registerPluginHandlers } from './ipc/pluginHandlers';
 import { ThemeStore } from './theme/themeStore';
 import { SettingsStore } from './settings/settingsStore';
 import { SnippetStore } from './snippets/snippetStore';
@@ -21,11 +23,28 @@ import { HistoryStore } from './history/historyStore';
 // %APPDATA%/Bitig/ konumu (buyuk B ile) tam olarak eslessin.
 app.setName('Bitig');
 
+const gotTheLock = app.requestSingleInstanceLock();
+if (!gotTheLock) {
+  app.quit();
+} else {
+  app.on('second-instance', () => {
+    const windows = BrowserWindow.getAllWindows();
+    if (windows.length > 0) {
+      const win = windows[0];
+      if (win.isMinimized()) win.restore();
+      win.focus();
+    }
+  });
+}
+
 const ptyManager = new PtyManager();
 const themeStore = new ThemeStore();
 const settingsStore = new SettingsStore();
 const snippetStore = new SnippetStore();
 const historyStore = new HistoryStore();
+const pluginManager = new PluginManager();
+
+const iconPath = join(__dirname, '../../assets/icon.png');
 
 function createMainWindow(): void {
   const mainWindow = new BrowserWindow({
@@ -35,6 +54,7 @@ function createMainWindow(): void {
     minHeight: 320,
     show: false,
     frame: false,
+    icon: iconPath,
     // Cerceve kaldirilinca kose yuvarlama ve golge OS'ten gelmiyor; bunu
     // renderer'daki #app konteynerinde CSS ile (border-radius + box-shadow)
     // taklit ediyoruz, bu yuzden pencere transparan olmali.
@@ -62,6 +82,11 @@ function createMainWindow(): void {
   registerWindowHandlers(mainWindow);
   registerThemeHandlers(themeStore, mainWindow.webContents);
   registerSettingsHandlers(settingsStore, mainWindow);
+  void pluginManager.init(mainWindow.webContents);
+
+  mainWindow.webContents.on('did-finish-load', () => {
+    pluginManager.broadcastContributions();
+  });
 
   const isDev = !app.isPackaged;
   if (isDev && process.env['ELECTRON_RENDERER_URL']) {
@@ -96,6 +121,7 @@ void app.whenReady().then(async () => {
   registerHistoryHandlers(historyStore);
   registerCockpitHandlers();
   registerAiHandlers(settingsStore);
+  registerPluginHandlers(pluginManager);
 
   createMainWindow();
   setupQuakeHud(settingsStore);

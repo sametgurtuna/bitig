@@ -31,6 +31,18 @@ export interface TerminalSettings {
   fontFamily: string;
   /** MIN_FONT_SIZE-MAX_FONT_SIZE araliginda kelepceli (settingsStore.ts). */
   fontSize: number;
+  /** Metin secildiginde otomatik panoya kopyala (PuTTY/Windows Terminal stili). */
+  copyOnSelect?: boolean;
+  /** Sag tiklandiginda dogrudan yapistir (false ise baglam menusu acilir). */
+  pasteOnRightClick?: boolean;
+  /** Calisan aktif surecler varken kapatmada onay uyarisi goster. */
+  confirmBeforeClose?: boolean;
+  /** Acilista onceki sekme ve panel duzenini geri yukle. */
+  restoreSession?: boolean;
+  /** Alt durum cubugunu (Status Bar) goster/gizle. */
+  showStatusBar?: boolean;
+  /** Geriye dogru kaydirma satiri siniri (default: 10000). */
+  scrollback?: number;
 }
 
 export interface TelemetrySettings {

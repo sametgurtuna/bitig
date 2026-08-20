@@ -1,4 +1,14 @@
+<div align="center">
+
 # Bitig Roadmap
+
+<sub>Every milestone through <b>1.0.0</b> is shipped. This document is the design record behind them, and the plan for what comes next.</sub>
+
+<sub><a href="README.md">README</a> · <a href="FEATURES.md">Features</a> · <a href="CHANGELOG.md">Changelog</a></sub>
+
+</div>
+
+---
 
 This document expands the short checklist in `README.md` into a detailed,
 working plan: what each milestone actually contains, why it is ordered where
@@ -6,7 +16,12 @@ it is, the technical approach, the concrete sub-tasks, and what "done" looks
 like. It is a living document; expect sections to be rewritten as design
 decisions are made and revisited once real usage exposes wrong assumptions.
 
-Status legend: `[ ]` not started, `[~]` in progress, `[x]` done.
+**Status legend:** `[ ]` not started · `[~]` in progress · `[x]` done.
+
+**Current state:** version 1.0.0 is released. Milestones 1 through 16 are
+complete and shipped as an NSIS installer and a portable executable for
+Windows 11 x64. Work beyond this point is tracked under
+[Post-1.0 Direction](#post-10-direction).
 
 ## Guiding Principles
 
@@ -51,8 +66,8 @@ design decision is not obvious:
 | 12 | Developer cockpit, live port sniffer & secret shield | 8, 10 | `0.9.0` (done) |
 | 13 | Quake / Dropdown HUD mode & broadcast input | 3, 9 | `0.9.5` (done) |
 | 14 | AI terminal companion ("Bitig Bilge" - Local & BYOK) | 8, 11 | `0.9.8` (done) |
-| 15 | Lightweight plugin system & sandboxing | 9, 10 | `1.0.0-rc` |
-| 16 | Packaging, installer & auto-updater | all | `1.0.0` |
+| 15 | Lightweight plugin system & sandboxing | 9, 10 | `1.0.0` (done) |
+| 16 | Packaging, installer & portable build | all | `1.0.0` (done) |
 
 Milestones can be built iteratively; each milestone represents a self-contained, tested, and deliverable capability.
 
@@ -243,7 +258,7 @@ before starting this milestone.
       across engines for `ResizeObserver`.
 - [x] Close-pane behavior (`Ctrl+Shift+X`): closing a leaf collapses its
       parent split node, promoting the sibling up; closing a tab's last
-      pane closes the tab itself (reuses the existing last-tab-closed →
+      pane closes the tab itself (reuses the existing last-tab-closed ->
       window-closes behavior from milestone 2).
 - [ ] Directional focus movement and its keyboard shortcuts. Deliberately
       deferred (confirmed before starting this milestone): focus currently
@@ -799,7 +814,7 @@ search, zoom, etc.) becomes remappable, with conflict detection and an interacti
 - [x] Action registry (`src/shared/actionTypes.ts`) and `KeybindingManager` (`src/renderer/src/keybindings.ts`) dispatch system.
 - [x] `keybindings` schema in `settingsTypes.ts` with sensible defaults in `DEFAULT_KEYBINDINGS`.
 - [x] Interactive Key Recorder component in Settings Panel (`settingsPanel.ts`) with live key capture.
-- [x] Conflict detection logic (`findConflict`) with visual warning badges (`⚠ Çakışıyor: [Action]`).
+- [x] Conflict detection logic (`findConflict`) with visual warning badges ("Conflicts with [Action]").
 
 ---
 
@@ -840,7 +855,7 @@ telemetry with background task completion notifications.
 - **Fuzzy Search Overlay (`Ctrl+R`):**
   - Instant history search modal ranking commands by frequency and recency (`src/renderer/src/historyModal.ts`).
 - **Execution Telemetry & Toast Notifications:**
-  - When a command runs for longer than a configurable threshold (e.g. 5 seconds) and the Bitig window is in the background, send a native Windows notification: `✅ "npm run build" finished in 14.2s (exit code 0)`.
+  - When a command runs for longer than a configurable threshold (e.g. 5 seconds) and the Bitig window is in the background, send a native Windows notification: `"npm run build" finished in 14.2s (exit code 0)`.
   - Configurable notification threshold in Settings.
 
 ### Sub-tasks
@@ -862,7 +877,7 @@ and automatic masking of accidental sensitive token leaks.
 
 - **Live Port Sniffer (Port & Process Sentinel):**
   - Detect when child processes bind to TCP listening ports on Windows (e.g. Vite on `5173`, Next.js on `3000`, API on `8080`).
-  - Render an interactive badge in tab headers: `🟢 :5173` -> 1-click open in default browser.
+  - Render an interactive badge in tab headers: `:5173` -> 1-click open in default browser.
 - **Smart File Hyperlinks:**
   - Regex match file references in terminal output (e.g., `src/renderer/src/main.ts:45:12` or `C:\project\error.log`).
   - Clicking automatically opens the file at the exact line in VS Code / default IDE (`vscode://file/...:line:col`).
@@ -892,7 +907,7 @@ and simultaneous multi-pane command broadcast for cluster management.
   - Loss of focus can automatically pin or slide back up.
 - **Broadcast Input Mode (`Alt+Shift+I`):**
   - When enabled, keystrokes typed into the focused pane are mirrored to all active split panes in the current tab.
-  - A distinct glowing border / status indicator ("🔴 Sync Active") alerts the user to prevent accidental command execution across servers.
+  - A distinct glowing border / status indicator ("Sync Active") alerts the user to prevent accidental command execution across servers.
 
 ### Sub-tasks
 
@@ -915,7 +930,7 @@ or personal API keys (OpenAI, Gemini, Anthropic, DeepSeek).
   - Zero telemetry or forced cloud accounts. Keys stored securely in OS credential vault / encrypted settings.
   - First-class support for local Ollama instances (`http://localhost:11434`).
 - **Inline Error Explainer:**
-  - When a command fails (`exit code != 0`), an optional "💡 Neden hata verdi?" icon appears.
+  - When a command fails (`exit code != 0`), an optional "Neden hata verdi?" icon appears.
   - Clicking sends only the relevant error snippet and shell context to the AI model, displaying an actionable fix.
 - **Natural Language to CLI Generator (`Ctrl+I` / Inline Ghost Prompt):**
   - Type `# find all files larger than 100MB and delete them` -> AI suggests the exact PowerShell/Bash syntax -> Press Tab to accept.
@@ -929,7 +944,7 @@ or personal API keys (OpenAI, Gemini, Anthropic, DeepSeek).
 
 ---
 
-## 15. Lightweight Plugin System & Sandboxing
+## 15. Lightweight Plugin System & Sandboxing - done
 
 **Goal:** let developers extend Bitig safely without patching core source: new actions,
 status bar widgets, custom themes, custom OSC handlers, and AI prompt hooks.
@@ -938,38 +953,54 @@ status bar widgets, custom themes, custom OSC handlers, and AI prompt hooks.
 
 - Plugins live in `%APPDATA%/Bitig/plugins/<plugin-name>/` with a `plugin.json` manifest.
 - **Security Sandbox:** Plugins execute inside Node's `vm` module with an explicit permission model
-  (`pty:read`, `ui:statusbar`, `settings:read`, `action:register`), completely denying access to raw
+  (`statusbar`, `actions`, `events`, `snippets`), completely denying access to raw
   `fs`, `child_process`, or ambient Node globals.
 - Plugin UI contribution points: Status Bar, Command Palette actions, and Settings Panel tabs.
 
 ### Sub-tasks
 
-- [ ] Plugin manifest loader and validator.
-- [ ] `vm`-based sandbox environment with scoped Bitig API.
-- [ ] Permission grant UI in Settings.
-- [ ] Reference example plugins (Git Status widget, System Resource monitor).
+- [x] Plugin manifest loader and validator (`src/main/plugins/pluginManager.ts`).
+- [x] `vm`-based sandbox environment with scoped Bitig API and cleanup timers.
+- [x] Permission grant and plugin management UI in Settings Panel (`settingsPanel.ts`).
+- [x] Reference example plugins (Git Status widget, System Resource monitor, Quick Web Search).
+- [x] Dynamic bridge for Status Bar widgets and Command Palette action injection (`pluginRuntime.ts`).
 
 ---
 
-## 16. Packaging, Installer & Auto-Updater
+## 16. Packaging, Installer & Auto-Updater - done
 
-**Goal:** deliver a production-ready, frictionless installer (`.exe`) and auto-update mechanism for Windows.
+**Goal:** deliver a production-ready, frictionless installer (`.exe`) and portable build for Windows.
 
 ### Design
 
-- `electron-builder` NSIS configuration targeting `x64` and `arm64` Windows.
+- `electron-builder` NSIS configuration targeting `x64` Windows (`Bitig-Setup-1.0.0.exe`).
+- Portable executable packaging (`Bitig-Portable-1.0.0.exe`).
 - `asarUnpack` configured for `node-pty` native `.node` binaries and ConPTY prebuilds.
-- Multi-resolution application icon set (`.ico` containing 16, 32, 48, 256px).
-- Auto-update support via GitHub Releases (`electron-updater`).
+- Multi-resolution application icon set (`.ico` containing 16, 32, 48, 64, 128, 256px and `assets/icon.png`).
+- Single-instance lock (`app.requestSingleInstanceLock`) restoring existing window on secondary launch.
 
 ### Sub-tasks
 
-- [ ] `electron-builder.yml` configuration and build scripts.
-- [ ] Native icon design and asset generation.
-- [ ] Clean-machine VM verification matrix.
-- [ ] Automated GitHub Actions release pipeline.
+- [x] `electron-builder.yml` configuration and packaging scripts (`pack`, `dist`, `dist:portable`).
+- [x] Native high-DPI icon asset generation (`assets/icon.ico`, `assets/icon.png`).
+- [x] Single instance lock and application window icon integration (`src/main/index.ts`).
+- [x] Verified zero-error production binary packaging with prebuilt `node-pty` ConPTY modules.
 
 ---
+
+## Post-1.0 Direction
+
+Nothing below is scheduled. These are the candidates that survived 1.0 without
+making the cut, kept here so the reasoning is not lost.
+
+| Candidate | Why it is interesting | What blocks it today |
+|---|---|---|
+| **Render-layer secret masking** | Secret Shield currently sanitizes on the way into history. Masking in the terminal viewport itself would also cover screen sharing and recordings. | Needs a per-cell overlay that survives reflow, resize and scrollback without measurable input latency. |
+| **Auto-updater** | An `electron-updater` feed would close the gap between a release and users actually running it. | Requires a signed release pipeline and a hosting decision; unsigned auto-update is worse than none. |
+| **Plugin theme and OSC contributions** | Plugins can add widgets and actions but not themes or custom OSC handlers. | The permission model needs two more scopes, and OSC handlers touch the hot output path. |
+| **Plugin marketplace or registry** | Manual folder drops do not scale past a handful of plugins. | A registry implies trust, review and signing. Out of scope until the plugin API itself is stable. |
+| **Serial and SSH profiles** | Would make Bitig useful for embedded and remote work, not just local shells. | Credential storage is a security design problem, not a UI one. |
+| **Session recording and replay (asciinema style)** | Natural companion to execution telemetry. | Storage format and secret redaction have to be solved together. |
 
 ## Explicit Non-Goals (for now)
 

@@ -50,7 +50,7 @@ export class HistoryModal {
 
     const hint = document.createElement('span');
     hint.className = 'history-hint';
-    hint.textContent = '↑↓ Navigate | Enter Run | Esc Close';
+    hint.innerHTML = '<kbd>Up</kbd><kbd>Down</kbd><span>Navigate</span><kbd>Enter</kbd><span>Run</span><kbd>Esc</kbd><span>Close</span>';
 
     const clearBtn = document.createElement('button');
     clearBtn.className = 'history-clear-btn';

@@ -20,7 +20,13 @@ const DEFAULT_SETTINGS: BitigSettings = {
   },
   terminal: {
     fontFamily: 'Cascadia Code',
-    fontSize: 14
+    fontSize: 14,
+    copyOnSelect: false,
+    pasteOnRightClick: false,
+    confirmBeforeClose: true,
+    restoreSession: false,
+    showStatusBar: true,
+    scrollback: 10000
   },
   profiles: DEFAULT_PROFILES,
   defaultProfileId: 'powershell',

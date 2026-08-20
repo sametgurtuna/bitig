@@ -23,6 +23,11 @@ import type { KeybindingManager } from './keybindings';
 import { ExecutionTelemetry } from './telemetry';
 import { PortSniffer } from './portSniffer';
 import type { DiscoveredPort } from '../../shared/cockpitTypes';
+import type { TerminalContextMenu, ContextMenuItem } from './contextMenu';
+import type { ConfirmModal } from './confirmModal';
+import type { StatusBar } from './statusBar';
+import type { SessionManager } from './sessionManager';
+import { icon } from './icons';
 
 interface Tab {
   id: string;
@@ -33,11 +38,13 @@ interface Tab {
   tabEl: HTMLButtonElement;
   profileId: string;
   isZoomed: boolean;
+  isCustomTitle?: boolean;
 }
 
 /**
  * Sekmeleri, pane agaclarini ve klavye kisayollarini yoneten ana magaza.
- * Profil yonetimi, dahili arama, yonsel split gezinmesi ve zoom yeteneklerini barindirir.
+ * Profil yonetimi, dahili arama, yonsel split gezinmesi, zoom, baglam menusu,
+ * durum cubugu senkronizasyonu ve oturum kurtarma yeteneklerini barindirir.
  */
 export class TabStore {
   private readonly tabs: Tab[] = [];
@@ -62,7 +69,12 @@ export class TabStore {
     private readonly tabbarListEl: HTMLElement,
     private readonly keybindings: KeybindingManager,
     telemetry?: ExecutionTelemetry,
-    private readonly onCycleThemeShortcut?: () => void
+    private readonly onCycleThemeShortcut?: () => void,
+    private readonly contextMenu?: TerminalContextMenu,
+    private readonly confirmModal?: ConfirmModal,
+    private readonly statusBar?: StatusBar,
+    private readonly sessionManager?: SessionManager,
+    private readonly onOpenBilge?: () => void
   ) {
     this.searchBar = new SearchBar(this.rootEl);
     this.telemetry = telemetry || new ExecutionTelemetry();
@@ -71,7 +83,7 @@ export class TabStore {
     // Broadcast banner: window'un etrafina kirmizi cizgi + uyari mesaji
     this.broadcastBanner = document.createElement('div');
     this.broadcastBanner.id = 'broadcast-banner';
-    this.broadcastBanner.innerHTML = '<span>🔴 BROADCAST ACTIVE — writing to all split panes</span>';
+    this.broadcastBanner.innerHTML = `<span class="broadcast-dot"></span><span>Broadcast active: writing to all split panes</span>`;
     document.body.appendChild(this.broadcastBanner);
 
     window.bitig.pty.onData((event) => {
@@ -91,6 +103,9 @@ export class TabStore {
 
     this.portSniffer.onPortsChanged((ports, tabId) => {
       this.updateTabPorts(tabId, ports);
+      if (tabId === this.activeId) {
+        this.syncStatusBar();
+      }
     });
 
     this.registerKeybindings();
@@ -99,7 +114,7 @@ export class TabStore {
   private registerKeybindings(): void {
     this.keybindings.registerAction('tab.new', () => void this.createTab());
     this.keybindings.registerAction('tab.close', () => {
-      if (this.activeId) this.closeTab(this.activeId);
+      if (this.activeId) void this.requestCloseTab(this.activeId);
     });
     this.keybindings.registerAction('tab.next', () => this.cycleTab(1));
     this.keybindings.registerAction('tab.previous', () => this.cycleTab(-1));
@@ -134,6 +149,10 @@ export class TabStore {
     if (settings.keybindings) {
       this.keybindings.setBindings(settings.keybindings);
     }
+    if (settings.terminal.showStatusBar !== undefined) {
+      this.statusBar?.setVisible(settings.terminal.showStatusBar);
+    }
+    this.syncStatusBar();
   }
 
   getProfiles(): ShellProfile[] {
@@ -151,15 +170,20 @@ export class TabStore {
     return this.getProfiles().find((p) => p.id === id) || this.getDefaultProfile();
   }
 
-  async createTab(profileId?: string, cwd?: string): Promise<void> {
+  async createTab(profileId?: string, cwd?: string, customTitle?: string): Promise<void> {
     const profile = this.getProfileById(profileId);
     let ptyId = '';
     const options: CreatePaneLeafOptions = {
       command: profile?.command,
       args: profile?.args,
       cwd: cwd || profile?.startingDirectory,
+      copyOnSelect: this.settings?.terminal.copyOnSelect,
+      pasteOnRightClick: this.settings?.terminal.pasteOnRightClick,
+      scrollback: this.settings?.terminal.scrollback,
       onInput: (data) => this.telemetry.handleTerminalInput(ptyId, data),
-      onWrite: (leafId, data) => this.handleLeafWrite(leafId, data)
+      onWrite: (leafId, data) => this.handleLeafWrite(leafId, data),
+      onContextMenu: (event, leaf) => this.handlePaneContextMenu(event, leaf),
+      onCursorMove: (line, col) => this.statusBar?.updateCursor(line, col)
     };
 
     const leaf = await createPaneLeaf(
@@ -175,7 +199,7 @@ export class TabStore {
     this.rootEl.appendChild(containerEl);
 
     const id = crypto.randomUUID();
-    const tabTitle = profile?.name || 'PowerShell';
+    const tabTitle = customTitle || profile?.name || 'PowerShell';
     const tab: Tab = {
       id,
       title: tabTitle,
@@ -184,12 +208,13 @@ export class TabStore {
       containerEl,
       tabEl: this.buildTabElement(id, tabTitle),
       profileId: profile?.id || 'powershell',
-      isZoomed: false
+      isZoomed: false,
+      isCustomTitle: Boolean(customTitle)
     };
 
-    // Terminal baslik degisimlerini sekme basligina yansit
+    // Terminal baslik degisimlerini sekme basligina yansit (eger ozel ad verilmediyse)
     leaf.terminal.onTitleChange((newTitle) => {
-      if (newTitle && newTitle.trim() !== '') {
+      if (!tab.isCustomTitle && newTitle && newTitle.trim() !== '') {
         this.updateTabTitle(tab, newTitle.trim());
       }
     });
@@ -200,6 +225,46 @@ export class TabStore {
 
     this.renderTabPanes(tab);
     this.setActiveTab(tab.id);
+    this.syncSession();
+  }
+
+  async requestCloseTab(id: string): Promise<void> {
+    const tab = this.tabsById.get(id);
+    if (!tab) return;
+
+    if (this.settings?.terminal.confirmBeforeClose) {
+      const leaves = collectLeaves(tab.root);
+      if (leaves.length > 1 || this.tabs.length > 1) {
+        const confirmed = await this.confirmModal?.confirm(
+          'Close Tab',
+          `Active terminal sessions in "${tab.title}" will be terminated. Are you sure?`,
+          'Close Tab',
+          true
+        );
+        if (!confirmed) return;
+      }
+    }
+
+    this.closeTab(id);
+  }
+
+  async closeOtherTabs(keepId: string): Promise<void> {
+    const otherTabs = this.tabs.filter((t) => t.id !== keepId);
+    if (otherTabs.length === 0) return;
+
+    if (this.settings?.terminal.confirmBeforeClose) {
+      const confirmed = await this.confirmModal?.confirm(
+        'Close Other Tabs',
+        `${otherTabs.length} tab(s) will be closed. Are you sure?`,
+        'Close Tabs',
+        true
+      );
+      if (!confirmed) return;
+    }
+
+    for (const tab of otherTabs) {
+      this.closeTab(tab.id);
+    }
   }
 
   closeTab(id: string): void {
@@ -218,6 +283,7 @@ export class TabStore {
     tab.tabEl.remove();
 
     if (this.tabs.length === 0) {
+      this.sessionManager?.clearSession();
       window.bitig.windowControls.close();
       return;
     }
@@ -226,6 +292,8 @@ export class TabStore {
       const fallback = this.tabs[Math.min(index, this.tabs.length - 1)];
       this.setActiveTab(fallback.id);
     }
+
+    this.syncSession();
   }
 
   setActiveTab(id: string): void {
@@ -246,6 +314,8 @@ export class TabStore {
       window.bitig.pty.resize(leaf.id, leaf.terminal.cols, leaf.terminal.rows);
     }
     this.focusTerminal(next, next.activeLeafId);
+    this.syncStatusBar();
+    this.syncSession();
   }
 
   /** Aktif sekmenin odakli pane'ini belirtilen yonde ikiye boler. */
@@ -265,8 +335,13 @@ export class TabStore {
       command: profile?.command,
       args: profile?.args,
       cwd: activeLeaf?.cwd || profile?.startingDirectory,
+      copyOnSelect: this.settings?.terminal.copyOnSelect,
+      pasteOnRightClick: this.settings?.terminal.pasteOnRightClick,
+      scrollback: this.settings?.terminal.scrollback,
       onInput: (data) => this.telemetry.handleTerminalInput(ptyId, data),
-      onWrite: (leafId, data) => this.handleLeafWrite(leafId, data)
+      onWrite: (leafId, data) => this.handleLeafWrite(leafId, data),
+      onContextMenu: (event, leaf) => this.handlePaneContextMenu(event, leaf),
+      onCursorMove: (line, col) => this.statusBar?.updateCursor(line, col)
     };
 
     const newLeaf = await createPaneLeaf(
@@ -278,7 +353,7 @@ export class TabStore {
     ptyId = newLeaf.id;
 
     newLeaf.terminal.onTitleChange((newTitle) => {
-      if (tab.activeLeafId === newLeaf.id && newTitle && newTitle.trim() !== '') {
+      if (!tab.isCustomTitle && tab.activeLeafId === newLeaf.id && newTitle && newTitle.trim() !== '') {
         this.updateTabTitle(tab, newTitle.trim());
       }
     });
@@ -289,6 +364,7 @@ export class TabStore {
     tab.activeLeafId = newLeaf.id;
     this.renderTabPanes(tab);
     this.focusTerminal(tab, newLeaf.id);
+    this.syncStatusBar();
   }
 
   closeActivePane(): void {
@@ -314,6 +390,7 @@ export class TabStore {
       this.focusTerminal(tab, activeLeaf.id);
     }
     this.updateTabElementZoom(tab);
+    this.syncStatusBar();
   }
 
   /** Yonsel olarak komsu pane'e odaklanir. */
@@ -344,12 +421,10 @@ export class TabStore {
     if (!tab) return;
 
     if (this.isBroadcast) {
-      // Broadcast: aktif sekmedeki tum leaf'lere ayni anda yaz
       const leaves = collectLeaves(tab.root);
       for (const leaf of leaves) {
         window.bitig.pty.write(leaf.id, text);
       }
-      // Telemetry sadece aktif leaf icin
       const activeLeaf = findLeaf(tab.root, tab.activeLeafId);
       if (activeLeaf) {
         this.telemetry.startCommand(activeLeaf.id, text.replace(/[\r\n]+$/, ''));
@@ -365,7 +440,6 @@ export class TabStore {
     }
   }
 
-  /** Klavye basilmasi ile gelen veriyi yonlendirir; broadcast aktifse sekmedeki tum pane'lere iletir. */
   private handleLeafWrite(leafId: string, data: string): void {
     if (this.isBroadcast && this.activeId) {
       const activeTab = this.tabsById.get(this.activeId);
@@ -385,14 +459,13 @@ export class TabStore {
     this.isBroadcast = !this.isBroadcast;
     this.broadcastBanner.classList.toggle('active', this.isBroadcast);
     document.body.classList.toggle('broadcast-active', this.isBroadcast);
+    this.syncStatusBar();
   }
 
-  /** Broadcast modunun aktif olup olmadigini doner. */
   isBroadcastActive(): boolean {
     return this.isBroadcast;
   }
 
-  /** Aktif sekmenin kabuk profili ve odakli panelin (OSC 7 ile izlenen) CWD'sini doner - Bitig Bilge (AI) icin baglam saglar. */
   getActiveShellContext(): { shellType: string; cwd?: string } {
     const tab = this.getActiveTab();
     const profile = this.getProfileById(tab?.profileId);
@@ -400,7 +473,6 @@ export class TabStore {
     return { shellType: profile?.name || 'PowerShell', cwd: leaf?.cwd };
   }
 
-  /** Acik sekmelerin id, baslik ve aktiflik durumlarini doner. */
   getTabsInfo(): { id: string; title: string; active: boolean }[] {
     return this.tabs.map((tab) => ({
       id: tab.id,
@@ -409,7 +481,6 @@ export class TabStore {
     }));
   }
 
-  /** Belirtilen sekmeye gecis yapar. */
   switchToTab(id: string): void {
     this.setActiveTab(id);
   }
@@ -444,12 +515,184 @@ export class TabStore {
     }
   }
 
+  private handlePaneContextMenu(event: MouseEvent, leaf: PaneLeaf): void {
+    if (!this.contextMenu) return;
+
+    const hasSelection = leaf.terminal.hasSelection();
+    const items: ContextMenuItem[] = [
+      {
+        id: 'copy',
+        label: 'Copy',
+        icon: icon('copy'),
+        shortcut: 'Ctrl+Shift+C',
+        disabled: !hasSelection,
+        action: () => {
+          const text = leaf.terminal.getSelection();
+          if (text) void navigator.clipboard.writeText(text);
+        }
+      },
+      {
+        id: 'paste',
+        label: 'Paste',
+        icon: icon('paste'),
+        shortcut: 'Ctrl+Shift+V',
+        action: () => {
+          void navigator.clipboard.readText().then((text) => {
+            if (text) leaf.terminal.paste(text);
+          });
+        }
+      },
+      { id: 'separator', label: '', action: () => {} },
+      {
+        id: 'split-right',
+        label: 'Split Right',
+        icon: icon('splitH'),
+        shortcut: 'Ctrl+Shift+E',
+        action: () => void this.splitActivePane('row')
+      },
+      {
+        id: 'split-down',
+        label: 'Split Down',
+        icon: icon('splitV'),
+        shortcut: 'Ctrl+Shift+O',
+        action: () => void this.splitActivePane('column')
+      },
+      {
+        id: 'zoom',
+        label: this.getActiveTab()?.isZoomed ? 'Restore Pane' : 'Zoom Pane',
+        icon: icon('expand'),
+        shortcut: 'Ctrl+Shift+Z',
+        action: () => this.toggleZoomActivePane()
+      },
+      { id: 'separator', label: '', action: () => {} },
+      {
+        id: 'search',
+        label: 'Search Terminal',
+        icon: icon('search'),
+        shortcut: 'Ctrl+F',
+        action: () => this.toggleSearch()
+      },
+      {
+        id: 'clear',
+        label: 'Clear Buffer',
+        icon: icon('eraser'),
+        shortcut: 'Ctrl+L',
+        action: () => leaf.terminal.clear()
+      },
+      { id: 'separator', label: '', action: () => {} },
+      {
+        id: 'bilge',
+        label: 'Ask Bilge AI',
+        icon: icon('sparkle'),
+        shortcut: 'Ctrl+I',
+        action: () => this.onOpenBilge?.()
+      }
+    ];
+
+    this.contextMenu.show(event.clientX, event.clientY, items);
+  }
+
+  private handleTabContextMenu(event: MouseEvent, tab: Tab): void {
+    if (!this.contextMenu) return;
+    event.preventDefault();
+    event.stopPropagation();
+
+    const items: ContextMenuItem[] = [
+      {
+        id: 'rename',
+        label: 'Rename Tab',
+        icon: icon('pencil'),
+        action: () => this.startInlineRename(tab)
+      },
+      {
+        id: 'split-right',
+        label: 'Split Right',
+        icon: icon('splitH'),
+        shortcut: 'Ctrl+Shift+E',
+        action: () => {
+          this.setActiveTab(tab.id);
+          void this.splitActivePane('row');
+        }
+      },
+      {
+        id: 'split-down',
+        label: 'Split Down',
+        icon: icon('splitV'),
+        shortcut: 'Ctrl+Shift+O',
+        action: () => {
+          this.setActiveTab(tab.id);
+          void this.splitActivePane('column');
+        }
+      },
+      { id: 'separator', label: '', action: () => {} },
+      {
+        id: 'close',
+        label: 'Close Tab',
+        icon: icon('x'),
+        shortcut: 'Ctrl+Shift+W',
+        action: () => void this.requestCloseTab(tab.id)
+      },
+      {
+        id: 'close-others',
+        label: 'Close Other Tabs',
+        icon: icon('ban'),
+        disabled: this.tabs.length <= 1,
+        action: () => void this.closeOtherTabs(tab.id)
+      }
+    ];
+
+    this.contextMenu.show(event.clientX, event.clientY, items);
+  }
+
+  private startInlineRename(tab: Tab): void {
+    const titleEl = tab.tabEl.querySelector('.tab-title') as HTMLElement | null;
+    if (!titleEl) return;
+
+    const currentTitle = tab.title;
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.className = 'tab-title-input';
+    input.value = currentTitle;
+
+    titleEl.replaceWith(input);
+    input.focus();
+    input.select();
+
+    const finishRename = (): void => {
+      const newTitle = input.value.trim() || currentTitle;
+      tab.title = newTitle;
+      tab.isCustomTitle = true;
+      const newTitleEl = document.createElement('span');
+      newTitleEl.className = 'tab-title';
+      newTitleEl.textContent = newTitle;
+      input.replaceWith(newTitleEl);
+      this.syncStatusBar();
+      this.syncSession();
+    };
+
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        input.blur();
+      } else if (e.key === 'Escape') {
+        input.value = currentTitle;
+        input.blur();
+      }
+    });
+
+    input.addEventListener('blur', finishRename, { once: true });
+  }
+
   private updateTabTitle(tab: Tab, title: string): void {
     tab.title = title;
     const titleEl = tab.tabEl.querySelector('.tab-title');
     if (titleEl) {
       titleEl.textContent = title;
     }
+    if (tab.id === this.activeId) {
+      this.syncStatusBar();
+    }
+    this.syncSession();
   }
 
   private updateTabElementZoom(tab: Tab): void {
@@ -458,7 +701,7 @@ export class TabStore {
       if (!zoomBadge) {
         const badgeEl = document.createElement('span');
         badgeEl.className = 'tab-zoom-badge';
-        badgeEl.textContent = '🔍';
+        badgeEl.innerHTML = icon('expand');
         badgeEl.title = 'Pane zoomed (Ctrl+Shift+Z)';
         tab.tabEl.insertBefore(badgeEl, tab.tabEl.querySelector('.tab-close'));
       }
@@ -520,6 +763,7 @@ export class TabStore {
     }
     this.renderTabPanes(tab);
     this.focusTerminal(tab, tab.activeLeafId);
+    this.syncStatusBar();
   }
 
   private focusLeaf(tab: Tab, leafId: string): void {
@@ -528,6 +772,7 @@ export class TabStore {
       this.renderTabPanes(tab);
     }
     this.focusTerminal(tab, leafId);
+    this.syncStatusBar();
   }
 
   private focusTerminal(tab: Tab, leafId: string): void {
@@ -566,6 +811,7 @@ export class TabStore {
     const [moved] = this.tabs.splice(fromIndex, 1);
     this.tabs.splice(toIndex, 0, moved);
     this.renderTabBar();
+    this.syncSession();
   }
 
   private renderTabBar(): void {
@@ -573,6 +819,37 @@ export class TabStore {
       this.tabbarListEl.appendChild(tab.tabEl);
       tab.tabEl.classList.toggle('active', tab.id === this.activeId);
     }
+  }
+
+  private syncStatusBar(): void {
+    if (!this.statusBar) return;
+    const tab = this.getActiveTab();
+    if (!tab) return;
+
+    const profile = this.getProfileById(tab.profileId);
+    this.statusBar.updateProfile(profile?.name || tab.title, profile?.color);
+
+    const leaves = collectLeaves(tab.root);
+    const activeIndex = leaves.findIndex((l) => l.id === tab.activeLeafId);
+    this.statusBar.updatePanes(Math.max(0, activeIndex), leaves.length, tab.isZoomed);
+    this.statusBar.updateBroadcast(this.isBroadcast);
+
+    const ports = this.portSniffer.getPortsForTab(tab.id).map((p) => p.port);
+    this.statusBar.updatePorts(ports);
+  }
+
+  private syncSession(): void {
+    if (!this.settings?.terminal.restoreSession || !this.sessionManager) return;
+    const activeIndex = this.tabs.findIndex((t) => t.id === this.activeId);
+    const savedTabs = this.tabs.map((t) => {
+      const leaf = findLeaf(t.root, t.activeLeafId);
+      return {
+        profileId: t.profileId,
+        title: t.title,
+        cwd: leaf?.cwd
+      };
+    });
+    this.sessionManager.saveSession(savedTabs, activeIndex);
   }
 
   private buildTabElement(id: string, initialTitle: string): HTMLButtonElement {
@@ -584,19 +861,34 @@ export class TabStore {
     const titleEl = document.createElement('span');
     titleEl.className = 'tab-title';
     titleEl.textContent = initialTitle;
+    titleEl.title = 'Double-click to rename';
 
     const closeBtn = document.createElement('button');
     closeBtn.className = 'tab-close';
-    closeBtn.title = 'Close';
+    closeBtn.title = 'Close tab';
     closeBtn.setAttribute('aria-label', 'Close tab');
     closeBtn.innerHTML = '<svg viewBox="0 0 10 10"><path d="M0 0l10 10M10 0L0 10" /></svg>';
 
     tabEl.append(titleEl, closeBtn);
 
     tabEl.addEventListener('click', () => this.setActiveTab(id));
+    
+    // Cift tiklama ile sekme adlandirma
+    titleEl.addEventListener('dblclick', (e) => {
+      e.stopPropagation();
+      const tab = this.tabsById.get(id);
+      if (tab) this.startInlineRename(tab);
+    });
+
+    // Sekmeye sag tiklama menusu
+    tabEl.addEventListener('contextmenu', (event) => {
+      const tab = this.tabsById.get(id);
+      if (tab) this.handleTabContextMenu(event, tab);
+    });
+
     closeBtn.addEventListener('click', (event) => {
       event.stopPropagation();
-      this.closeTab(id);
+      void this.requestCloseTab(id);
     });
 
     tabEl.addEventListener('mousedown', (event) => {
@@ -605,7 +897,7 @@ export class TabStore {
     tabEl.addEventListener('auxclick', (event) => {
       if (event.button === 1) {
         event.preventDefault();
-        this.closeTab(id);
+        void this.requestCloseTab(id);
       }
     });
 

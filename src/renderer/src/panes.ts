@@ -39,6 +39,11 @@ export interface CreatePaneLeafOptions {
   cwd?: string;
   onInput?: (data: string) => void;
   onWrite?: (leafId: string, data: string) => void;
+  onContextMenu?: (event: MouseEvent, leaf: PaneLeaf) => void;
+  onCursorMove?: (line: number, col: number) => void;
+  copyOnSelect?: boolean;
+  pasteOnRightClick?: boolean;
+  scrollback?: number;
 }
 
 export async function createPaneLeaf(
@@ -66,7 +71,7 @@ export async function createPaneLeaf(
     lineHeight: 1.2,
     letterSpacing: 0,
     rescaleOverlappingGlyphs: true,
-    scrollback: 5000,
+    scrollback: options?.scrollback ?? 10000,
     allowTransparency: true,
     theme: terminalTheme
   });
@@ -88,6 +93,22 @@ export async function createPaneLeaf(
     }
   });
 
+  // Metin secildiginde otomatik kopyalama (copyOnSelect)
+  terminal.onSelectionChange(() => {
+    if (options?.copyOnSelect && terminal.hasSelection()) {
+      const selectedText = terminal.getSelection();
+      if (selectedText) {
+        void navigator.clipboard.writeText(selectedText);
+      }
+    }
+  });
+
+  // Imlec hareket takibi
+  terminal.onCursorMove(() => {
+    const buffer = terminal.buffer.active;
+    options?.onCursorMove?.(buffer.cursorY + 1, buffer.cursorX + 1);
+  });
+
   const leaf: PaneLeaf = {
     kind: 'leaf',
     id,
@@ -98,6 +119,20 @@ export async function createPaneLeaf(
     resizeObserver: null as unknown as ResizeObserver,
     cwd: options?.cwd
   };
+
+  // Sag tik menusu ya da dogrudan yapistirma (pasteOnRightClick)
+  container.addEventListener('contextmenu', (event) => {
+    event.preventDefault();
+    if (options?.pasteOnRightClick) {
+      void navigator.clipboard.readText().then((clipText) => {
+        if (clipText) {
+          terminal.paste(clipText);
+        }
+      });
+    } else {
+      options?.onContextMenu?.(event, leaf);
+    }
+  });
 
   registerSmartLinks(terminal, () => leaf.cwd);
 

@@ -1,6 +1,6 @@
 {
   "name": "bitig",
-  "version": "0.9.8",
+  "version": "1.0.0",
   "description": "Windows Terminal'e alternatif, ozellestirilebilir masaustu terminal emulatoru",
   "main": "./out/main/index.js",
   "author": "sametgrtna@gmail.com",
@@ -9,7 +9,11 @@
   "scripts": {
     "dev": "electron-vite dev",
     "build": "electron-vite build",
-    "preview": "electron-vite preview"
+    "preview": "electron-vite preview",
+    "typecheck": "tsc --noEmit",
+    "pack": "electron-vite build && electron-builder --dir",
+    "dist": "electron-vite build && electron-builder --win",
+    "dist:portable": "electron-vite build && electron-builder --win portable"
   },
   "dependencies": {
     "@xterm/addon-fit": "^0.11.0",

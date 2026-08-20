@@ -23,6 +23,12 @@ import {
   type AiExplainErrorRequest
 } from '../shared/aiTypes';
 
+import {
+  PLUGIN_CHANNELS,
+  type PluginState,
+  type PluginContributions
+} from '../shared/pluginTypes';
+
 // nodeIntegration kapali, contextIsolation acik: renderer'a sadece bu daralmis
 // API yuzeyi contextBridge ile sunulur, dogrudan Node/Electron erisimi verilmez.
 const ptyApi = {
@@ -163,6 +169,29 @@ const aiApi = {
     ipcRenderer.invoke(AI_CHANNELS.testConnection)
 };
 
+const pluginsApi = {
+  list: (): Promise<PluginState[]> => ipcRenderer.invoke(PLUGIN_CHANNELS.list),
+  getContributions: (): Promise<PluginContributions> =>
+    ipcRenderer.invoke(PLUGIN_CHANNELS.getContributions),
+  toggle: (id: string, enabled: boolean): Promise<PluginState[]> =>
+    ipcRenderer.invoke(PLUGIN_CHANNELS.toggle, { id, enabled }),
+  reload: (): Promise<PluginState[]> => ipcRenderer.invoke(PLUGIN_CHANNELS.reload),
+  openDir: (): void => {
+    ipcRenderer.send(PLUGIN_CHANNELS.openDir);
+  },
+  executeAction: (actionId: string): void => {
+    ipcRenderer.send('plugin:execute-action', { actionId });
+  },
+  onContributions: (listener: (contributions: PluginContributions) => void): (() => void) => {
+    const subscription = (
+      _event: Electron.IpcRendererEvent,
+      contributions: PluginContributions
+    ): void => listener(contributions);
+    ipcRenderer.on(PLUGIN_CHANNELS.contributions, subscription);
+    return () => ipcRenderer.removeListener(PLUGIN_CHANNELS.contributions, subscription);
+  }
+};
+
 export type BitigApi = {
   pty: typeof ptyApi;
   windowControls: typeof windowApi;
@@ -174,6 +203,7 @@ export type BitigApi = {
   cockpit: typeof cockpitApi;
   quake: typeof quakeApi;
   ai: typeof aiApi;
+  plugins: typeof pluginsApi;
 };
 
 const bitigApi: BitigApi = {
@@ -186,7 +216,8 @@ const bitigApi: BitigApi = {
   history: historyApi,
   cockpit: cockpitApi,
   quake: quakeApi,
-  ai: aiApi
+  ai: aiApi,
+  plugins: pluginsApi
 };
 
 contextBridge.exposeInMainWorld('bitig', bitigApi);
