@@ -1,14 +1,15 @@
 import { join } from 'node:path';
-import { app, BrowserWindow, shell } from 'electron';
+import { app, BrowserWindow, globalShortcut, shell } from 'electron';
 import { PtyManager } from './pty/ptyManager';
 import { registerPtyHandlers } from './ipc/ptyHandlers';
-import { registerWindowHandlers } from './ipc/windowHandlers';
+import { attachWindowEvents, registerWindowHandlers } from './ipc/windowHandlers';
 import { registerThemeHandlers } from './ipc/themeHandlers';
 import { registerSettingsHandlers } from './ipc/settingsHandlers';
 import { registerFontHandlers } from './ipc/fontHandlers';
 import { registerSnippetHandlers } from './ipc/snippetHandlers';
 import { registerHistoryHandlers } from './ipc/historyHandlers';
 import { registerCockpitHandlers } from './ipc/cockpitHandlers';
+import { registerCompletionHandlers } from './ipc/completionHandlers';
 import { registerQuakeHandlers, unregisterQuakeHandlers } from './ipc/quakeHandlers';
 import { registerAiHandlers } from './ipc/aiHandlers';
 import { PluginManager } from './plugins/pluginManager';
@@ -27,13 +28,11 @@ const gotTheLock = app.requestSingleInstanceLock();
 if (!gotTheLock) {
   app.quit();
 } else {
+  // Bitig'i ikinci kez calistirmak mevcut pencereyi one getirmez; Windows
+  // Terminal'de oldugu gibi YENI ve bagimsiz bir pencere acar. Tek proses
+  // kaldigimiz icin settings.json/history.json'in tek yazicisi olur.
   app.on('second-instance', () => {
-    const windows = BrowserWindow.getAllWindows();
-    if (windows.length > 0) {
-      const win = windows[0];
-      if (win.isMinimized()) win.restore();
-      win.focus();
-    }
+    if (app.isReady()) createMainWindow();
   });
 }
 
@@ -45,6 +44,21 @@ const historyStore = new HistoryStore();
 const pluginManager = new PluginManager();
 
 const iconPath = join(__dirname, '../../assets/icon.png');
+
+/** Acik ana pencereler. Quake HUD bu sete girmez - cikis karari sadece
+ *  gercek Bitig pencerelerine bakar. */
+const mainWindows = new Set<BrowserWindow>();
+
+/** Son ana pencere kapaninca uygulamayi tamamen sonlandirir.
+ *  `window-all-closed`'a guvenemeyiz: gizli Quake HUD penceresi acikken o olay
+ *  hic tetiklenmez ve uygulama arkaplanda hayalet proses olarak kalir. */
+function quitIfNoMainWindows(): void {
+  if (mainWindows.size > 0) return;
+  ptyManager.disposeAll();
+  unregisterQuakeHandlers();
+  globalShortcut.unregisterAll();
+  app.quit();
+}
 
 function createMainWindow(): void {
   const mainWindow = new BrowserWindow({
@@ -70,6 +84,15 @@ function createMainWindow(): void {
     }
   });
 
+  mainWindows.add(mainWindow);
+  const ownerId = mainWindow.webContents.id;
+  mainWindow.on('closed', () => {
+    mainWindows.delete(mainWindow);
+    // Sadece bu pencereye ait shell'ler oldurulur; diger pencereler etkilenmez.
+    ptyManager.disposeByOwner(ownerId);
+    quitIfNoMainWindows();
+  });
+
   mainWindow.once('ready-to-show', () => mainWindow.show());
 
   // Uygulama disina acilan linkleri varsayilan tarayicida ac.
@@ -78,10 +101,7 @@ function createMainWindow(): void {
     return { action: 'deny' };
   });
 
-  registerPtyHandlers(ptyManager, mainWindow.webContents);
-  registerWindowHandlers(mainWindow);
-  registerThemeHandlers(themeStore, mainWindow.webContents);
-  registerSettingsHandlers(settingsStore, mainWindow);
+  attachWindowEvents(mainWindow);
   void pluginManager.init(mainWindow.webContents);
 
   mainWindow.webContents.on('did-finish-load', () => {
@@ -116,10 +136,15 @@ void app.whenReady().then(async () => {
   // Pencereye bagli olmayan handler'lar; ipcMain.handle ayni kanal icin
   // ikinci kez cagrilinca hata verdigi icin pencere olusturmanin degil
   // uygulama baslangicinin parcasi.
+  registerPtyHandlers(ptyManager, settingsStore);
+  registerWindowHandlers(() => createMainWindow());
+  registerThemeHandlers(themeStore);
+  registerSettingsHandlers(settingsStore);
   registerFontHandlers();
   registerSnippetHandlers(snippetStore);
   registerHistoryHandlers(historyStore);
   registerCockpitHandlers();
+  registerCompletionHandlers();
   registerAiHandlers(settingsStore);
   registerPluginHandlers(pluginManager);
 
@@ -133,10 +158,11 @@ void app.whenReady().then(async () => {
 
 app.on('window-all-closed', () => {
   ptyManager.disposeAll();
-  if (process.platform !== 'darwin') app.quit();
+  app.quit();
 });
 
 app.on('before-quit', () => {
   ptyManager.disposeAll();
   unregisterQuakeHandlers();
+  globalShortcut.unregisterAll();
 });

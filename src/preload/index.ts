@@ -15,6 +15,7 @@ import { FONT_CHANNELS } from '../shared/fontTypes';
 import { SNIPPET_CHANNELS, type BitigSnippet } from '../shared/snippetTypes';
 import { HISTORY_CHANNELS, type HistoryEntry } from '../shared/historyTypes';
 import { COCKPIT_CHANNELS } from '../shared/cockpitTypes';
+import { COMPLETION_CHANNELS, type CompletionContext } from '../shared/completionTypes';
 import { QUAKE_CHANNELS } from '../shared/quakeTypes';
 import {
   AI_CHANNELS,
@@ -76,6 +77,11 @@ const windowApi = {
   },
 
   isMaximized: (): Promise<boolean> => ipcRenderer.invoke(WINDOW_CHANNELS.isMaximized),
+
+  /** Tamamen bagimsiz yeni bir Bitig penceresi acar. */
+  newWindow: (): void => {
+    ipcRenderer.send(WINDOW_CHANNELS.newWindow);
+  },
 
   notify: (payload: WindowNotifyPayload): void => {
     ipcRenderer.send(WINDOW_CHANNELS.notify, payload);
@@ -152,6 +158,12 @@ const cockpitApi = {
     ipcRenderer.invoke(COCKPIT_CHANNELS.openFile, payload)
 };
 
+const completionApi = {
+  /** Verilen calisma dizini icin proje farkindalikli tamamlama baglami. */
+  context: (cwd: string): Promise<CompletionContext> =>
+    ipcRenderer.invoke(COMPLETION_CHANNELS.context, cwd)
+};
+
 const quakeApi = {
   /** Quake HUD penceresini goster/gizle. Yeni gorünürlük durumunu (boolean) doner. */
   toggle: (): Promise<boolean> => ipcRenderer.invoke(QUAKE_CHANNELS.toggle),
@@ -201,6 +213,7 @@ export type BitigApi = {
   snippets: typeof snippetsApi;
   history: typeof historyApi;
   cockpit: typeof cockpitApi;
+  completion: typeof completionApi;
   quake: typeof quakeApi;
   ai: typeof aiApi;
   plugins: typeof pluginsApi;
@@ -215,6 +228,7 @@ const bitigApi: BitigApi = {
   snippets: snippetsApi,
   history: historyApi,
   cockpit: cockpitApi,
+  completion: completionApi,
   quake: quakeApi,
   ai: aiApi,
   plugins: pluginsApi

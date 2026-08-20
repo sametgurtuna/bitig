@@ -1,6 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { dialog, ipcMain, type BrowserWindow } from 'electron';
+import { BrowserWindow, dialog, ipcMain } from 'electron';
 import { SETTINGS_CHANNELS } from '../../shared/settingsTypes';
 import type { BitigSettingsPatch } from '../../shared/settingsTypes';
 import type { SettingsStore } from '../settings/settingsStore';
@@ -23,9 +23,7 @@ const MIME_BY_EXTENSION: Record<string, string> = {
  * URL'i olarak dondurur - boylece CSP'yi `file:`e acmamiza gerek kalmaz ve
  * renderer hicbir zaman keyfi bir dosya yoluna erismez.
  */
-export function registerSettingsHandlers(settingsStore: SettingsStore, win: BrowserWindow): void {
-  const webContents = win.webContents;
-
+export function registerSettingsHandlers(settingsStore: SettingsStore): void {
   ipcMain.handle(SETTINGS_CHANNELS.get, () => settingsStore.get());
 
   ipcMain.on(SETTINGS_CHANNELS.set, (_event, patch: BitigSettingsPatch) => {
@@ -36,14 +34,18 @@ export function registerSettingsHandlers(settingsStore: SettingsStore, win: Brow
     settingsStore.reset();
   });
 
-  ipcMain.handle(SETTINGS_CHANNELS.pickBackgroundImage, async () => {
-    const result = await dialog.showOpenDialog(win, {
+  ipcMain.handle(SETTINGS_CHANNELS.pickBackgroundImage, async (event) => {
+    const parent = BrowserWindow.fromWebContents(event.sender);
+    const dialogOptions = {
       title: 'Arkaplan gorseli sec',
-      properties: ['openFile'],
+      properties: ['openFile' as const],
       filters: [
         { name: 'Gorseller', extensions: ['png', 'jpg', 'jpeg', 'gif', 'webp', 'bmp', 'svg'] }
       ]
-    });
+    };
+    const result = parent
+      ? await dialog.showOpenDialog(parent, dialogOptions)
+      : await dialog.showOpenDialog(dialogOptions);
     if (result.canceled || result.filePaths.length === 0) return null;
     return result.filePaths[0];
   });
@@ -69,9 +71,10 @@ export function registerSettingsHandlers(settingsStore: SettingsStore, win: Brow
   });
 
   settingsStore.onChange((settings) => {
-    if (!win.isDestroyed() && !webContents.isDestroyed()) {
+    for (const win of BrowserWindow.getAllWindows()) {
+      if (win.isDestroyed() || win.webContents.isDestroyed()) continue;
       try {
-        webContents.send(SETTINGS_CHANNELS.changed, settings);
+        win.webContents.send(SETTINGS_CHANNELS.changed, settings);
       } catch {
         // Pencere kapaniyorsa sessizce gec
       }

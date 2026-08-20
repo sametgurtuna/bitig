@@ -12,7 +12,8 @@
 
 | Version | Date | Headline |
 |---|---|---|
-| [**1.0.0**](#100---2026-08-20) | 2026-08-20 | Stable release: plugin runtime, Windows installer, compact icon-driven UI |
+| [**1.0.1**](#101---2026-08-20) | 2026-08-20 | Inline command suggestions, true multi-window, live working-directory tab titles |
+| [1.0.0](#100---2026-08-20) | 2026-08-20 | Stable release: plugin runtime, Windows installer, compact icon-driven UI |
 | [0.9.8](#098---2026-08-20) | 2026-08-20 | Bitig Bilge, the local and BYOK AI companion |
 | [0.9.5](#095---2026-08-20) | 2026-08-20 | Quake HUD mode and Broadcast Input |
 | [0.9.0](#090---2026-08-19) | 2026-08-19 | Developer Cockpit: port sniffer, smart links, secret shield |
@@ -22,6 +23,84 @@
 | [0.7.0](#070---2026-08-19) | 2026-08-19 | Shell profiles, auto-discovery, in-terminal search |
 | [0.6.x](#06x---2026-08-19) | 2026-08-19 | Settings panel, font picker, Nerd Font detection |
 | [0.1.0](#010---2026-08-19) | 2026-08-19 | First working terminal: window, PTY, xterm.js |
+
+---
+
+## [1.0.1] - 2026-08-20
+
+### Added
+
+- **Inline Command Suggestions (`src/renderer/src/autocomplete.ts`):**
+  - Fish/Warp-style ghost text: as you type, the most likely full command is
+    rendered translucently after the cursor. `Tab` (or `→` / `End` at the end of
+    the line) accepts it, `Esc` dismisses it. When there is no suggestion, `Tab`
+    is passed through untouched so the shell's own completion still works.
+  - Candidates are ranked from three sources, prefix matches beating fuzzy ones:
+    command history (frecency-ordered), project context (`package.json` scripts,
+    `Makefile` targets, subdirectories after `cd `), and a built-in dictionary of
+    common developer commands.
+  - New `completion:context` IPC channel (`src/main/ipc/completionHandlers.ts`)
+    resolves project context in the main process, cached per directory by mtime,
+    so no disk I/O happens on the keystroke path.
+  - The ghost text is a positioned DOM overlay; nothing is ever written into the
+    terminal buffer, so it cannot collide with the shell's own echo. Its letter
+    spacing is corrected at render time to land exactly on the character grid.
+  - Toggle: Settings > Terminal > "Inline Command Suggestions"
+    (`terminal.inlineSuggestions`, default on).
+- **True Multi-Window Support:**
+  - Launching Bitig again now opens a **new, fully independent window** instead of
+    focusing the existing one; `Ctrl+Shift+N` (`window.new`) and the tab context
+    menu do the same from inside the app. New `window:new-window` IPC channel.
+  - PTY sessions are now owned per window (`PtyManager.disposeByOwner`): closing
+    one window terminates only its shells and leaves other windows untouched.
+  - `pty:*`, `window:*`, `theme:*` and `settings:*` handlers are registered once
+    per application and resolve their target window from `event.sender`; push
+    events broadcast to every open window. Previously they captured a single
+    `webContents`, which made a second window impossible (`ipcMain.handle` throws
+    on a duplicate channel).
+- **Shell Integration for Live Working Directories (`src/main/pty/shellIntegration.ts`):**
+  - Bitig now injects a prompt hook into the shell it spawns so every prompt emits
+    the current directory as OSC 7: PowerShell/pwsh via `-NoExit -EncodedCommand`
+    wrapping the existing `prompt` function, cmd via
+    `/K prompt $E]7;file:///$P$E\$P$G`, bash via `PROMPT_COMMAND`. Existing user
+    prompts are wrapped, never replaced.
+  - The renderer also handles OSC 9;9 (ConEmu/Windows Terminal compatibility) and
+    falls back to `src/renderer/src/cwdTracker.ts`, which infers the directory
+    from the prompt line, for shells that cannot be instrumented (e.g. WSL).
+  - Toggle: Settings > Terminal > "Shell Integration"
+    (`terminal.shellIntegration`, default on).
+- **Publisher identity and code signing:**
+  - `package.json` now carries a structured author (`Samet Gurtuna`) and an MIT
+    `LICENSE`; `electron-builder.yml` adds `copyright`,
+    `win.signtoolOptions.publisherName` and `nsis.uninstallDisplayName`, so the
+    installer and "Apps & Features" show **Samet Gurtuna** as the publisher.
+  - `scripts/make-cert.ps1` generates a local self-signed code-signing
+    certificate; builds pick it up through `CSC_LINK` / `CSC_KEY_PASSWORD` and
+    fall back to an unsigned build when it is absent. Certificates are gitignored.
+
+### Fixed
+
+- **Bitig kept running in the background after every window was closed.** The
+  Quake HUD `BrowserWindow` was created eagerly at startup; because a (hidden)
+  window was always open, Electron's `window-all-closed` never fired and the
+  process survived with its PTY sessions and global hotkey still alive. The HUD is
+  now created lazily on first use, and quitting is driven by an explicit count of
+  real Bitig windows (`quitIfNoMainWindows`).
+- **Tab titles never followed the working directory** — a tab could stay labelled
+  `system32` no matter how many times you `cd`'d. Titles came only from OSC 0/2,
+  which PowerShell and cmd emit once at startup with the executable's full path.
+  Tabs now retitle to the folder name the moment the directory changes, executable
+  path titles are ignored, prompt-emitted titles (oh-my-posh, starship) no longer
+  override the directory, the full path is exposed as the tab tooltip, and
+  manually renamed tabs are still left alone.
+- `assets/**` was missing from the packaged `files` list, so the window icon path
+  did not exist in installed builds.
+- `PLUGIN_CHANNELS` was used in `pluginManager.ts` without being imported; the
+  main/preload `tsconfig` is now part of `npm run typecheck`, which surfaced it.
+- The "Show Bottom Status Bar" settings row was created without
+  `type = 'checkbox'`, so it rendered as a text input.
+- Command history entries are now recorded with the directory they ran in
+  (`HistoryEntry.cwd` was previously always undefined).
 
 ---
 

@@ -2,6 +2,7 @@
 
 export type ActionId =
   | 'tab.new'
+  | 'window.new'
   | 'tab.close'
   | 'tab.next'
   | 'tab.previous'
@@ -49,6 +50,13 @@ export const ACTION_DEFINITIONS: ActionDefinition[] = [
     category: 'Tabs',
     defaultKeys: 'Ctrl+Shift+T',
     description: 'Opens a new tab with the default profile'
+  },
+  {
+    id: 'window.new',
+    name: 'New Window',
+    category: 'Application',
+    defaultKeys: 'Ctrl+Shift+N',
+    description: 'Opens a second, fully independent Bitig window'
   },
   {
     id: 'tab.close',

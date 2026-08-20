@@ -1,16 +1,19 @@
 {
   "name": "bitig",
-  "version": "1.0.0",
-  "description": "Windows Terminal'e alternatif, ozellestirilebilir masaustu terminal emulatoru",
+  "version": "1.0.1",
+  "description": "A customizable Windows terminal emulator built from scratch - an alternative to Windows Terminal",
   "main": "./out/main/index.js",
-  "author": "sametgrtna@gmail.com",
-  "license": "ISC",
+  "author": {
+    "name": "Samet Gurtuna",
+    "email": "sametgrtna@gmail.com"
+  },
+  "license": "MIT",
   "type": "commonjs",
   "scripts": {
     "dev": "electron-vite dev",
     "build": "electron-vite build",
     "preview": "electron-vite preview",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "tsc --noEmit && tsc -p tsconfig.node.json --noEmit",
     "pack": "electron-vite build && electron-builder --dir",
     "dist": "electron-vite build && electron-builder --win",
     "dist:portable": "electron-vite build && electron-builder --win portable"

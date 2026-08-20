@@ -3,6 +3,7 @@ import path from 'node:path';
 import vm from 'node:vm';
 import os from 'node:os';
 import { app, shell, type WebContents } from 'electron';
+import { PLUGIN_CHANNELS } from '../../shared/pluginTypes';
 import type {
   PluginManifest,
   PluginState,
@@ -44,12 +45,27 @@ export class PluginManager {
   private readonly statesFile = path.join(app.getPath('userData'), 'plugin-states.json');
   private plugins = new Map<string, PluginRuntimeInstance>();
   private disabledPluginIds = new Set<string>();
-  private webContents: WebContents | null = null;
+  /** Katkilarin yayinlanacagi pencereler; coklu pencere destegi icin set. */
+  private readonly targets = new Set<WebContents>();
+  private initialized = false;
   private widgets = new Map<string, StatusBarWidgetContribution>();
   private actions = new Map<string, PluginActionContribution>();
 
+  /** Bir pencereyi katki yayin listesine ekler (pencere kapaninca cikarilir). */
+  registerWindow(webContents: WebContents): void {
+    this.targets.add(webContents);
+    webContents.once('destroyed', () => this.targets.delete(webContents));
+  }
+
   async init(webContents: WebContents): Promise<void> {
-    this.webContents = webContents;
+    this.registerWindow(webContents);
+    // Eklentiler uygulama basina bir kez yuklenir; yeni pencereler sadece
+    // mevcut katkilari alir.
+    if (this.initialized) {
+      this.broadcastContributions();
+      return;
+    }
+    this.initialized = true;
     this.ensurePluginsDir();
     this.loadDisabledStates();
     this.seedDefaultPlugins();
@@ -451,9 +467,14 @@ bitig.actions.register({
   }
 
   broadcastContributions(): void {
-    if (this.webContents && !this.webContents.isDestroyed()) {
+    const contributions = this.getContributions();
+    for (const target of Array.from(this.targets)) {
+      if (target.isDestroyed()) {
+        this.targets.delete(target);
+        continue;
+      }
       try {
-        this.webContents.send(PLUGIN_CHANNELS.contributions, this.getContributions());
+        target.send(PLUGIN_CHANNELS.contributions, contributions);
       } catch {
         // sessizce gec
       }

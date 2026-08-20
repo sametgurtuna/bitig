@@ -26,7 +26,9 @@ const DEFAULT_SETTINGS: BitigSettings = {
     confirmBeforeClose: true,
     restoreSession: false,
     showStatusBar: true,
-    scrollback: 10000
+    scrollback: 10000,
+    inlineSuggestions: true,
+    shellIntegration: true
   },
   profiles: DEFAULT_PROFILES,
   defaultProfileId: 'powershell',

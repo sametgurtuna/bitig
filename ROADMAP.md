@@ -2,7 +2,7 @@
 
 # Bitig Roadmap
 
-<sub>Every milestone through <b>1.0.0</b> is shipped. This document is the design record behind them, and the plan for what comes next.</sub>
+<sub>Every milestone through <b>1.0.1</b> is shipped. This document is the design record behind them, and the plan for what comes next.</sub>
 
 <sub><a href="README.md">README</a> · <a href="FEATURES.md">Features</a> · <a href="CHANGELOG.md">Changelog</a></sub>
 
@@ -18,7 +18,7 @@ decisions are made and revisited once real usage exposes wrong assumptions.
 
 **Status legend:** `[ ]` not started · `[~]` in progress · `[x]` done.
 
-**Current state:** version 1.0.0 is released. Milestones 1 through 16 are
+**Current state:** version 1.0.1 is released. Milestones 1 through 17 are
 complete and shipped as an NSIS installer and a portable executable for
 Windows 11 x64. Work beyond this point is tracked under
 [Post-1.0 Direction](#post-10-direction).
@@ -68,6 +68,7 @@ design decision is not obvious:
 | 14 | AI terminal companion ("Bitig Bilge" - Local & BYOK) | 8, 11 | `0.9.8` (done) |
 | 15 | Lightweight plugin system & sandboxing | 9, 10 | `1.0.0` (done) |
 | 16 | Packaging, installer & portable build | all | `1.0.0` (done) |
+| 17 | Inline suggestions, multi-window, shell integration | 16 | `1.0.1` (done) |
 
 Milestones can be built iteratively; each milestone represents a self-contained, tested, and deliverable capability.
 
@@ -985,6 +986,75 @@ status bar widgets, custom themes, custom OSC handlers, and AI prompt hooks.
 - [x] Native high-DPI icon asset generation (`assets/icon.ico`, `assets/icon.png`).
 - [x] Single instance lock and application window icon integration (`src/main/index.ts`).
 - [x] Verified zero-error production binary packaging with prebuilt `node-pty` ConPTY modules.
+
+---
+
+## Milestone 17 - Inline Suggestions, Multi-Window & Shell Integration (`1.0.1`, done)
+
+### Why now
+
+Three problems surfaced immediately after 1.0.0 shipped, all of them things a
+terminal is expected to get right before it gets clever:
+
+1. Retyping the same commands with no assistance beyond `Ctrl+R`.
+2. The installed build behaved like a background service: a second launch only
+   focused the existing window, and closing that window left the process alive.
+3. Tab titles never changed, so a tab could read `system32` for an entire
+   session regardless of where you actually were.
+
+### Design
+
+**Inline suggestions.** Ghost text is a *DOM overlay*, never terminal content.
+Writing a suggestion into the xterm buffer would race the shell's own echo and
+corrupt the line beyond recovery; an overlay can be wrong without consequences.
+The typed line is tracked from the input stream (the same approach
+`telemetry.ts` already uses) rather than read back from the buffer, because
+reading the buffer means guessing where the prompt ends, which is unsolvable
+across prompt themes. Candidates come from history (frecency), project context
+resolved in main (`completion:context`, mtime-cached), and a small built-in
+dictionary; prefix matches always beat fuzzy matches. `Tab` is only intercepted
+while a suggestion is visible, so shell completion is never shadowed.
+
+**Multi-window.** One process, many `BrowserWindow`s — chosen over
+process-per-window so that `settings.json` and `history.json` keep exactly one
+writer and the `fs.watch` stores cannot race. This required making every
+`ipcMain` handler window-agnostic (`event.sender` instead of a captured
+`webContents`), since `ipcMain.handle` throws on a duplicate channel, and giving
+`PtyManager` per-window ownership so one window's shells die with it.
+
+**Shell integration.** The only reliable way to know the working directory of a
+process you do not own on Windows is to make the shell tell you. Bitig injects a
+prompt hook that emits OSC 7 on every prompt, wrapping whatever `prompt` /
+`PROMPT_COMMAND` the user already has. PowerShell uses `-EncodedCommand` so no
+quoting scheme has to survive ConPTY's command-line construction. Shells that
+cannot be instrumented fall back to inferring the directory from the prompt line.
+
+### Sub-tasks
+
+- [x] `src/renderer/src/autocomplete.ts`: input-line tracking, candidate ranking, ghost overlay with grid-aligned letter spacing.
+- [x] `src/shared/completionTypes.ts` + `src/main/ipc/completionHandlers.ts`: `completion:context` with per-directory mtime cache.
+- [x] `terminal.inlineSuggestions` and `terminal.shellIntegration` settings plus Settings > Terminal toggles.
+- [x] Window-agnostic `pty:*`, `window:*`, `theme:*`, `settings:*` handlers; `PtyManager.disposeByOwner`; `PluginManager` broadcasting to every window.
+- [x] `window:new-window` channel, `window.new` action (`Ctrl+Shift+N`), tab context menu entry.
+- [x] Lazy Quake HUD creation and `quitIfNoMainWindows`, fixing the background ghost process.
+- [x] `src/main/pty/shellIntegration.ts` (PowerShell / cmd / bash) and `src/renderer/src/cwdTracker.ts` fallback.
+- [x] CWD-driven tab titles with executable-path filtering, tooltips, and custom-rename protection.
+- [x] Publisher metadata, MIT `LICENSE`, `scripts/make-cert.ps1`, `CSC_LINK`-based signing.
+
+### Acceptance criteria
+
+- [x] Typing a prefix of a previously run command shows ghost text; `Tab` accepts it, `Esc` dismisses it, and `Tab` with no suggestion still triggers shell completion.
+- [x] `cd Desktop` renames the tab to `Desktop` immediately; manually renamed tabs are unaffected.
+- [x] Launching the executable twice yields two independent windows; closing one leaves the other's sessions running, and closing the last leaves **zero** processes behind (verified on the packaged build).
+- [x] The installer and Apps & Features show Samet Gurtuna as the publisher; `Get-AuthenticodeSignature` reports `CN=Samet Gurtuna`.
+
+### Deviation
+
+Prompt-emitted window titles (oh-my-posh, starship) are now *ignored* whenever a
+working directory is known. The original plan was "last event wins", but in
+practice those themes publish the last command as the title, which is exactly
+what the milestone set out to replace. Titles from OSC 0/2 still win for panes
+where no directory could be determined (e.g. `ssh` sessions).
 
 ---
 

@@ -1,4 +1,4 @@
-import { ipcMain, type WebContents } from 'electron';
+import { ipcMain } from 'electron';
 import { PTY_CHANNELS } from '../../shared/ptyTypes';
 import type {
   PtyCreateOptions,
@@ -8,28 +8,42 @@ import type {
   PtyWritePayload
 } from '../../shared/ptyTypes';
 import type { PtyManager } from '../pty/ptyManager';
+import type { SettingsStore } from '../settings/settingsStore';
 
 /**
  * pty:* IPC kanallarini PtyManager'a baglar. Renderer -> main yonundeki
  * cagrilari dinler ve main -> renderer yonunde pty:data / pty:exit event'lerini gonderir.
+ *
+ * Handler'lar uygulama basina bir kez kaydedilir; hedef pencere her cagrida
+ * `event.sender` uzerinden cozulur. Boylece birden fazla ana pencere ayni
+ * kanallari paylasabilir (bkz. CLAUDE.md "Coklu Pencere").
  */
-export function registerPtyHandlers(ptyManager: PtyManager, webContents: WebContents): void {
-  ipcMain.handle(PTY_CHANNELS.create, (_event, options: PtyCreateOptions): PtyCreateResult => {
-    const id = ptyManager.create(options.cols, options.rows, options.command, options.args, options.cwd);
+export function registerPtyHandlers(ptyManager: PtyManager, settingsStore: SettingsStore): void {
+  ipcMain.handle(PTY_CHANNELS.create, (event, options: PtyCreateOptions): PtyCreateResult => {
+    const sender = event.sender;
+    const id = ptyManager.create({
+      cols: options.cols,
+      rows: options.rows,
+      command: options.command,
+      args: options.args,
+      cwd: options.cwd,
+      ownerId: sender.id,
+      shellIntegration: settingsStore.get().terminal.shellIntegration !== false
+    });
 
     ptyManager.onData(id, (data) => {
-      if (!webContents.isDestroyed()) {
+      if (!sender.isDestroyed()) {
         try {
-          webContents.send(PTY_CHANNELS.data, { id, data });
+          sender.send(PTY_CHANNELS.data, { id, data });
         } catch {
           // Pencere kapaniyorsa veya nesne yok edildiyse sessizce gec
         }
       }
     });
     ptyManager.onExit(id, (exitCode) => {
-      if (!webContents.isDestroyed()) {
+      if (!sender.isDestroyed()) {
         try {
-          webContents.send(PTY_CHANNELS.exit, { id, exitCode });
+          sender.send(PTY_CHANNELS.exit, { id, exitCode });
         } catch {
           // Pencere kapaniyorsa veya nesne yok edildiyse sessizce gec
         }

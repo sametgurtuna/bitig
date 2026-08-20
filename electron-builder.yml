@@ -1,6 +1,7 @@
 appId: com.bitig.app
 productName: Bitig
 executableName: bitig
+copyright: Copyright (c) 2026 Samet Gurtuna
 npmRebuild: false
 
 directories:
@@ -10,6 +11,7 @@ directories:
 files:
   - out/**/*
   - package.json
+  - assets/**/*
   - node_modules/**/*
   - "!node_modules/*/{CHANGELOG.md,README.md,README,readme.md,readme}"
   - "!node_modules/*/{test,__tests__,tests,powered-test,example,examples}"
@@ -23,6 +25,16 @@ asarUnpack:
 
 win:
   icon: assets/icon.ico
+  # "Uygulamalar ve Ozellikler" ile kurulum sihirbazindaki yayinci adi.
+  # Kod imzalama sertifikasi CSC_LINK/CSC_KEY_PASSWORD ortam degiskenleriyle
+  # verilir (bkz. scripts/make-cert.ps1 ve README > Building & Signing);
+  # sertifika yoksa build imzasiz tamamlanir.
+  legalTrademarks: Bitig
+  # Sertifika (CSC_LINK) verilmezse build imzasiz tamamlanir.
+  forceCodeSigning: false
+  # electron-builder 26'da publisherName kok "win" altindan signtoolOptions'a tasindi.
+  signtoolOptions:
+    publisherName: Samet Gurtuna
   target:
     - target: nsis
       arch:
@@ -37,6 +49,7 @@ nsis:
   createDesktopShortcut: always
   createStartMenuShortcut: true
   shortcutName: Bitig
+  uninstallDisplayName: Bitig
   artifactName: ${productName}-Setup-${version}.${ext}
 
 portable:

@@ -15,6 +15,8 @@ export class ExecutionTelemetry {
   private settings: BitigSettings | null = null;
   private pendingCommands = new Map<string, PendingCommand>();
   private inputBuffers = new Map<string, string>();
+  /** Komutun calistirildigi dizini cozer; gecmise cwd ile kaydedilir. */
+  private cwdResolver: ((paneId: string) => string | undefined) | null = null;
 
   constructor() {
     void window.bitig.settings.get().then((s) => {
@@ -24,6 +26,11 @@ export class ExecutionTelemetry {
     window.bitig.settings.onChanged((s) => {
       this.settings = s;
     });
+  }
+
+  /** TabStore acilista pane -> cwd cozucusunu baglar. */
+  setCwdResolver(resolver: (paneId: string) => string | undefined): void {
+    this.cwdResolver = resolver;
   }
 
   /**
@@ -101,6 +108,7 @@ export class ExecutionTelemetry {
     // Gecmise kaydet
     void window.bitig.history.add({
       command: cmd,
+      cwd: this.cwdResolver?.(paneId),
       durationMs,
       exitCode
     });

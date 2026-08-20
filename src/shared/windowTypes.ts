@@ -7,7 +7,8 @@ export const WINDOW_CHANNELS = {
   close: 'window:close',
   isMaximized: 'window:is-maximized',
   maximizeChange: 'window:maximize-change',
-  notify: 'window:notify'
+  notify: 'window:notify',
+  newWindow: 'window:new-window'
 } as const;
 
 export interface WindowMaximizeChangeEvent {

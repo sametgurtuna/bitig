@@ -43,6 +43,10 @@ export interface TerminalSettings {
   showStatusBar?: boolean;
   /** Geriye dogru kaydirma satiri siniri (default: 10000). */
   scrollback?: number;
+  /** Yazarken seffaf (ghost) komut onerisi goster; Tab ile kabul edilir. */
+  inlineSuggestions?: boolean;
+  /** Kabuga OSC 7 prompt kancasi enjekte et (canli calisma dizini takibi). */
+  shellIntegration?: boolean;
 }
 
 export interface TelemetrySettings {

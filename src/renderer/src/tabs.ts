@@ -22,12 +22,27 @@ import { SearchBar } from './searchBar';
 import type { KeybindingManager } from './keybindings';
 import { ExecutionTelemetry } from './telemetry';
 import { PortSniffer } from './portSniffer';
+import { CwdTracker } from './cwdTracker';
+import { InlineSuggestions } from './autocomplete';
 import type { DiscoveredPort } from '../../shared/cockpitTypes';
 import type { TerminalContextMenu, ContextMenuItem } from './contextMenu';
 import type { ConfirmModal } from './confirmModal';
 import type { StatusBar } from './statusBar';
 import type { SessionManager } from './sessionManager';
 import { icon } from './icons';
+
+/**
+ * Sekme basligi icin yolun son parcasini verir: `C:\Users\samet\Desktop` ->
+ * `Desktop`. Surucu kokunde surucu harfi (`C:`), kullanici klasorunde `~`
+ * gosterilir.
+ */
+function folderNameOf(cwd: string): string {
+  const normalized = cwd.replace(/[\\/]+$/, '');
+  if (!normalized) return cwd;
+  if (/^[A-Za-z]:$/.test(normalized)) return normalized;
+  const parts = normalized.split(/[\\/]/);
+  return parts[parts.length - 1] || normalized;
+}
 
 interface Tab {
   id: string;
@@ -60,6 +75,9 @@ export class TabStore {
   private readonly searchBar: SearchBar;
   private readonly telemetry: ExecutionTelemetry;
   private readonly portSniffer: PortSniffer;
+  private readonly cwdTracker: CwdTracker;
+  /** OSC 7/9 ile guvenilir CWD bildiren pane'ler; bunlarda prompt sezgisi devre disidir. */
+  private readonly oscCwdLeaves = new Set<string>();
   /** Broadcast Input modu aktif mi? Alt+Shift+I ile togglenir. */
   private isBroadcast = false;
   private readonly broadcastBanner: HTMLDivElement;
@@ -79,6 +97,8 @@ export class TabStore {
     this.searchBar = new SearchBar(this.rootEl);
     this.telemetry = telemetry || new ExecutionTelemetry();
     this.portSniffer = new PortSniffer();
+    this.cwdTracker = new CwdTracker();
+    this.telemetry.setCwdResolver((paneId) => this.leavesByPtyId.get(paneId)?.leaf.cwd);
 
     // Broadcast banner: window'un etrafina kirmizi cizgi + uyari mesaji
     this.broadcastBanner = document.createElement('div');
@@ -92,8 +112,14 @@ export class TabStore {
       this.telemetry.handleTerminalOutput(event.id, event.data);
       if (entry) {
         this.portSniffer.processOutput(entry.tab.id, entry.leaf.id, event.data);
+        // Kabuk entegrasyonu OSC 7 yayiyorsa prompt sezgisine hic girmeyiz.
+        if (!this.oscCwdLeaves.has(entry.leaf.id)) {
+          this.cwdTracker.processOutput(entry.leaf.id, event.data);
+        }
       }
     });
+
+    this.cwdTracker.onCwdChanged((leafId, cwd) => this.handleCwdChange(leafId, cwd, false));
 
     window.bitig.pty.onExit((event) => {
       const entry = this.leavesByPtyId.get(event.id);
@@ -113,6 +139,7 @@ export class TabStore {
 
   private registerKeybindings(): void {
     this.keybindings.registerAction('tab.new', () => void this.createTab());
+    this.keybindings.registerAction('window.new', () => window.bitig.windowControls.newWindow());
     this.keybindings.registerAction('tab.close', () => {
       if (this.activeId) void this.requestCloseTab(this.activeId);
     });
@@ -183,7 +210,9 @@ export class TabStore {
       onInput: (data) => this.telemetry.handleTerminalInput(ptyId, data),
       onWrite: (leafId, data) => this.handleLeafWrite(leafId, data),
       onContextMenu: (event, leaf) => this.handlePaneContextMenu(event, leaf),
-      onCursorMove: (line, col) => this.statusBar?.updateCursor(line, col)
+      onCursorMove: (line, col) => this.statusBar?.updateCursor(line, col),
+      onCwdChange: (leafId, newCwd) => this.handleCwdChange(leafId, newCwd, true),
+      inlineSuggestions: this.createSuggestions(() => ptyId)
     };
 
     const leaf = await createPaneLeaf(
@@ -214,9 +243,7 @@ export class TabStore {
 
     // Terminal baslik degisimlerini sekme basligina yansit (eger ozel ad verilmediyse)
     leaf.terminal.onTitleChange((newTitle) => {
-      if (!tab.isCustomTitle && newTitle && newTitle.trim() !== '') {
-        this.updateTabTitle(tab, newTitle.trim());
-      }
+      this.handleTerminalTitle(tab, leaf.id, newTitle);
     });
 
     this.leavesByPtyId.set(leaf.id, { tab, leaf });
@@ -276,6 +303,8 @@ export class TabStore {
 
     for (const leaf of collectLeaves(tab.root)) {
       this.leavesByPtyId.delete(leaf.id);
+      this.cwdTracker.clearLeaf(leaf.id);
+      this.oscCwdLeaves.delete(leaf.id);
       disposePaneLeaf(leaf);
     }
     this.portSniffer.clearTab(id);
@@ -313,6 +342,7 @@ export class TabStore {
       leaf.fitAddon.fit();
       window.bitig.pty.resize(leaf.id, leaf.terminal.cols, leaf.terminal.rows);
     }
+    this.refreshTitleFromActiveLeaf(next);
     this.focusTerminal(next, next.activeLeafId);
     this.syncStatusBar();
     this.syncSession();
@@ -341,7 +371,9 @@ export class TabStore {
       onInput: (data) => this.telemetry.handleTerminalInput(ptyId, data),
       onWrite: (leafId, data) => this.handleLeafWrite(leafId, data),
       onContextMenu: (event, leaf) => this.handlePaneContextMenu(event, leaf),
-      onCursorMove: (line, col) => this.statusBar?.updateCursor(line, col)
+      onCursorMove: (line, col) => this.statusBar?.updateCursor(line, col),
+      onCwdChange: (leafId, newCwd) => this.handleCwdChange(leafId, newCwd, true),
+      inlineSuggestions: this.createSuggestions(() => ptyId)
     };
 
     const newLeaf = await createPaneLeaf(
@@ -353,9 +385,7 @@ export class TabStore {
     ptyId = newLeaf.id;
 
     newLeaf.terminal.onTitleChange((newTitle) => {
-      if (!tab.isCustomTitle && tab.activeLeafId === newLeaf.id && newTitle && newTitle.trim() !== '') {
-        this.updateTabTitle(tab, newTitle.trim());
-      }
+      this.handleTerminalTitle(tab, newLeaf.id, newTitle);
     });
 
     this.leavesByPtyId.set(newLeaf.id, { tab, leaf: newLeaf });
@@ -605,6 +635,13 @@ export class TabStore {
         action: () => this.startInlineRename(tab)
       },
       {
+        id: 'new-window',
+        label: 'New Window',
+        icon: icon('plus'),
+        shortcut: 'Ctrl+Shift+N',
+        action: () => window.bitig.windowControls.newWindow()
+      },
+      {
         id: 'split-right',
         label: 'Split Right',
         icon: icon('splitH'),
@@ -683,6 +720,62 @@ export class TabStore {
     input.addEventListener('blur', finishRename, { once: true });
   }
 
+  /** Her pane icin bir ghost-text oneri katmani uretir (ayarla kapatilabilir). */
+  private createSuggestions(getPtyId: () => string): InlineSuggestions | undefined {
+    if (this.settings?.terminal.inlineSuggestions === false) return undefined;
+    return new InlineSuggestions({
+      getCwd: () => {
+        const entry = this.leavesByPtyId.get(getPtyId());
+        return entry?.leaf.cwd;
+      }
+    });
+  }
+
+  /**
+   * Kabuktan gelen OSC 0/2 basligi. PowerShell/cmd acilista baslik olarak
+   * calistirilan exe'nin TAM YOLUNU yayar ("C:\WINDOWS\System32\...\powershell.exe")
+   * - bu, sekmenin "system32" gibi anlamsiz bir isimde takili kalmasinin
+   * sebebiydi. Bu tur basliklari yok sayip CWD tabanli baslige birakiyoruz.
+   */
+  private handleTerminalTitle(tab: Tab, leafId: string, rawTitle: string): void {
+    if (tab.isCustomTitle) return;
+    if (tab.activeLeafId !== leafId) return;
+    const title = rawTitle?.trim();
+    if (!title) return;
+    // Acilista yayilan exe yolu basligi ("C:\WINDOWS\System32\...\powershell.exe")
+    // sekmenin "system32" gibi anlamsiz bir isimde takili kalmasina sebep oluyordu.
+    if (/[\\/]/.test(title) && /\.(exe|com|bat|cmd)$/i.test(title)) return;
+    // Calisma dizini biliniyorsa klasor adi otoritedir: oh-my-posh/starship gibi
+    // temalar baslik olarak son komutu yayar, kullanici ise sekmede bulundugu
+    // klasoru gormek ister.
+    if (this.leavesByPtyId.get(leafId)?.leaf.cwd) return;
+    this.updateTabTitle(tab, title);
+  }
+
+  /** OSC 7/9 ya da prompt sezgisiyle gelen yeni calisma dizinini isler. */
+  private handleCwdChange(leafId: string, cwd: string, fromOsc: boolean): void {
+    const entry = this.leavesByPtyId.get(leafId);
+    if (!entry) return;
+    if (fromOsc) this.oscCwdLeaves.add(leafId);
+    entry.leaf.cwd = cwd;
+
+    if (entry.tab.activeLeafId !== leafId) return;
+    if (!entry.tab.isCustomTitle) {
+      this.updateTabTitle(entry.tab, folderNameOf(cwd));
+    }
+    entry.tab.tabEl.title = cwd;
+    if (entry.tab.id === this.activeId) this.syncStatusBar();
+  }
+
+  /** Aktif pane degisince sekme basligini o pane'in dizinine gore tazeler. */
+  private refreshTitleFromActiveLeaf(tab: Tab): void {
+    if (tab.isCustomTitle) return;
+    const leaf = findLeaf(tab.root, tab.activeLeafId);
+    if (!leaf?.cwd) return;
+    this.updateTabTitle(tab, folderNameOf(leaf.cwd));
+    tab.tabEl.title = leaf.cwd;
+  }
+
   private updateTabTitle(tab: Tab, title: string): void {
     tab.title = title;
     const titleEl = tab.tabEl.querySelector('.tab-title');
@@ -747,6 +840,8 @@ export class TabStore {
     const newRoot = closeLeafFromTree(tab.root, leafId);
     this.leavesByPtyId.delete(leafId);
     this.portSniffer.clearLeaf(leafId);
+    this.cwdTracker.clearLeaf(leafId);
+    this.oscCwdLeaves.delete(leafId);
     disposePaneLeaf(leaf);
 
     if (newRoot === null) {
@@ -770,6 +865,7 @@ export class TabStore {
     if (tab.activeLeafId !== leafId) {
       tab.activeLeafId = leafId;
       this.renderTabPanes(tab);
+      this.refreshTitleFromActiveLeaf(tab);
     }
     this.focusTerminal(tab, leafId);
     this.syncStatusBar();

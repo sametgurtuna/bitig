@@ -7,6 +7,11 @@ dist/
 build/
 release/
 
+# Kod imzalama sertifikalari - ASLA depoya girmemeli
+*.pfx
+*.p12
+*.cer
+
 # Loglar
 *.log
 npm-debug.log*

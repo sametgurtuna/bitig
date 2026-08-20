@@ -16,6 +16,8 @@ export interface PaneLeaf {
   resizeObserver: ResizeObserver;
   cwd?: string;
   title?: string;
+  /** Bu pane'e bagli ghost-text oneri katmani (varsa). */
+  suggestions?: InlineSuggestionHost;
 }
 
 export interface PaneSplit {
@@ -41,9 +43,53 @@ export interface CreatePaneLeafOptions {
   onWrite?: (leafId: string, data: string) => void;
   onContextMenu?: (event: MouseEvent, leaf: PaneLeaf) => void;
   onCursorMove?: (line: number, col: number) => void;
+  /** Kabuk calisma dizinini degistirdiginde (OSC 7 / OSC 9;9) tetiklenir. */
+  onCwdChange?: (leafId: string, cwd: string) => void;
   copyOnSelect?: boolean;
   pasteOnRightClick?: boolean;
   scrollback?: number;
+  /** Ghost-text oneri katmani; Tab/Ok tuslarini kabul icin yakalayabilir. */
+  inlineSuggestions?: InlineSuggestionHost;
+}
+
+/** autocomplete.ts'teki InlineSuggestions'in panes.ts'in ihtiyac duydugu yuzeyi. */
+export interface InlineSuggestionHost {
+  attach(leaf: PaneLeaf): void;
+  /** true donerse tus olayi shell'e iletilmez (oneri kabul/reddedildi). */
+  handleKeyEvent(event: KeyboardEvent): boolean;
+  handleInput(data: string): void;
+  dispose(): void;
+}
+
+/**
+ * OSC 7/9;9 ile gelen yolu Windows'ta kullanilabilir mutlak bir yola cevirir.
+ * Kabul edilen bicimler: `file:///C:/yol`, `file://host/C:/yol`, `/C:/yol`,
+ * `C:\yol`. Bos ya da cozulemeyen degerler icin bos metin doner.
+ */
+export function normalizeCwd(raw: string): string {
+  let value = raw.trim();
+  if (!value) return '';
+
+  if (value.startsWith('file://')) {
+    try {
+      const url = new URL(value);
+      value = decodeURIComponent(url.pathname);
+    } catch {
+      value = value.replace(/^file:\/\/[^/]*/, '');
+      try {
+        value = decodeURIComponent(value);
+      } catch {
+        // yuzde kodlamasi bozuksa ham hali kullan
+      }
+    }
+  }
+
+  // "/C:/Users/..." -> "C:/Users/..."
+  if (/^\/[A-Za-z]:/.test(value)) value = value.slice(1);
+  // Ters egik cizgileri normalize et, sondaki ayraci at (kok haric)
+  value = value.replace(/\//g, '\\');
+  if (value.length > 3 && value.endsWith('\\')) value = value.slice(0, -1);
+  return value;
 }
 
 export async function createPaneLeaf(
@@ -83,8 +129,16 @@ export async function createPaneLeaf(
   terminal.loadAddon(new WebLinksAddon());
   terminal.open(container);
 
-  terminal.attachCustomKeyEventHandler((event) => !isReservedShortcut(event));
+  terminal.attachCustomKeyEventHandler((event) => {
+    if (isReservedShortcut(event)) return false;
+    // Ghost-text onerisi aktifse Tab/ArrowRight/End/Esc'i once oneri katmani
+    // gorur; oneri yoksa tus dokunulmadan shell'e gider (kabugun kendi
+    // tamamlamasi bozulmaz).
+    if (options?.inlineSuggestions?.handleKeyEvent(event)) return false;
+    return true;
+  });
   terminal.onData((data) => {
+    options?.inlineSuggestions?.handleInput(data);
     options?.onInput?.(data);
     if (options?.onWrite) {
       options.onWrite(id, data);
@@ -136,28 +190,38 @@ export async function createPaneLeaf(
 
   registerSmartLinks(terminal, () => leaf.cwd);
 
-  // OSC 7 calisma dizini (CWD) takibi
+  // Calisma dizini (CWD) takibi: OSC 7 (standart) ve OSC 9;9 (ConEmu/Windows
+  // Terminal uyumlulugu). Kabuk entegrasyonu bu diziyi her prompt'ta yayar
+  // (bkz. src/main/pty/shellIntegration.ts).
+  const applyCwd = (raw: string): void => {
+    const normalized = normalizeCwd(raw);
+    if (!normalized || normalized === leaf.cwd) return;
+    leaf.cwd = normalized;
+    options?.onCwdChange?.(id, normalized);
+  };
+
   try {
     terminal.parser.registerOscHandler(7, (data) => {
-      let pathStr = data;
-      if (pathStr.startsWith('file://')) {
-        try {
-          const url = new URL(pathStr);
-          pathStr = decodeURIComponent(url.pathname);
-          if (pathStr.startsWith('/') && pathStr.includes(':')) {
-            pathStr = pathStr.slice(1);
-          }
-        } catch {
-          pathStr = pathStr.replace(/^file:\/\/[^/]+/, '');
-        }
-      }
-      if (pathStr) {
-        leaf.cwd = pathStr;
-      }
+      applyCwd(data);
       return true;
     });
   } catch {
     // OSC 7 parser desteklenmiyorsa sessizce gec
+  }
+
+  try {
+    terminal.parser.registerOscHandler(9, (data) => {
+      // ConEmu formati: "9;<path>"; yalnizca dizin bildirimini isliyoruz.
+      if (data.startsWith('9;')) applyCwd(data.slice(2));
+      return true;
+    });
+  } catch {
+    // OSC 9 parser desteklenmiyorsa sessizce gec
+  }
+
+  if (options?.inlineSuggestions) {
+    leaf.suggestions = options.inlineSuggestions;
+    options.inlineSuggestions.attach(leaf);
   }
 
   let resizePending = false;
@@ -178,6 +242,7 @@ export async function createPaneLeaf(
 }
 
 export function disposePaneLeaf(leaf: PaneLeaf): void {
+  leaf.suggestions?.dispose();
   leaf.resizeObserver.disconnect();
   window.bitig.pty.dispose(leaf.id);
   leaf.terminal.dispose();

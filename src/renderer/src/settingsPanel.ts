@@ -329,6 +329,7 @@ export class SettingsPanel {
     statusLabel.className = 'settings-label';
     statusLabel.textContent = 'Show Bottom Status Bar';
     const statusToggle = document.createElement('input');
+    statusToggle.type = 'checkbox';
     statusToggle.checked = settings.terminal.showStatusBar !== false;
     statusToggle.addEventListener('change', () => {
       window.bitig.settings.set({ terminal: { showStatusBar: statusToggle.checked } });
@@ -357,7 +358,45 @@ export class SettingsPanel {
     });
     scrollRow.append(scrollLabel, scrollSelect);
 
-    section.append(desc, copyRow, pasteRow, confirmRow, restoreRow, statusRow, scrollRow);
+    // 7. Inline Suggestions (ghost text)
+    const suggestRow = document.createElement('div');
+    suggestRow.className = 'settings-row settings-toggle-row';
+    const suggestLabel = document.createElement('label');
+    suggestLabel.className = 'settings-label';
+    suggestLabel.textContent = 'Inline Command Suggestions (Tab to accept)';
+    const suggestToggle = document.createElement('input');
+    suggestToggle.type = 'checkbox';
+    suggestToggle.checked = settings.terminal.inlineSuggestions !== false;
+    suggestToggle.addEventListener('change', () => {
+      window.bitig.settings.set({ terminal: { inlineSuggestions: suggestToggle.checked } });
+    });
+    suggestRow.append(suggestLabel, suggestToggle);
+
+    // 8. Shell Integration (OSC 7 -> live tab titles)
+    const shellIntRow = document.createElement('div');
+    shellIntRow.className = 'settings-row settings-toggle-row';
+    const shellIntLabel = document.createElement('label');
+    shellIntLabel.className = 'settings-label';
+    shellIntLabel.textContent = 'Shell Integration (live working directory in tab titles)';
+    const shellIntToggle = document.createElement('input');
+    shellIntToggle.type = 'checkbox';
+    shellIntToggle.checked = settings.terminal.shellIntegration !== false;
+    shellIntToggle.addEventListener('change', () => {
+      window.bitig.settings.set({ terminal: { shellIntegration: shellIntToggle.checked } });
+    });
+    shellIntRow.append(shellIntLabel, shellIntToggle);
+
+    section.append(
+      desc,
+      copyRow,
+      pasteRow,
+      confirmRow,
+      restoreRow,
+      statusRow,
+      scrollRow,
+      suggestRow,
+      shellIntRow
+    );
     return section;
   }
 

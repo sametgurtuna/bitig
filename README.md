@@ -9,11 +9,11 @@
 <sub>Sifirdan yazilan, Windows icin bir terminal emulatoru.</sub>
 </p>
 
-[![Version](https://img.shields.io/badge/version-1.0.0-7dd3fc?style=for-the-badge&labelColor=0f1117)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-1.0.1-7dd3fc?style=for-the-badge&labelColor=0f1117)](CHANGELOG.md)
 [![Platform](https://img.shields.io/badge/Windows%2011-x64-0f1117?style=for-the-badge&logo=windows&logoColor=7dd3fc&labelColor=0f1117)](#installation)
 [![Electron](https://img.shields.io/badge/Electron-43-47848F?style=for-the-badge&logo=electron&logoColor=white&labelColor=0f1117)](https://www.electronjs.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178C6?style=for-the-badge&logo=typescript&logoColor=white&labelColor=0f1117)](tsconfig.json)
-[![License](https://img.shields.io/badge/license-ISC-a78bfa?style=for-the-badge&labelColor=0f1117)](#license)
+[![License](https://img.shields.io/badge/license-MIT-a78bfa?style=for-the-badge&labelColor=0f1117)](#license)
 
 <p>
 <a href="#english"><b>English</b></a>
@@ -29,10 +29,10 @@
 
 <table>
 <tr>
+<td align="center" width="25%"><sub><b>Inline Suggestions</b></sub><br /><sub>Ghost text from history<br />and project context</sub></td>
 <td align="center" width="25%"><sub><b>Developer Cockpit</b></sub><br /><sub>Live ports, smart links,<br />secret masking</sub></td>
 <td align="center" width="25%"><sub><b>Local AI</b></sub><br /><sub>Ollama or BYOK,<br />zero telemetry</sub></td>
 <td align="center" width="25%"><sub><b>Plugin Runtime</b></sub><br /><sub>Sandboxed Node VM,<br />manifest based</sub></td>
-<td align="center" width="25%"><sub><b>Keyboard First</b></sub><br /><sub>Every action is<br />rebindable</sub></td>
 </tr>
 </table>
 
@@ -50,7 +50,7 @@
 |---|---|
 | [About](#about) | What Bitig is and is not |
 | [Installation](#installation) | Setup installer and portable build |
-| [Feature Overview](#feature-overview) | Everything shipped in 1.0.0 |
+| [Feature Overview](#feature-overview) | Everything shipped in 1.0.1 |
 | [Tech Stack](#tech-stack) | Layers and why each was chosen |
 | [Architecture](#architecture) | Process boundaries and data flow |
 | [IPC Channel Reference](#ipc-channel-reference) | The full typed contract |
@@ -82,8 +82,8 @@ Download the latest release for Windows 11 x64:
 
 | Build | File | Notes |
 |---|---|---|
-| **Setup** | `Bitig-Setup-1.0.0.exe` | NSIS installer. Choose install directory, creates Start Menu and desktop shortcuts. |
-| **Portable** | `Bitig-Portable-1.0.0.exe` | Single self contained executable. No installation, no registry writes. |
+| **Setup** | `Bitig-Setup-1.0.1.exe` | NSIS installer. Choose install directory, creates Start Menu and desktop shortcuts. |
+| **Portable** | `Bitig-Portable-1.0.1.exe` | Single self contained executable. No installation, no registry writes. |
 
 Both builds are x64 only and require Windows 11. No runtime prerequisites:
 Node.js, Electron and the native ConPTY bindings are bundled.
@@ -97,8 +97,16 @@ Node.js, Electron and the native ConPTY bindings are bundled.
 <td>Real shell processes (PowerShell, CMD, Git Bash, WSL distributions) spawned through ConPTY via <code>node-pty</code>. Auto discovery of installed shells at startup. Configurable scrollback depth up to 50,000 lines. Copy on select, paste on right click, and a glassmorphic right click context menu.</td>
 </tr>
 <tr>
-<td valign="top"><b>Tabs and panes</b></td>
-<td>Drag to reorder, middle click to close, inline double click rename, per tab context menu, confirm before closing an active session, and session restore on launch. Split panes nest arbitrarily, the divider is draggable, and any pane can be zoomed to full area.</td>
+<td valign="top"><b>Inline suggestions</b></td>
+<td>Fish style ghost text as you type, ranked from frecency ordered command history, project context (<code>package.json</code> scripts, <code>Makefile</code> targets, subdirectories after <code>cd</code>) and a built in command dictionary. <code>Tab</code> accepts, <code>Esc</code> dismisses, and when there is no suggestion <code>Tab</code> falls through to the shell's own completion untouched.</td>
+</tr>
+<tr>
+<td valign="top"><b>Windows and tabs</b></td>
+<td>Launching Bitig again opens a new, fully independent window (<code>Ctrl+Shift+N</code>) with its own tabs and shell processes; closing the last one exits the process completely. Tabs drag to reorder, middle click to close, double click to rename, and retitle themselves to the current working directory as you <code>cd</code>, via automatic shell integration (OSC 7).</td>
+</tr>
+<tr>
+<td valign="top"><b>Panes</b></td>
+<td>Split panes nest arbitrarily, the divider is draggable, and any pane can be zoomed to full area. Confirm before closing an active session, plus session restore on launch.</td>
 </tr>
 <tr>
 <td valign="top"><b>Appearance</b></td>
@@ -223,6 +231,12 @@ contract cannot silently drift between processes.
 | `window:is-maximized` | renderer to main | invoke | Query current maximize state |
 | `window:maximize-change` | main to renderer | event | Maximize state changed |
 | `window:notify` | renderer to main | send | Fire a native Windows desktop notification |
+| `window:new-window` | renderer to main | send | Open a new, fully independent Bitig window |
+
+All `pty:*` and `window:*` handlers are registered once per application and
+resolve their target window from `event.sender`, so several windows can share
+the same channels; `pty:data` and `pty:exit` are sent only to the window that
+owns the session.
 
 </details>
 
@@ -257,6 +271,7 @@ contract cannot silently drift between processes.
 | `history:clear` | renderer to main | invoke | Clear all history |
 | `cockpit:open-url` | renderer to main | invoke | Open a URL in the default browser |
 | `cockpit:open-file` | renderer to main | invoke | Open a file in the configured editor at a line |
+| `completion:context` | renderer to main | invoke | Project context for inline suggestions (`package.json` scripts, `Makefile` targets, directory entries), cached per directory by mtime |
 
 </details>
 
@@ -292,6 +307,7 @@ conflict detection and a per shortcut reset.
 
 | Shortcut | Action |
 |---|---|
+| `Ctrl+Shift+N` | New window |
 | `Ctrl+Shift+T` | New tab |
 | `Ctrl+Shift+W` | Close active tab |
 | `Ctrl+Tab` / `Ctrl+Shift+Tab` | Next / previous tab |
@@ -317,6 +333,7 @@ conflict detection and a per shortcut reset.
 | `Alt+Shift+T` | Cycle themes |
 | `Alt+Shift+I` | Toggle Broadcast Input |
 | `Win+~` / `Ctrl+~` | Quake HUD window |
+| `Tab` | Accept the inline suggestion |
 
 </td></tr>
 </table>
@@ -399,7 +416,7 @@ Node `vm` context with no filesystem or process globals; only the declared
 {
   "id": "git-status",
   "name": "Git Branch Sentinel",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Shows the active Git branch in the status bar.",
   "author": "Bitig Team",
   "main": "main.js",
@@ -445,13 +462,38 @@ npm install
 | `npm run dist` | Both Windows targets: NSIS setup and portable executable |
 | `npm run dist:portable` | Portable executable only |
 
+#### Code signing
+
+Release builds are signed when a certificate is supplied through the standard
+electron-builder environment variables; without them the build still completes,
+unsigned.
+
+```powershell
+# One time: create a local self signed certificate under build/ (gitignored)
+.\scripts\make-cert.ps1
+
+$env:CSC_LINK = "$PWD\build\bitig-codesign.pfx"
+$env:CSC_KEY_PASSWORD = "<password>"
+npm run dist
+```
+
+The signature and the `publisherName` in `electron-builder.yml` make **Samet
+Gurtuna** the publisher shown in the installer and in Apps & Features. Note that
+a self signed certificate does **not** remove the SmartScreen warning on first
+run: Windows only trusts it if the certificate is imported into the machine's
+Trusted Root store (`.\scripts\make-cert.ps1 -TrustLocally`, requires
+administrator), and even a properly signed build needs to accumulate SmartScreen
+reputation. Silencing it for everyone requires a commercial OV or EV code
+signing certificate.
+
 ### Project Structure
 
 ```
 Bitig/
-  electron-builder.yml        Windows packaging targets (nsis + portable)
+  electron-builder.yml        Windows packaging targets (nsis + portable), publisher
   electron.vite.config.ts     Build config for main / preload / renderer
   assets/                     App icon set and README banner
+  scripts/make-cert.ps1       Generates a local self signed code signing certificate
   src/
     shared/                   Typed IPC contracts, shared by all processes
       ptyTypes.ts               PTY channels
@@ -467,10 +509,12 @@ Bitig/
       quakeTypes.ts             Quake HUD settings
       aiTypes.ts                AI provider settings + prompt contracts
       pluginTypes.ts            Plugin manifest + contribution contracts
+      completionTypes.ts        Inline suggestion project context contract
       builtinThemes/            bitigDark / bitigLight / dracula / nord
     main/
-      index.ts                  App lifecycle, BrowserWindow, single instance lock
+      index.ts                  App lifecycle, multi window management, clean shutdown
       pty/                      PTY session manager, shell auto discovery
+        shellIntegration.ts     Injects the OSC 7 prompt hook per shell
       theme/                    Theme store, watches themes/
       settings/                 Settings store, watches settings.json
       snippets/ history/        Runbook and command history stores
@@ -498,6 +542,8 @@ Bitig/
         confirmModal.ts         Confirm before destructive close
         sessionManager.ts       Session persistence and restore
         pluginRuntime.ts        Bridges plugin contributions into the UI
+        autocomplete.ts         Inline ghost text suggestion engine and overlay
+        cwdTracker.ts           Prompt based working directory fallback
         portSniffer.ts          Live port detection from the PTY stream
         smartLinks.ts           file:line:col link provider
         secretShield.ts         Sensitive token detection and masking
@@ -536,7 +582,7 @@ Turkic mythology and Old Turkic vocabulary.
 |---|---|
 | [Proje Hakkinda](#proje-hakkinda) | Bitig ne, ne degil |
 | [Kurulum](#kurulum) | Setup ve portable dagitimlari |
-| [Ozellikler](#ozellikler) | 1.0.0 ile gelen her sey |
+| [Ozellikler](#ozellikler) | 1.0.1 ile gelen her sey |
 | [Teknik Yigin](#teknik-yigin) | Katmanlar ve tercih gerekceleri |
 | [Klavye Kisayollari](#klavye-kisayollari-1) | Varsayilan kisayollar |
 | [Ozellestirme](#ozellestirme) | Ayarlar, temalar, betikler, eklentiler |
@@ -564,8 +610,8 @@ Windows 11 x64 icin son surum:
 
 | Dagitim | Dosya | Not |
 |---|---|---|
-| **Setup** | `Bitig-Setup-1.0.0.exe` | NSIS kurulum sihirbazi. Kurulum dizini secilebilir, Baslat menusu ve masaustu kisayolu olusturur. |
-| **Portable** | `Bitig-Portable-1.0.0.exe` | Tek dosyalik bagimsiz calistirilabilir. Kurulum yok, kayit defterine yazmaz. |
+| **Setup** | `Bitig-Setup-1.0.1.exe` | NSIS kurulum sihirbazi. Kurulum dizini secilebilir, Baslat menusu ve masaustu kisayolu olusturur. |
+| **Portable** | `Bitig-Portable-1.0.1.exe` | Tek dosyalik bagimsiz calistirilabilir. Kurulum yok, kayit defterine yazmaz. |
 
 Iki dagitim da yalnizca x64 ve Windows 11 icindir. On kosul yoktur: Node.js,
 Electron ve native ConPTY baglayicilari paketin icinde gelir.
@@ -575,7 +621,9 @@ Electron ve native ConPTY baglayicilari paketin icinde gelir.
 | Alan | Yetenek |
 |---|---|
 | **Terminal cekirdegi** | `node-pty` uzerinden ConPTY ile gercek shell prosesleri (PowerShell, CMD, Git Bash, WSL). Kurulu kabuklarin baslangicta otomatik tespiti. 50.000 satira kadar ayarlanabilir gecmis tamponu. Secince kopyala, sag tikla yapistir ve cam efektli sag tik menusu. |
-| **Sekmeler ve pane'ler** | Surukle-sirala, orta tikla-kapat, cift tiklayip yerinde yeniden adlandirma, sekme baglam menusu, aktif oturum kapatilirken onay ve acilista oturum geri yukleme. Split pane'ler ic ice bolunebilir, divider suruklenebilir, herhangi bir pane tam alana buyutulebilir. |
+| **Akilli tamamlama** | Yazarken beliren seffaf (ghost) komut onerisi; frecency sirali komut gecmisi, proje baglami (`package.json` script'leri, `Makefile` hedefleri, `cd` sonrasi alt klasorler) ve yerlesik komut sozlugunden beslenir. `Tab` kabul eder, `Esc` kapatir; oneri yokken `Tab` dogrudan kabuga gider, kabugun kendi tamamlamasi bozulmaz. |
+| **Pencereler ve sekmeler** | Bitig'i tekrar calistirmak yeni ve tamamen bagimsiz bir pencere acar (`Ctrl+Shift+N`); her pencerenin kendi sekmeleri ve shell prosesleri vardir, son pencere kapatilinca uygulama tamamen sonlanir. Sekmeler suruklenip siralanir, orta tikla kapanir, cift tikla yeniden adlandirilir ve kabuk entegrasyonu (OSC 7) sayesinde `cd` yaptikca calisma dizinine gore anlik olarak yeniden adlandirilir. |
+| **Pane'ler** | Split pane'ler ic ice bolunebilir, divider suruklenebilir, herhangi bir pane tam alana buyutulebilir. Aktif oturum kapatilirken onay ve acilista oturum geri yukleme. |
 | **Gorunum** | Dort hazir tema (Bitig Dark, Bitig Light, Dracula, Nord) ve aninda yuklenen kullanici temalari. Pencere seffafligi, bagimsiz opaklik ve yerlesime sahip arkaplan gorseli, font ailesinin adina bakmak yerine canvas uzerinde Nerd Font glyph kapsamini *olcen* font secici. |
 | **Gelistirici Kokpiti** | Canli Port Dinleyicisi PTY akisindaki dev sunucularini tespit edip tiklanabilir rozetler cizer. Akilli Linkler `src/main.ts:42:15` ifadesini tek tikla VS Code veya Cursor'da tam satira atlayan bir baglantiya cevirir. Secret Shield token'lari (`sk-`, `ghp_`, `AKIA`, bearer, ozel anahtarlar) gecmise yazilmadan once maskeler. |
 | **Komut yuzeyleri** | Aksiyonlar, sekmeler, profiller ve temalar uzerinde fuzzy arama yapan Evrensel Komut Paleti. `{{degisken}}` yer tutuculu ve otomatik form ureten Bitig Betik runbook'lari. Oturumlar arasi, frecency sirali komut gecmisi. Regex, buyuk/kucuk harf ve tam kelime secenekli terminal ici artimli arama. |
@@ -609,6 +657,7 @@ tespiti ve kisayol basina sifirlama ile yeniden atanabilir.
 
 | Kisayol | Eylem |
 |---|---|
+| `Ctrl+Shift+N` | Yeni pencere |
 | `Ctrl+Shift+T` | Yeni sekme |
 | `Ctrl+Shift+W` | Aktif sekmeyi kapat |
 | `Ctrl+Tab` / `Ctrl+Shift+Tab` | Sonraki / onceki sekme |
@@ -634,6 +683,7 @@ tespiti ve kisayol basina sifirlama ile yeniden atanabilir.
 | `Alt+Shift+T` | Tema dongusu |
 | `Alt+Shift+I` | Broadcast Input ac/kapat |
 | `Win+~` / `Ctrl+~` | Quake HUD penceresi |
+| `Tab` | Satir ici oneriyi kabul et |
 
 </td></tr>
 </table>
@@ -687,6 +737,29 @@ npm install
 | `npm run dist` | Iki Windows hedefi: NSIS kurulum ve portable calistirilabilir |
 | `npm run dist:portable` | Yalnizca portable calistirilabilir |
 
+#### Kod imzalama
+
+Sertifika `CSC_LINK` / `CSC_KEY_PASSWORD` ortam degiskenleriyle verildiginde
+build imzalanir; verilmezse build imzasiz tamamlanir.
+
+```powershell
+# Tek seferlik: build/ altinda yerel self-signed sertifika uret (gitignore'da)
+.\scripts\make-cert.ps1
+
+$env:CSC_LINK = "$PWD\build\bitig-codesign.pfx"
+$env:CSC_KEY_PASSWORD = "<sifre>"
+npm run dist
+```
+
+Imza ve `electron-builder.yml` icindeki `publisherName`, kurulum sihirbazinda
+ve "Uygulamalar ve Ozellikler" listesinde yayinci adini **Samet Gurtuna**
+yapar. Ancak self-signed sertifika SmartScreen uyarisini kaldirmaz: Windows bu
+sertifikaya ancak Trusted Root deposuna eklenirse guvenir
+(`.\scripts\make-cert.ps1 -TrustLocally`, yonetici gerekir) ve duzgun imzali
+bir build bile SmartScreen itibari biriktirene kadar uyari gosterebilir.
+Uyarinin herkeste kalkmasi icin ticari bir OV/EV kod imzalama sertifikasi
+gerekir.
+
 ### Katkida Bulunma
 
 Repoyu fork'layin, her commit'i tek bir konuya odaklayin ve commit
@@ -703,6 +776,6 @@ calistirin.
 
 <div align="center" id="license">
 
-**License / Lisans:** [ISC](package.json)
+**License / Lisans:** [MIT](LICENSE) &nbsp;·&nbsp; Copyright (c) 2026 Samet Gurtuna
 
 </div>

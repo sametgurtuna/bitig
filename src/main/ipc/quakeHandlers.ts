@@ -95,7 +95,7 @@ function toggleQuakeWindow(): void {
   }
 }
 
-function registerGlobalHotkey(hotkey: string): boolean {
+function registerGlobalHotkey(hotkey: string, isDev: boolean, rendererUrl?: string): boolean {
   if (registeredHotkey) {
     try {
       globalShortcut.unregister(registeredHotkey);
@@ -104,7 +104,12 @@ function registerGlobalHotkey(hotkey: string): boolean {
     }
   }
   try {
-    const ok = globalShortcut.register(hotkey, toggleQuakeWindow);
+    const ok = globalShortcut.register(hotkey, () => {
+      // Pencere tembel yaratilir: kisayola basilana kadar hicbir gizli
+      // BrowserWindow acilmaz.
+      createQuakeWindowIfNeeded(isDev, rendererUrl);
+      toggleQuakeWindow();
+    });
     if (ok) registeredHotkey = hotkey;
     return ok;
   } catch (_) {
@@ -127,12 +132,14 @@ export function registerQuakeHandlers(
     currentSettings = { ...DEFAULT_QUAKE_SETTINGS, ...settings };
   }
 
-  // Pencereyi on olustur (hizli ilk acilma icin)
-  createQuakeWindowIfNeeded(isDev, rendererUrl);
-
-  // Global kisayol kaydi
+  // ONEMLI: Quake penceresi burada ON OLUSTURULMAZ.
+  // Gorunmez de olsa acik bir BrowserWindow, Electron'un `window-all-closed`
+  // olayini asla tetiklememesine ve kullanici tum Bitig pencerelerini
+  // kapattiktan sonra uygulamanin arkaplanda hayalet proses olarak yasamaya
+  // devam etmesine yol aciyordu (v1.0.0 hatasi). Pencere ilk toggle'da
+  // tembel olarak yaratilir.
   if (currentSettings.enabled) {
-    registerGlobalHotkey(currentSettings.hotkey);
+    registerGlobalHotkey(currentSettings.hotkey, isDev, rendererUrl);
   }
 
   // IPC: renderer'dan veya settings panelinden tetiklenebilir toggle
@@ -145,8 +152,13 @@ export function registerQuakeHandlers(
   // IPC: kisayolu guncelle
   ipcMain.handle(QUAKE_CHANNELS.setHotkey, (_event, newHotkey: string) => {
     currentSettings.hotkey = newHotkey;
-    return registerGlobalHotkey(newHotkey);
+    return registerGlobalHotkey(newHotkey, isDev, rendererUrl);
   });
+}
+
+/** Quake penceresi su an acik mi? (Cikis kararinda pencere sayimini etkilemesin diye.) */
+export function hasQuakeWindow(): boolean {
+  return Boolean(quakeWin && !quakeWin.isDestroyed());
 }
 
 /** Uygulama kapatilirken global kisayolu temizle. */
