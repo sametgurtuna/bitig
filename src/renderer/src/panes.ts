@@ -130,6 +130,11 @@ export async function createPaneLeaf(
   terminal.open(container);
 
   terminal.attachCustomKeyEventHandler((event) => {
+    // Tab'in tarayici varsayilani odagi bir sonraki butona tasir (title bar,
+    // durum cubugu). Terminalde bu asla istenmez: tusu xterm isleyecekse zaten
+    // kendi preventDefault'unu yapar, ama biz olayi yuttugumuzda (return false)
+    // o adim atlanir ve odak terminalden kacardi.
+    if (event.type === 'keydown' && event.key === 'Tab') event.preventDefault();
     if (isReservedShortcut(event)) return false;
     // Ghost-text onerisi aktifse Tab/ArrowRight/End/Esc'i once oneri katmani
     // gorur; oneri yoksa tus dokunulmadan shell'e gider (kabugun kendi

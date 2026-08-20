@@ -1,6 +1,6 @@
 import type { PaneLeaf, InlineSuggestionHost } from './panes';
 import type { CompletionContext } from '../../shared/completionTypes';
-import { fuzzyScore } from './fuzzy';
+import type { HistoryEntry } from '../../shared/historyTypes';
 
 /**
  * Akilli komut tamamlama (inline ghost text).
@@ -15,6 +15,12 @@ import { fuzzyScore } from './fuzzy';
  * mutlak bir <span> ile cizilir; terminal tamponuna HICBIR SEY yazilmaz.
  * Kabul edildiginde ise sadece "kalan ek" PTY'ye yazilir ve kabuk kendi
  * dogal echo'suyla satiri tamamlar.
+ *
+ * ONEMLI: Bir aday yalnizca yazilan satirin GERCEK bir oneki ise onerilebilir.
+ * Ghost text "kalanin eklenmesi" demektir; fuzzy (araya serpistirilmis harf)
+ * eslesmeleri burada anlamsizdir - eski surumde fuzzy adaylar da kabul edilip
+ * `aday.slice(buffer.length)` ile kesiliyordu, ortaya yazilan metinle alakasiz
+ * bir ek cikiyordu.
  */
 
 /** Kabuk gecmisi bos oldugunda bile ise yarayan kucuk bir yerlesik sozluk. */
@@ -40,14 +46,43 @@ const BUILTIN_COMMANDS = [
   'clear'
 ];
 
+/** Son argumani bir yol olarak tamamlanabilen komutlar. */
+const PATH_COMMANDS = new Set([
+  'cd',
+  'ls',
+  'dir',
+  'cat',
+  'type',
+  'code',
+  'vim',
+  'nvim',
+  'nano',
+  'rm',
+  'del',
+  'mv',
+  'move',
+  'cp',
+  'copy',
+  'mkdir',
+  'touch',
+  'less',
+  'head',
+  'tail',
+  'node',
+  'python',
+  'py',
+  'source',
+  'pushd'
+]);
+
+/** Yalniz dizin bekleyen komutlar (dosya onerilmez). */
+const DIR_ONLY_COMMANDS = new Set(['cd', 'pushd', 'mkdir']);
+
 /** Girdi tamponunu guvenilmez kilan kontrol dizileri (ok tuslari, gecmis gezinme). */
 const RESET_SEQUENCES = ['\x03', '\x15', '\x0c', '\x1b'];
 
-interface Candidate {
-  text: string;
-  /** Yuksek olan kazanir. */
-  score: number;
-}
+/** Proje baglaminin (dosya listesi vb.) yeniden okunma araligi. */
+const CONTEXT_TTL_MS = 5_000;
 
 export interface InlineSuggestionsOptions {
   /** Pane'in guncel calisma dizinini doner (proje baglami icin). */
@@ -61,11 +96,19 @@ export class InlineSuggestions implements InlineSuggestionHost {
   private buffer = '';
   private suggestion = '';
   private enabled = true;
-  /** Ok tusu/gecmis gezintisi sonrasi tampon guvenilmez olur. */
+  /**
+   * Ok tusu/gecmis gezintisi ya da kabugun kendi Tab tamamlamasi sonrasi tampon
+   * ekrandaki satiri temsil etmez. Bu bayrak yalnizca satir gercekten sifirlanan
+   * bir noktada (Enter, Ctrl+C, Ctrl+U, Ctrl+L, Esc) temizlenir - aksi halde
+   * yazilan bir sonraki harf, yarim bir tamponla alakasiz oneriler uretir.
+   */
   private muted = false;
-  private history: string[] = [];
+  private history: HistoryEntry[] = [];
+  /** Bu oturumda calistirilanlar - gecmis dosyasina yazilmadan da bilinir. */
+  private sessionHistory: string[] = [];
   private context: CompletionContext | null = null;
   private contextCwd = '';
+  private contextFetchedAt = 0;
   private readonly disposers: Array<() => void> = [];
 
   constructor(private readonly options: InlineSuggestionsOptions) {}
@@ -119,7 +162,6 @@ export class InlineSuggestions implements InlineSuggestionHost {
       }
       if (char === '\x7f' || char === '\b') {
         this.buffer = this.buffer.slice(0, -1);
-        this.muted = false;
         continue;
       }
       if (RESET_SEQUENCES.includes(char)) {
@@ -128,10 +170,16 @@ export class InlineSuggestions implements InlineSuggestionHost {
         this.clearSuggestion();
         continue;
       }
-      if (char === '\t') continue; // Tab kabul icin ayrildi
+      if (char === '\t') {
+        // Tab bize ulasmadiysa kabugun kendi tamamlamasi calisti: satir bizim
+        // haberimiz olmadan degisti, tampon artik guvenilir degil.
+        this.muted = true;
+        this.buffer = '';
+        this.clearSuggestion();
+        continue;
+      }
       if (char < ' ') continue; // diger kontrol karakterlerini yok say
       this.buffer += char;
-      this.muted = false;
     }
 
     this.update();
@@ -146,14 +194,26 @@ export class InlineSuggestions implements InlineSuggestionHost {
 
     if (event.key === 'Escape' && this.suggestion) {
       this.clearSuggestion();
+      event.preventDefault();
       return true;
     }
 
     if (!this.suggestion) return false;
+
+    // Ctrl/Alt + Sag ok: oneriyi kelime kelime kabul et (fish davranisi).
+    if (event.key === 'ArrowRight' && (event.ctrlKey || event.altKey)) {
+      this.acceptWord();
+      event.preventDefault();
+      return true;
+    }
+
     if (event.ctrlKey || event.altKey || event.metaKey) return false;
 
     if (event.key === 'Tab' || event.key === 'ArrowRight' || event.key === 'End') {
       this.accept();
+      // Olayi yuttugumuz icin xterm kendi preventDefault'unu yapmaz; Tab'in
+      // tarayici varsayilani odagi bir sonraki butona tasirdi.
+      event.preventDefault();
       return true;
     }
 
@@ -182,6 +242,19 @@ export class InlineSuggestions implements InlineSuggestionHost {
     this.buffer += remainder;
     this.clearSuggestion();
     window.bitig.pty.write(leaf.id, remainder);
+    // Kalan satir icin (or. `cd src/` sonrasi) yeni bir oneri uret.
+    this.update();
+  }
+
+  /** Onerinin yalnizca bir sonraki kelimesini/yol parcasini kabul eder. */
+  private acceptWord(): void {
+    const leaf = this.leaf;
+    if (!leaf || !this.suggestion) return;
+    const match = /^\s*[^\s/\\]*[\s/\\]?/.exec(this.suggestion);
+    const chunk = match && match[0] ? match[0] : this.suggestion;
+    this.buffer += chunk;
+    window.bitig.pty.write(leaf.id, chunk);
+    this.update();
   }
 
   private commit(): void {
@@ -191,84 +264,138 @@ export class InlineSuggestions implements InlineSuggestionHost {
     this.clearSuggestion();
     if (command) {
       // En son calistirilan komut bir sonraki onerilerde hemen kullanilabilsin.
-      this.history = [command, ...this.history.filter((entry) => entry !== command)];
+      this.sessionHistory = [
+        command,
+        ...this.sessionHistory.filter((entry) => entry !== command)
+      ].slice(0, 100);
       void this.refreshHistory();
     }
+    // Komut dosya sistemini degistirmis olabilir (mkdir, git checkout, ...).
+    this.contextFetchedAt = 0;
     void this.refreshContext();
   }
 
   private update(): void {
-    if (this.muted || this.buffer.trim() === '' || this.buffer.length < 2) {
+    const line = this.buffer;
+    if (this.muted || line.trim() === '') {
       this.clearSuggestion();
       return;
     }
 
     void this.refreshContext();
-    const best = this.findBest(this.buffer);
+    const best = this.findBest(line);
     if (!best) {
       this.clearSuggestion();
       return;
     }
 
-    this.suggestion = best.slice(this.buffer.length);
+    this.suggestion = best.slice(line.length);
+    if (!this.suggestion) {
+      this.clearSuggestion();
+      return;
+    }
     this.render();
   }
 
-  private findBest(prefix: string): string | null {
-    const lower = prefix.toLowerCase();
-    const candidates: Candidate[] = [];
+  private findBest(line: string): string | null {
+    const lower = line.toLowerCase();
+    const scores = new Map<string, number>();
 
+    /** Yalniz gercek onek eslesmeleri aday olabilir (bkz. dosya basi notu). */
     const add = (text: string, weight: number): void => {
-      if (text.length <= prefix.length) return;
-      const lowerText = text.toLowerCase();
-      if (lowerText.startsWith(lower)) {
-        // Tam onek eslesmesi her zaman kazanir; kisa olan tercih edilir.
-        candidates.push({ text, score: 10_000 + weight - text.length });
-        return;
-      }
-      const fuzzy = fuzzyScore(prefix, text);
-      if (fuzzy.matches && fuzzy.highlightIndices[0] === 0) {
-        candidates.push({ text, score: fuzzy.score + weight });
-      }
+      if (text.length <= line.length) return;
+      if (!text.toLowerCase().startsWith(lower)) return;
+      // Yazimi birebir koruyan aday, buyuk/kucuk harf degistirene tercih edilir.
+      const caseBonus = text.startsWith(line) ? 25 : 0;
+      // Kisa tamamlamalar daha guvenli: uzayan ek kadar ceza.
+      const score = weight + caseBonus - Math.min(60, (text.length - line.length) * 0.5);
+      const previous = scores.get(text);
+      if (previous === undefined || score > previous) scores.set(text, score);
     };
 
-    // 1. Komut gecmisi (frecency sirasi historyStore'dan gelir; basta olan agir basar)
-    this.history.forEach((command, index) => add(command, 500 - index));
+    const token = lastToken(line);
+    const cwd = this.options.getCwd();
 
-    // 2. Proje baglami: package.json script'leri, Makefile hedefleri
+    // 1. Komut gecmisi - frecency (siklik + tazelik + ayni dizin) ile puanlanir.
+    const now = Date.now();
+    for (const entry of this.history) {
+      const ageHours = Math.max(0, now - entry.timestamp) / 3_600_000;
+      const recency = ageHours < 1 ? 140 : ageHours < 24 ? 100 : ageHours < 24 * 7 ? 55 : 15;
+      const frequency = Math.min(80, Math.log2(entry.count + 1) * 24);
+      const sameCwd = cwd && entry.cwd && samePath(entry.cwd, cwd) ? 90 : 0;
+      // Hata ile biten komutlari one cikarmanin anlami yok.
+      const failed = entry.exitCode ? -70 : 0;
+      add(entry.command, 500 + recency + frequency + sameCwd + failed);
+    }
+
+    // Bu oturumda calistirilanlar her zaman en tazedir.
+    this.sessionHistory.forEach((command, index) => add(command, 820 - index * 4));
+
+    // 2. Proje baglami
     if (this.context) {
-      for (const script of this.context.scripts) add(script, 900);
-      for (const target of this.context.makeTargets) add(target, 700);
-      if (/^cd\s+\S*$/i.test(prefix)) {
-        const typed = prefix.slice(3).trim();
-        for (const dir of this.context.directories) {
-          if (dir.toLowerCase().startsWith(typed.toLowerCase())) add(`cd ${dir}`, 950);
+      // Paket yoneticisi varyantlari: `pnpm dev`, `yarn run build`, `bun dev`...
+      const runMatch = /^(npm|pnpm|yarn|bun)\s+(run\s+)?\S*$/i.exec(line);
+      if (runMatch) {
+        const manager = runMatch[1];
+        const runWord = runMatch[2] ? 'run ' : manager.toLowerCase() === 'npm' ? 'run ' : '';
+        for (const script of this.context.scripts) {
+          const name = script.replace(/^npm\s+run\s+/i, '');
+          add(`${manager} ${runWord}${name}`, 1000);
+        }
+      }
+      for (const script of this.context.scripts) add(script, 950);
+      for (const target of this.context.makeTargets) add(target, 900);
+
+      // 3. Yol tamamlama: son argumani dizin/dosya adlariyla tamamla.
+      if (token && PATH_COMMANDS.has(token.command.toLowerCase())) {
+        const typed = token.value;
+        // Ayirac iceren yollarda alt dizinin icerigi elimizde yok.
+        if (!/[\\/]/.test(typed) && !typed.startsWith('-')) {
+          const dirOnly = DIR_ONLY_COMMANDS.has(token.command.toLowerCase());
+          const head = line.slice(0, line.length - typed.length);
+          for (const dir of this.context.directories) {
+            if (dir.includes(' ')) continue; // tirnak gerektirir, ghost text bozulur
+            add(`${head}${dir}/`, 980);
+          }
+          if (!dirOnly) {
+            for (const file of this.context.files) {
+              if (file.includes(' ')) continue;
+              add(`${head}${file}`, 940);
+            }
+          }
         }
       }
     }
 
-    // 3. Yerlesik sozluk
-    for (const command of BUILTIN_COMMANDS) add(command, 100);
+    // 4. Yerlesik sozluk
+    for (const command of BUILTIN_COMMANDS) add(command, 120);
 
-    if (candidates.length === 0) return null;
-    candidates.sort((a, b) => b.score - a.score);
-    return candidates[0].text;
+    let bestText: string | null = null;
+    let bestScore = -Infinity;
+    for (const [text, score] of scores) {
+      if (score > bestScore) {
+        bestScore = score;
+        bestText = text;
+      }
+    }
+    return bestText;
   }
 
   private async refreshHistory(): Promise<void> {
     try {
-      const entries = await window.bitig.history.list();
-      const remembered = this.history.filter((c) => !entries.some((e) => e.command === c));
-      this.history = [...remembered, ...entries.map((entry) => entry.command)];
+      this.history = await window.bitig.history.list();
     } catch {
-      // gecmis okunamadiysa yerlesik sozlukle devam
+      // gecmis okunamadiysa oturum gecmisi + yerlesik sozlukle devam
     }
   }
 
   private async refreshContext(): Promise<void> {
     const cwd = this.options.getCwd();
-    if (!cwd || cwd === this.contextCwd) return;
+    if (!cwd) return;
+    const fresh = cwd === this.contextCwd && Date.now() - this.contextFetchedAt < CONTEXT_TTL_MS;
+    if (fresh) return;
     this.contextCwd = cwd;
+    this.contextFetchedAt = Date.now();
     try {
       this.context = await window.bitig.completion.context(cwd);
     } catch {
@@ -340,4 +467,23 @@ export class InlineSuggestions implements InlineSuggestionHost {
       ghost.style.letterSpacing = `${cellWidth - naturalAdvance}px`;
     }
   }
+}
+
+/** Satirin ilk kelimesi ve imlecin uzerinde bulundugu son (yarim) argumani. */
+function lastToken(line: string): { command: string; value: string } | null {
+  const trimmedStart = line.replace(/^\s+/, '');
+  if (!trimmedStart) return null;
+  const command = trimmedStart.split(/\s+/)[0] ?? '';
+  if (!command) return null;
+  if (/\s$/.test(line)) return { command, value: '' };
+  const parts = trimmedStart.split(/\s+/);
+  if (parts.length < 2) return null;
+  return { command, value: parts[parts.length - 1] };
+}
+
+/** Windows yollari buyuk/kucuk harf ve ayirac farkina duyarsiz karsilastirilir. */
+function samePath(a: string, b: string): boolean {
+  const normalize = (value: string): string =>
+    value.replace(/\\/g, '/').replace(/\/+$/, '').toLowerCase();
+  return normalize(a) === normalize(b);
 }

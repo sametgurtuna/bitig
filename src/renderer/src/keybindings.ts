@@ -16,6 +16,19 @@ export class KeybindingManager {
 
   constructor() {
     window.addEventListener('keydown', (event) => this.handleKeydown(event));
+    // Tab ile DOM odak gezintisi bir terminal uygulamasinda istenmez: odak
+    // sessizce title bar / durum cubugu butonlarina kayiyor ve sonraki Enter
+    // (or. yayin modu butonu) yanlislikla tetikleniyordu. Yalniz gercek metin
+    // alanlarinda (modal girdileri, ayarlar formu) varsayilan davranis korunur.
+    window.addEventListener(
+      'keydown',
+      (event) => {
+        if (event.key !== 'Tab' || event.defaultPrevented) return;
+        if (isTextEntry(event.target)) return;
+        event.preventDefault();
+      },
+      true
+    );
   }
 
   setBindings(customBindings?: Record<string, string>): void {
@@ -89,4 +102,12 @@ export class KeybindingManager {
       }
     }
   }
+}
+
+/** Tab'in dogal davranisini koruyacak gercek metin girdisi mi? */
+function isTextEntry(target: EventTarget | null): boolean {
+  if (!(target instanceof HTMLElement)) return false;
+  if (target.isContentEditable) return true;
+  const tag = target.tagName;
+  return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT';
 }
