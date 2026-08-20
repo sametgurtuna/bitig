@@ -7,6 +7,7 @@ import { KeybindingManager } from './keybindings';
 import { CommandPalette } from './commandPalette';
 import { BetikModal } from './betikModal';
 import { HistoryModal } from './historyModal';
+import { BilgeModal } from './bilgeModal';
 
 /**
  * Uygulama girisi: title bar davranisini baglar, gorunum (tema/opaklik/
@@ -26,7 +27,7 @@ async function bootstrap(): Promise<void> {
   const profileMenuEl = document.getElementById('profile-dropdown-menu');
   const appEl = document.getElementById('app') || document.body;
   if (!rootEl || !tabbarListEl || !newTabBtn || !terminalShellEl || !settingsPanelEl || !settingsBtn || !newTabDropdownBtn || !profileMenuEl) {
-    throw new Error('Sekme/ayarlar icin gerekli DOM elemanlari bulunamadi');
+    throw new Error('Required DOM elements for tabs/settings were not found');
   }
 
   const appearance = new AppearanceController();
@@ -35,6 +36,7 @@ async function bootstrap(): Promise<void> {
   const settingsPanel = new SettingsPanel(settingsPanelEl, terminalShellEl, settingsBtn, appearance, keybindings);
   const betikModal = new BetikModal(appEl, tabStore);
   const historyModal = new HistoryModal(appEl, tabStore);
+  const bilgeModal = new BilgeModal(appEl, tabStore);
   const commandPalette = new CommandPalette(
     appEl,
     tabStore,
@@ -42,13 +44,15 @@ async function bootstrap(): Promise<void> {
     keybindings,
     () => settingsPanel.open(),
     () => betikModal.open(),
-    () => historyModal.open()
+    () => historyModal.open(),
+    () => bilgeModal.open()
   );
 
   keybindings.registerAction('settings.toggle', () => settingsPanel.toggle());
   keybindings.registerAction('palette.toggle', () => commandPalette.toggle());
   keybindings.registerAction('betik.toggle', () => betikModal.toggle());
   keybindings.registerAction('history.search', () => historyModal.toggle());
+  keybindings.registerAction('ai.prompt', () => bilgeModal.toggle());
 
   // Ilk sekme acilmadan once aktif tema/opaklik/arkaplan uygulanmis olsun;
   // TabStore.createTab() zaten guncel temayla (currentTerminalTheme) acar.

@@ -10,6 +10,7 @@ import { registerSnippetHandlers } from './ipc/snippetHandlers';
 import { registerHistoryHandlers } from './ipc/historyHandlers';
 import { registerCockpitHandlers } from './ipc/cockpitHandlers';
 import { registerQuakeHandlers, unregisterQuakeHandlers } from './ipc/quakeHandlers';
+import { registerAiHandlers } from './ipc/aiHandlers';
 import { ThemeStore } from './theme/themeStore';
 import { SettingsStore } from './settings/settingsStore';
 import { SnippetStore } from './snippets/snippetStore';
@@ -94,6 +95,7 @@ void app.whenReady().then(async () => {
   registerSnippetHandlers(snippetStore);
   registerHistoryHandlers(historyStore);
   registerCockpitHandlers();
+  registerAiHandlers(settingsStore);
 
   createMainWindow();
   setupQuakeHud(settingsStore);

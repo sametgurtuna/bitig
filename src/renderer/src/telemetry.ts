@@ -116,7 +116,7 @@ export class ExecutionTelemetry {
       if (isBackground) {
         const sec = (durationMs / 1000).toFixed(1);
         window.bitig.windowControls.notify({
-          title: '✅ Komut Tamamlandi',
+          title: '✅ Command Finished',
           body: `"${cmd.length > 40 ? cmd.slice(0, 37) + '...' : cmd}" (${sec}s)`
         });
       }

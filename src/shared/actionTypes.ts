@@ -1,4 +1,4 @@
-// Merkezi eylem tanimlari ve klavye kisayollari icin paylasilan sozlesme.
+// Central action definitions and shared contract for keyboard shortcuts.
 
 export type ActionId =
   | 'tab.new'
@@ -28,9 +28,10 @@ export type ActionId =
   | 'profile.open7'
   | 'profile.open8'
   | 'profile.open9'
-  | 'broadcast.toggle';
+  | 'broadcast.toggle'
+  | 'ai.prompt';
 
-export type ActionCategory = 'Sekmeler' | 'Paneller' | 'Gorunum ve Arama' | 'Uygulama';
+export type ActionCategory = 'Tabs' | 'Panes' | 'View & Search' | 'Application';
 
 export interface ActionDefinition {
   id: ActionId;
@@ -41,173 +42,180 @@ export interface ActionDefinition {
 }
 
 export const ACTION_DEFINITIONS: ActionDefinition[] = [
-  // Sekmeler
+  // Tabs
   {
     id: 'tab.new',
-    name: 'Yeni Sekme',
-    category: 'Sekmeler',
+    name: 'New Tab',
+    category: 'Tabs',
     defaultKeys: 'Ctrl+Shift+T',
-    description: 'Varsayilan profille yeni bir sekme acar'
+    description: 'Opens a new tab with the default profile'
   },
   {
     id: 'tab.close',
-    name: 'Sekmeyi Kapat',
-    category: 'Sekmeler',
+    name: 'Close Tab',
+    category: 'Tabs',
     defaultKeys: 'Ctrl+Shift+W',
-    description: 'Aktif sekmeyi ve icindeki tum panelleri kapatir'
+    description: 'Closes the active tab and all panes within it'
   },
   {
     id: 'tab.next',
-    name: 'Sonraki Sekme',
-    category: 'Sekmeler',
+    name: 'Next Tab',
+    category: 'Tabs',
     defaultKeys: 'Ctrl+Tab',
-    description: 'Bir sonraki sekmeye gecer'
+    description: 'Switches to the next tab'
   },
   {
     id: 'tab.previous',
-    name: 'Onceki Sekme',
-    category: 'Sekmeler',
+    name: 'Previous Tab',
+    category: 'Tabs',
     defaultKeys: 'Ctrl+Shift+Tab',
-    description: 'Bir onceki sekmeye gecer'
+    description: 'Switches to the previous tab'
   },
   {
     id: 'profile.open1',
-    name: '1. Profili Ac',
-    category: 'Sekmeler',
+    name: 'Open Profile 1',
+    category: 'Tabs',
     defaultKeys: 'Ctrl+Shift+1',
-    description: '1. kabuk profiliyle yeni sekme acar'
+    description: 'Opens a new tab with the 1st shell profile'
   },
   {
     id: 'profile.open2',
-    name: '2. Profili Ac',
-    category: 'Sekmeler',
+    name: 'Open Profile 2',
+    category: 'Tabs',
     defaultKeys: 'Ctrl+Shift+2',
-    description: '2. kabuk profiliyle yeni sekme acar'
+    description: 'Opens a new tab with the 2nd shell profile'
   },
   {
     id: 'profile.open3',
-    name: '3. Profili Ac',
-    category: 'Sekmeler',
+    name: 'Open Profile 3',
+    category: 'Tabs',
     defaultKeys: 'Ctrl+Shift+3',
-    description: '3. kabuk profiliyle yeni sekme acar'
+    description: 'Opens a new tab with the 3rd shell profile'
   },
   {
     id: 'profile.open4',
-    name: '4. Profili Ac',
-    category: 'Sekmeler',
+    name: 'Open Profile 4',
+    category: 'Tabs',
     defaultKeys: 'Ctrl+Shift+4',
-    description: '4. kabuk profiliyle yeni sekme acar'
+    description: 'Opens a new tab with the 4th shell profile'
   },
 
-  // Paneller
+  // Panes
   {
     id: 'pane.splitRight',
-    name: 'Saga Bol (Split Right)',
-    category: 'Paneller',
+    name: 'Split Right',
+    category: 'Panes',
     defaultKeys: 'Alt+Shift+D',
-    description: 'Aktif paneli dikey cizgiyle saga dogru ikiye boler'
+    description: 'Splits the active pane in two with a vertical divider'
   },
   {
     id: 'pane.splitDown',
-    name: 'Asagi Bol (Split Down)',
-    category: 'Paneller',
+    name: 'Split Down',
+    category: 'Panes',
     defaultKeys: 'Alt+Shift+E',
-    description: 'Aktif paneli yatay cizgiyle asagi dogru ikiye boler'
+    description: 'Splits the active pane in two with a horizontal divider'
   },
   {
     id: 'pane.close',
-    name: 'Paneli Kapat',
-    category: 'Paneller',
+    name: 'Close Pane',
+    category: 'Panes',
     defaultKeys: 'Ctrl+Shift+X',
-    description: 'Odakli olan aktif paneli kapatir'
+    description: 'Closes the currently focused pane'
   },
   {
     id: 'pane.zoom',
-    name: 'Paneli Buyut / Geri Yukle (Zoom)',
-    category: 'Paneller',
+    name: 'Zoom Pane',
+    category: 'Panes',
     defaultKeys: 'Ctrl+Shift+Z',
-    description: 'Odakli paneli tam ekran yapar veya split duzenine dondurur'
+    description: 'Expands the focused pane to full size, or restores the split layout'
   },
   {
     id: 'pane.navigateLeft',
-    name: 'Sola Odaklan',
-    category: 'Paneller',
+    name: 'Focus Left',
+    category: 'Panes',
     defaultKeys: 'Alt+ArrowLeft',
-    description: 'Soldaki komsu panele odaklanir'
+    description: 'Focuses the neighboring pane to the left'
   },
   {
     id: 'pane.navigateRight',
-    name: 'Saga Odaklan',
-    category: 'Paneller',
+    name: 'Focus Right',
+    category: 'Panes',
     defaultKeys: 'Alt+ArrowRight',
-    description: 'Sagdaki komsu panele odaklanir'
+    description: 'Focuses the neighboring pane to the right'
   },
   {
     id: 'pane.navigateUp',
-    name: 'Yukari Odaklan',
-    category: 'Paneller',
+    name: 'Focus Up',
+    category: 'Panes',
     defaultKeys: 'Alt+ArrowUp',
-    description: 'Yukaridaki komsu panele odaklanir'
+    description: 'Focuses the neighboring pane above'
   },
   {
     id: 'pane.navigateDown',
-    name: 'Asagi Odaklan',
-    category: 'Paneller',
+    name: 'Focus Down',
+    category: 'Panes',
     defaultKeys: 'Alt+ArrowDown',
-    description: 'Asagidaki komsu panele odaklanir'
+    description: 'Focuses the neighboring pane below'
   },
 
-  // Gorunum ve Arama
+  // View & Search
   {
     id: 'terminal.search',
-    name: 'Terminalde Ara',
-    category: 'Gorunum ve Arama',
+    name: 'Search Terminal',
+    category: 'View & Search',
     defaultKeys: 'Ctrl+F',
-    description: 'Dahili arama cubugunu acar veya kapatir'
+    description: 'Opens or closes the in-terminal search bar'
   },
   {
     id: 'history.search',
-    name: 'Komut Gecmisinde Ara',
-    category: 'Gorunum ve Arama',
+    name: 'Search Command History',
+    category: 'View & Search',
     defaultKeys: 'Ctrl+R',
-    description: 'Oturumlar arasi komut gecmisinde fuzzy arama yapar'
+    description: 'Fuzzy-searches command history across sessions'
   },
   {
     id: 'theme.cycle',
-    name: 'Temayi Degistir',
-    category: 'Gorunum ve Arama',
+    name: 'Cycle Theme',
+    category: 'View & Search',
     defaultKeys: 'Alt+Shift+T',
-    description: 'Kurulu temalar arasinda sirasiyla gecis yapar'
+    description: 'Cycles through the installed themes in order'
   },
 
-  // Uygulama
+  // Application
   {
     id: 'palette.toggle',
-    name: 'Komut Paletini Ac',
-    category: 'Uygulama',
+    name: 'Open Command Palette',
+    category: 'Application',
     defaultKeys: 'Ctrl+Shift+P',
-    description: 'Evrensel eylem, tema ve profil komut paletini acar'
+    description: 'Opens the universal action, theme, and profile command palette'
   },
   {
     id: 'betik.toggle',
-    name: 'Bitig Betik (Runbook Yoneticisi)',
-    category: 'Uygulama',
+    name: 'Bitig Betik (Runbook Manager)',
+    category: 'Application',
     defaultKeys: 'Ctrl+Shift+B',
-    description: 'Parametrik komut sablonlari ve betik yoneticisini acar'
+    description: 'Opens the parametric command template and runbook manager'
   },
   {
     id: 'settings.toggle',
-    name: 'Ayarlari Ac / Kapat',
-    category: 'Uygulama',
+    name: 'Toggle Settings',
+    category: 'Application',
     defaultKeys: 'Ctrl+,',
-    description: 'Ayarlar panelini goruntuler veya gizler'
+    description: 'Shows or hides the settings panel'
   },
   {
     id: 'broadcast.toggle',
-    name: 'Yayin Modunu Ac / Kapat',
-    category: 'Paneller',
+    name: 'Toggle Broadcast Mode',
+    category: 'Panes',
     defaultKeys: 'Alt+Shift+I',
-    description: 'Aktif sekmedeki tum panellere ayni anda giris gonderir (Broadcast Input)'
+    description: 'Sends input to every pane in the active tab at once (Broadcast Input)'
+  },
+  {
+    id: 'ai.prompt',
+    name: 'Bitig Bilge (AI Assistant)',
+    category: 'Application',
+    defaultKeys: 'Ctrl+I',
+    description: 'Opens the natural-language command generation and error-explanation assistant'
   }
 ];
 

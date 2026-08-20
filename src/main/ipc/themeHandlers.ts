@@ -7,6 +7,12 @@ export function registerThemeHandlers(themeStore: ThemeStore, webContents: WebCo
   ipcMain.handle(THEME_CHANNELS.list, () => themeStore.list());
 
   themeStore.onListChanged(() => {
-    webContents.send(THEME_CHANNELS.listChanged);
+    if (!webContents.isDestroyed()) {
+      try {
+        webContents.send(THEME_CHANNELS.listChanged);
+      } catch {
+        // Pencere kapaniyorsa sessizce gec
+      }
+    }
   });
 }

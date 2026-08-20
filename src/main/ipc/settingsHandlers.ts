@@ -69,6 +69,12 @@ export function registerSettingsHandlers(settingsStore: SettingsStore, win: Brow
   });
 
   settingsStore.onChange((settings) => {
-    webContents.send(SETTINGS_CHANNELS.changed, settings);
+    if (!win.isDestroyed() && !webContents.isDestroyed()) {
+      try {
+        webContents.send(SETTINGS_CHANNELS.changed, settings);
+      } catch {
+        // Pencere kapaniyorsa sessizce gec
+      }
+    }
   });
 }

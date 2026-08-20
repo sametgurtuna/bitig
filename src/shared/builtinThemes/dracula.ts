@@ -6,7 +6,7 @@ export const dracula: BitigTheme = {
   schemaVersion: 1,
   id: 'dracula',
   name: 'Dracula',
-  author: 'Bitig (Dracula paletinden esinlenilmistir)',
+  author: 'Bitig (inspired by the Dracula palette)',
   terminal: {
     background: '#282a36',
     foreground: '#f8f8f2',

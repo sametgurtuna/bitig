@@ -18,10 +18,22 @@ export function registerPtyHandlers(ptyManager: PtyManager, webContents: WebCont
     const id = ptyManager.create(options.cols, options.rows, options.command, options.args, options.cwd);
 
     ptyManager.onData(id, (data) => {
-      webContents.send(PTY_CHANNELS.data, { id, data });
+      if (!webContents.isDestroyed()) {
+        try {
+          webContents.send(PTY_CHANNELS.data, { id, data });
+        } catch {
+          // Pencere kapaniyorsa veya nesne yok edildiyse sessizce gec
+        }
+      }
     });
     ptyManager.onExit(id, (exitCode) => {
-      webContents.send(PTY_CHANNELS.exit, { id, exitCode });
+      if (!webContents.isDestroyed()) {
+        try {
+          webContents.send(PTY_CHANNELS.exit, { id, exitCode });
+        } catch {
+          // Pencere kapaniyorsa veya nesne yok edildiyse sessizce gec
+        }
+      }
     });
 
     return { id };

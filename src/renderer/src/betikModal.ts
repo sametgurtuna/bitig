@@ -16,7 +16,7 @@ export class BetikModal {
   private filteredSnippets: BitigSnippet[] = [];
   private selectedSnippet: BitigSnippet | null = null;
   private formValues: Record<string, string> = {};
-  private activeCategory: string = 'Tumu';
+  private activeCategory: string = 'All';
 
   private readonly backdropEl: HTMLDivElement;
   private readonly modalEl: HTMLDivElement;
@@ -65,7 +65,7 @@ export class BetikModal {
     this.isOpen = true;
     this.snippets = await window.bitig.snippets.list();
     this.filteredSnippets = [...this.snippets];
-    this.activeCategory = 'Tumu';
+    this.activeCategory = 'All';
     this.switchView('list');
 
     this.backdropEl.classList.remove('hidden');
@@ -105,13 +105,13 @@ export class BetikModal {
 
     const desc = document.createElement('p');
     desc.className = 'betik-subtitle';
-    desc.textContent = 'Parametrik komut sablonlari ile uzun CLI komutlarini hatasiz calistirin.';
+    desc.textContent = 'Run long CLI commands reliably using parametric command templates.';
 
     titleWrap.append(title, desc);
 
     const newBtn = document.createElement('button');
     newBtn.className = 'betik-btn-primary';
-    newBtn.innerHTML = '+ Yeni Betik';
+    newBtn.innerHTML = '+ New Betik';
     newBtn.addEventListener('click', () => this.switchView('editor'));
 
     header.append(titleWrap, newBtn);
@@ -123,12 +123,12 @@ export class BetikModal {
     const searchInput = document.createElement('input');
     searchInput.type = 'text';
     searchInput.className = 'betik-search-input';
-    searchInput.placeholder = 'Betiklerde veya komut kaliplarinda ara (docker, ffmpeg, git...)...';
+    searchInput.placeholder = 'Search snippets or command patterns (docker, ffmpeg, git...)...';
 
     const categoryList = document.createElement('div');
     categoryList.className = 'betik-cat-pills';
 
-    const categories = ['Tumu', 'Docker', 'Git', 'Medya', 'Sistem', 'Web & Ag', 'Kubernetes'];
+    const categories = ['All', 'Docker', 'Git', 'Media', 'System', 'Web & Network', 'Kubernetes'];
     for (const cat of categories) {
       const pill = document.createElement('button');
       pill.type = 'button';
@@ -161,7 +161,7 @@ export class BetikModal {
 
   private filterSnippets(query: string): void {
     let list = this.snippets;
-    if (this.activeCategory !== 'Tumu') {
+    if (this.activeCategory !== 'All') {
       list = list.filter((s) => s.category === this.activeCategory);
     }
 
@@ -188,7 +188,7 @@ export class BetikModal {
     if (this.filteredSnippets.length === 0) {
       const empty = document.createElement('div');
       empty.className = 'betik-empty';
-      empty.textContent = 'Aramaya uygun bir betik sablonu bulunamadi.';
+      empty.textContent = 'No matching snippet found.';
       gridEl.appendChild(empty);
       return;
     }
@@ -223,7 +223,7 @@ export class BetikModal {
 
       const runBtn = document.createElement('button');
       runBtn.className = 'betik-btn-run';
-      runBtn.textContent = '🚀 Calistir / Doldur';
+      runBtn.textContent = '🚀 Run / Fill In';
       runBtn.addEventListener('click', (e) => {
         e.stopPropagation();
         this.openSnippetForm(snippet);
@@ -259,7 +259,7 @@ export class BetikModal {
 
     const backBtn = document.createElement('button');
     backBtn.className = 'betik-btn-back';
-    backBtn.innerHTML = '← Geri (Esc)';
+    backBtn.innerHTML = '← Back (Esc)';
     backBtn.addEventListener('click', () => this.switchView('list'));
 
     const titleWrap = document.createElement('div');
@@ -327,7 +327,7 @@ export class BetikModal {
     } else {
       const noVarsMsg = document.createElement('p');
       noVarsMsg.className = 'betik-no-vars';
-      noVarsMsg.textContent = 'Bu sablon parametre icermemektedir. Dogrudan calistirabilirsiniz.';
+      noVarsMsg.textContent = 'This template has no parameters. You can run it directly.';
       formContainer.appendChild(noVarsMsg);
     }
 
@@ -337,7 +337,7 @@ export class BetikModal {
 
     const previewLabel = document.createElement('div');
     previewLabel.className = 'betik-preview-label';
-    previewLabel.textContent = 'Canli Komut Onizlemesi (Terminalde Calisacak)';
+    previewLabel.textContent = 'Live Command Preview (Will Run In Terminal)';
 
     const previewBox = document.createElement('div');
     previewBox.className = 'betik-preview-box';
@@ -351,17 +351,17 @@ export class BetikModal {
 
     const copyBtn = document.createElement('button');
     copyBtn.className = 'betik-btn-secondary';
-    copyBtn.innerHTML = '📋 Panoya Kopyala';
+    copyBtn.innerHTML = '📋 Copy to Clipboard';
     copyBtn.addEventListener('click', () => {
       const cmd = this.composeCommand(snippet.template, this.formValues);
       void navigator.clipboard.writeText(cmd);
-      copyBtn.textContent = '✓ Kopyalandi!';
-      setTimeout(() => (copyBtn.innerHTML = '📋 Panoya Kopyala'), 1500);
+      copyBtn.textContent = '✓ Copied!';
+      setTimeout(() => (copyBtn.innerHTML = '📋 Copy to Clipboard'), 1500);
     });
 
     const runBtn = document.createElement('button');
     runBtn.className = 'betik-btn-primary';
-    runBtn.innerHTML = '🚀 Terminale Gonder & Calistir (Enter)';
+    runBtn.innerHTML = '🚀 Send to Terminal & Run (Enter)';
     runBtn.addEventListener('click', () => {
       this.executeSnippet(snippet);
     });
@@ -413,30 +413,30 @@ export class BetikModal {
 
     const backBtn = document.createElement('button');
     backBtn.className = 'betik-btn-back';
-    backBtn.innerHTML = '← Geri (Esc)';
+    backBtn.innerHTML = '← Back (Esc)';
     backBtn.addEventListener('click', () => this.switchView('list'));
 
     const title = document.createElement('h2');
-    title.textContent = 'Yeni Betik Sablonu Ekle';
+    title.textContent = 'Add New Betik Template';
 
     header.append(backBtn, title);
 
     const form = document.createElement('div');
     form.className = 'betik-editor-form';
 
-    // Sablon Adi
-    const nameGroup = this.buildInputGroup('Betik Adi', 'Orn: Docker PostgreSQL Container');
-    // Aciklama
-    const descGroup = this.buildInputGroup('Aciklama', 'Orn: PostgreSQL 16 veritabanini baslatir');
-    // Kategori
+    // Template name
+    const nameGroup = this.buildInputGroup('Template Name', 'e.g. Docker PostgreSQL Container');
+    // Description
+    const descGroup = this.buildInputGroup('Description', 'e.g. Starts a PostgreSQL 16 database');
+    // Category
     const catGroup = document.createElement('div');
     catGroup.className = 'betik-field-group';
     const catLabel = document.createElement('label');
     catLabel.className = 'betik-field-label';
-    catLabel.textContent = 'Kategori';
+    catLabel.textContent = 'Category';
     const catSelect = document.createElement('select');
     catSelect.className = 'betik-field-input';
-    ['Docker', 'Git', 'Medya', 'Sistem', 'Web & Ag', 'Kubernetes', 'Genel'].forEach((cat) => {
+    ['Docker', 'Git', 'Media', 'System', 'Web & Network', 'Kubernetes', 'General'].forEach((cat) => {
       const opt = document.createElement('option');
       opt.value = cat;
       opt.textContent = cat;
@@ -444,21 +444,21 @@ export class BetikModal {
     });
     catGroup.append(catLabel, catSelect);
 
-    // Komut Sablonu
+    // Command template
     const tplGroup = document.createElement('div');
     tplGroup.className = 'betik-field-group';
     const tplLabel = document.createElement('label');
     tplLabel.className = 'betik-field-label';
-    tplLabel.textContent = 'Komut Sablonu (Degiskenler icin {{isim}} kullanin)';
+    tplLabel.textContent = 'Command Template (use {{name}} for variables)';
     const tplArea = document.createElement('textarea');
     tplArea.className = 'betik-field-input betik-textarea';
-    tplArea.placeholder = 'Orn: docker run -d -p {{port}}:5432 -e POSTGRES_PASSWORD={{password}} postgres:16';
+    tplArea.placeholder = 'e.g. docker run -d -p {{port}}:5432 -e POSTGRES_PASSWORD={{password}} postgres:16';
     tplArea.rows = 4;
     tplGroup.append(tplLabel, tplArea);
 
     const saveBtn = document.createElement('button');
     saveBtn.className = 'betik-btn-primary';
-    saveBtn.textContent = 'Sablonu Kaydet';
+    saveBtn.textContent = 'Save Template';
     saveBtn.addEventListener('click', async () => {
       const name = (nameGroup.querySelector('input') as HTMLInputElement).value.trim();
       const descText = (descGroup.querySelector('input') as HTMLInputElement).value.trim();
@@ -466,7 +466,7 @@ export class BetikModal {
       const category = catSelect.value as any;
 
       if (!name || !template) {
-        alert('Lutfen en azindan Sablon Adi ve Komut Sablonu giriniz.');
+        alert('Please enter at least a Template Name and a Command Template.');
         return;
       }
 

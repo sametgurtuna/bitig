@@ -37,7 +37,7 @@ export class HistoryModal {
     this.inputEl = document.createElement('input');
     this.inputEl.type = 'text';
     this.inputEl.className = 'history-input';
-    this.inputEl.placeholder = 'Gecmis komutlarda ara... (Ctrl+R / Enter)';
+    this.inputEl.placeholder = 'Search command history... (Ctrl+R / Enter)';
     this.inputEl.spellcheck = false;
 
     header.append(promptPrefix, this.inputEl);
@@ -50,13 +50,13 @@ export class HistoryModal {
 
     const hint = document.createElement('span');
     hint.className = 'history-hint';
-    hint.textContent = '↑↓ Gezin | Enter Calistir | Esc Kapat';
+    hint.textContent = '↑↓ Navigate | Enter Run | Esc Close';
 
     const clearBtn = document.createElement('button');
     clearBtn.className = 'history-clear-btn';
-    clearBtn.textContent = 'Gecmisi Temizle';
+    clearBtn.textContent = 'Clear History';
     clearBtn.addEventListener('click', async () => {
-      if (confirm('Tum komut gecmisini silmek istediginize emin misiniz?')) {
+      if (confirm('Are you sure you want to delete the entire command history?')) {
         this.entries = await window.bitig.history.clear();
         this.filterEntries();
       }
@@ -166,7 +166,7 @@ export class HistoryModal {
     if (this.filteredEntries.length === 0) {
       const empty = document.createElement('div');
       empty.className = 'history-empty';
-      empty.textContent = 'Gecmiste komut bulunamadi.';
+      empty.textContent = 'No command found in history.';
       this.listEl.appendChild(empty);
       return;
     }
@@ -228,12 +228,12 @@ export class HistoryModal {
   private formatTimeAgo(timestamp: number): string {
     const diff = Math.max(0, Date.now() - timestamp);
     const sec = Math.floor(diff / 1000);
-    if (sec < 60) return 'az once';
+    if (sec < 60) return 'just now';
     const min = Math.floor(sec / 60);
-    if (min < 60) return `${min} dk`;
+    if (min < 60) return `${min}m`;
     const hrs = Math.floor(min / 60);
-    if (hrs < 24) return `${hrs} sa`;
+    if (hrs < 24) return `${hrs}h`;
     const days = Math.floor(hrs / 24);
-    return `${days} gun`;
+    return `${days}d`;
   }
 }

@@ -47,12 +47,20 @@ export class PtyManager {
   }
 
   dispose(id: string): void {
-    this.sessions.get(id)?.kill();
-    this.sessions.delete(id);
+    const session = this.sessions.get(id);
+    if (session) {
+      try {
+        session.kill();
+      } catch {
+        // Proses zaten sonlanmissa sessizce gec
+      }
+      this.sessions.delete(id);
+    }
   }
 
   disposeAll(): void {
-    for (const id of this.sessions.keys()) {
+    const ids = Array.from(this.sessions.keys());
+    for (const id of ids) {
       this.dispose(id);
     }
   }

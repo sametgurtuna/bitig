@@ -50,7 +50,7 @@ design decision is not obvious:
 | 11 | Command history, fuzzy search & execution telemetry | 2, 8 | `0.8.5` (done) |
 | 12 | Developer cockpit, live port sniffer & secret shield | 8, 10 | `0.9.0` (done) |
 | 13 | Quake / Dropdown HUD mode & broadcast input | 3, 9 | `0.9.5` (done) |
-| 14 | AI terminal companion ("Bitig Bilge" - Local & BYOK) | 8, 11 | `0.9.8` |
+| 14 | AI terminal companion ("Bitig Bilge" - Local & BYOK) | 8, 11 | `0.9.8` (done) |
 | 15 | Lightweight plugin system & sandboxing | 9, 10 | `1.0.0-rc` |
 | 16 | Packaging, installer & auto-updater | all | `1.0.0` |
 
@@ -922,10 +922,10 @@ or personal API keys (OpenAI, Gemini, Anthropic, DeepSeek).
 
 ### Sub-tasks
 
-- [ ] AI provider abstraction in main (`OllamaProvider`, `OpenAIProvider`, `GeminiProvider`, `AnthropicProvider`).
-- [ ] Settings Panel: **AI / Bilge** configuration section (Provider, API Key, Model name, Temperature).
-- [ ] Inline explanation drawer / tooltip component in renderer.
-- [ ] Inline ghost-text suggestion prompt.
+- [x] AI provider abstraction in main (`OllamaProvider`, `OpenAIProvider`, `GeminiProvider`, `AnthropicProvider`, `DeepSeek`).
+- [x] Settings Panel: **AI / Bilge** configuration section (Provider, API Key, Model name, Temperature, Connection Test).
+- [x] Inline explanation drawer / error explainer.
+- [x] Natural language to CLI generator (`Ctrl+I` - Bilge Modal).
 
 ---
 

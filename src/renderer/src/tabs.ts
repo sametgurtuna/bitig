@@ -71,7 +71,7 @@ export class TabStore {
     // Broadcast banner: window'un etrafina kirmizi cizgi + uyari mesaji
     this.broadcastBanner = document.createElement('div');
     this.broadcastBanner.id = 'broadcast-banner';
-    this.broadcastBanner.innerHTML = '<span>🔴 BROADCAST AKTİF — tüm split pane\'lere yazılıyor</span>';
+    this.broadcastBanner.innerHTML = '<span>🔴 BROADCAST ACTIVE — writing to all split panes</span>';
     document.body.appendChild(this.broadcastBanner);
 
     window.bitig.pty.onData((event) => {
@@ -85,7 +85,7 @@ export class TabStore {
 
     window.bitig.pty.onExit((event) => {
       const entry = this.leavesByPtyId.get(event.id);
-      entry?.leaf.terminal.write(`\r\n[proses sonlandi, exit code: ${event.exitCode}]\r\n`);
+      entry?.leaf.terminal.write(`\r\n[process exited, exit code: ${event.exitCode}]\r\n`);
       this.telemetry.finishCommand(event.id, event.exitCode);
     });
 
@@ -392,6 +392,14 @@ export class TabStore {
     return this.isBroadcast;
   }
 
+  /** Aktif sekmenin kabuk profili ve odakli panelin (OSC 7 ile izlenen) CWD'sini doner - Bitig Bilge (AI) icin baglam saglar. */
+  getActiveShellContext(): { shellType: string; cwd?: string } {
+    const tab = this.getActiveTab();
+    const profile = this.getProfileById(tab?.profileId);
+    const leaf = tab ? findLeaf(tab.root, tab.activeLeafId) : undefined;
+    return { shellType: profile?.name || 'PowerShell', cwd: leaf?.cwd };
+  }
+
   /** Acik sekmelerin id, baslik ve aktiflik durumlarini doner. */
   getTabsInfo(): { id: string; title: string; active: boolean }[] {
     return this.tabs.map((tab) => ({
@@ -451,7 +459,7 @@ export class TabStore {
         const badgeEl = document.createElement('span');
         badgeEl.className = 'tab-zoom-badge';
         badgeEl.textContent = '🔍';
-        badgeEl.title = 'Pane buyutuldu (Ctrl+Shift+Z)';
+        badgeEl.title = 'Pane zoomed (Ctrl+Shift+Z)';
         tab.tabEl.insertBefore(badgeEl, tab.tabEl.querySelector('.tab-close'));
       }
     } else {
@@ -479,7 +487,7 @@ export class TabStore {
     for (const p of ports) {
       const badge = document.createElement('span');
       badge.className = 'tab-port-badge';
-      badge.title = `${p.url} tarayicida ac`;
+      badge.title = `Open ${p.url} in browser`;
       badge.innerHTML = `<span class="tab-port-dot"></span>:${p.port}`;
       badge.addEventListener('click', (e) => {
         e.stopPropagation();
@@ -579,8 +587,8 @@ export class TabStore {
 
     const closeBtn = document.createElement('button');
     closeBtn.className = 'tab-close';
-    closeBtn.title = 'Kapat';
-    closeBtn.setAttribute('aria-label', 'Sekmeyi kapat');
+    closeBtn.title = 'Close';
+    closeBtn.setAttribute('aria-label', 'Close tab');
     closeBtn.innerHTML = '<svg viewBox="0 0 10 10"><path d="M0 0l10 10M10 0L0 10" /></svg>';
 
     tabEl.append(titleEl, closeBtn);

@@ -230,50 +230,9 @@ body {
   stroke-width: 1.4;
 }
 
-/* ── Port Sniffer Rozet Stilleri ─────────────────────────────────────────── */
-.tab-ports-container {
-  display: flex;
-  align-items: center;
-  gap: 3px;
-  margin-right: 2px;
-}
-
-.tab-port-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 3px;
-  padding: 1px 5px;
-  border-radius: 8px;
-  background: rgba(34, 197, 94, 0.15);
-  border: 1px solid rgba(34, 197, 94, 0.4);
-  color: #4ade80;
-  font-size: 10px;
-  font-weight: 600;
-  line-height: 1;
-  cursor: pointer;
-  -webkit-app-region: no-drag;
-  transition: background 0.15s, border-color 0.15s;
-  white-space: nowrap;
-}
-
-.tab-port-badge:hover {
-  background: rgba(34, 197, 94, 0.28);
-  border-color: rgba(34, 197, 94, 0.7);
-}
-
-.tab-port-dot {
-  width: 5px;
-  height: 5px;
-  border-radius: 50%;
-  background: #4ade80;
-  animation: port-pulse 2s ease-in-out infinite;
-  flex-shrink: 0;
-}
-
-@keyframes port-pulse {
-  0%, 100% { opacity: 1; transform: scale(1); }
-  50%       { opacity: 0.45; transform: scale(0.75); }
-}
+/* Port Sniffer badge styles live further down (live-updating variant); see
+   the "Port Sniffer" section below - this used to be a duplicate,
+   superseded copy of those rules and has been removed. */
 
 #new-tab-group {
   position: relative;
@@ -459,6 +418,8 @@ body {
   padding: 20px 24px 32px;
   background: var(--bitig-panel-scrim);
   color: var(--bitig-text);
+  scrollbar-width: thin;
+  scrollbar-color: var(--bitig-border) transparent;
 }
 
 #settings-panel.hidden {
@@ -604,6 +565,66 @@ body {
   white-space: nowrap;
   font: 12px/1 'Segoe UI', sans-serif;
   color: var(--bitig-text-dim);
+}
+
+.settings-desc {
+  margin: 0 0 12px;
+  font: 12px/1.5 'Segoe UI', sans-serif;
+  color: var(--bitig-text-dim);
+}
+
+.settings-hint-tight {
+  margin: -6px 0 12px;
+  font-size: 11px;
+  opacity: 0.75;
+}
+
+.settings-label {
+  flex: 0 0 auto;
+  font: 12px/1 'Segoe UI', sans-serif;
+  color: var(--bitig-text-dim);
+}
+
+.settings-checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font: 12px/1.4 'Segoe UI', sans-serif;
+  color: var(--bitig-text);
+  cursor: pointer;
+}
+
+.settings-checkbox-label input[type='checkbox'] {
+  width: 14px;
+  height: 14px;
+  accent-color: var(--bitig-accent);
+  cursor: pointer;
+}
+
+.settings-input {
+  flex: 1 1 auto;
+  padding: 6px 8px;
+  border: 1px solid var(--bitig-border);
+  border-radius: 6px;
+  background: var(--bitig-titlebar-bg);
+  color: var(--bitig-text);
+  font: 12px/1 'Segoe UI', sans-serif;
+}
+
+.settings-input::placeholder {
+  color: var(--bitig-text-dim);
+  opacity: 0.7;
+}
+
+.settings-input:focus {
+  outline: none;
+  border-color: var(--bitig-accent);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--bitig-accent) 25%, transparent);
+}
+
+.settings-input:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 .settings-select {
@@ -1868,7 +1889,263 @@ body.quake-mode #app {
   box-shadow: 0 8px 32px hsla(0, 0%, 0%, 0.55);
 }
 
-body.quake-mode .titlebar {
+body.quake-mode #titlebar {
   -webkit-app-region: drag;
   border-radius: 0;
 }
+
+/* ============================================================
+   BITIG BILGE (AI ASSISTANT - CTRL+I) - v0.9.8
+   ============================================================ */
+
+.bilge-backdrop {
+  position: absolute;
+  inset: 0;
+  background: hsla(220, 25%, 6%, 0.65);
+  backdrop-filter: blur(8px);
+  z-index: 1000;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding-top: 12vh;
+  animation: bilge-fade-in 0.18s ease-out;
+}
+
+.bilge-backdrop.hidden,
+.bilge-error-banner.hidden,
+.bilge-preview.hidden,
+.bilge-btn.hidden {
+  display: none !important;
+}
+
+@keyframes bilge-fade-in {
+  from { opacity: 0; transform: translateY(-8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.bilge-modal {
+  width: 90%;
+  max-width: 640px;
+  background: var(--bitig-bg);
+  border: 1px solid var(--bitig-border);
+  border-radius: 12px;
+  box-shadow:
+    0 16px 48px hsla(0, 0%, 0%, 0.5),
+    0 0 0 1px color-mix(in srgb, var(--bitig-accent) 15%, transparent);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.bilge-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  background: hsla(220, 20%, 10%, 0.5);
+  border-bottom: 1px solid var(--bitig-border);
+}
+
+.bilge-title-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.bilge-icon {
+  font-size: 16px;
+}
+
+.bilge-title {
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  color: var(--bitig-text);
+}
+
+.bilge-header-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.bilge-close-btn {
+  background: transparent;
+  border: none;
+  color: var(--bitig-text-dim);
+  font-size: 13px;
+  cursor: pointer;
+  padding: 3px 6px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s;
+}
+
+.bilge-close-btn:hover {
+  background: hsla(0, 80%, 50%, 0.15);
+  color: #f87171;
+}
+
+.bilge-status-badge {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--bitig-accent) 15%, transparent);
+  color: var(--bitig-accent);
+  border: 1px solid color-mix(in srgb, var(--bitig-accent) 30%, transparent);
+}
+
+.bilge-status-badge.disabled {
+  background: hsla(220, 10%, 50%, 0.15);
+  color: var(--bitig-text-dim);
+  border-color: var(--bitig-border);
+}
+
+.bilge-status-badge.loading {
+  background: hsla(45, 90%, 50%, 0.15);
+  color: #fcd34d;
+  border-color: hsla(45, 90%, 50%, 0.3);
+  animation: bilge-badge-pulse 1s infinite alternate;
+}
+
+@keyframes bilge-badge-pulse {
+  from { opacity: 0.6; }
+  to   { opacity: 1; }
+}
+
+.bilge-input-row {
+  padding: 14px 16px;
+}
+
+.bilge-input {
+  width: 100%;
+  padding: 10px 14px;
+  background: hsla(220, 25%, 8%, 0.7);
+  border: 1px solid var(--bitig-border);
+  border-radius: 8px;
+  color: var(--bitig-text);
+  font-size: 14px;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.bilge-input:focus {
+  border-color: var(--bitig-accent);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--bitig-accent) 20%, transparent);
+}
+
+.bilge-input:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.bilge-error-banner {
+  margin: 0 16px 12px 16px;
+  padding: 8px 12px;
+  background: hsla(0, 80%, 45%, 0.15);
+  border: 1px solid hsla(0, 80%, 45%, 0.3);
+  border-radius: 6px;
+  color: #fca5a5;
+  font-size: 12px;
+  line-height: 1.45;
+  white-space: pre-wrap;
+}
+
+.bilge-preview {
+  margin: 0 16px 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.bilge-command-box {
+  background: hsla(220, 30%, 6%, 0.9);
+  border: 1px solid hsla(190, 80%, 45%, 0.3);
+  border-radius: 8px;
+  padding: 12px 14px;
+  box-shadow: inset 0 2px 8px hsla(0, 0%, 0%, 0.4);
+}
+
+.bilge-command-code {
+  font-family: 'Cascadia Code', Consolas, monospace;
+  font-size: 13px;
+  color: var(--bitig-accent);
+  word-break: break-all;
+  white-space: pre-wrap;
+  user-select: text;
+}
+
+.bilge-explanation {
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--bitig-text-dim);
+  padding: 0 4px;
+  user-select: text;
+}
+
+.bilge-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 16px;
+  background: hsla(220, 20%, 10%, 0.4);
+  border-top: 1px solid var(--bitig-border);
+}
+
+.bilge-hint {
+  font-size: 11px;
+  color: var(--bitig-text-dim);
+}
+
+.bilge-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.bilge-btn {
+  padding: 6px 14px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+  transition: all 0.15s ease;
+}
+
+.bilge-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.bilge-btn-primary {
+  background: var(--bitig-accent);
+  color: #0b0e14;
+}
+
+.bilge-btn-primary:hover {
+  filter: brightness(0.9);
+}
+
+.bilge-btn-secondary {
+  background: hsla(220, 15%, 20%, 0.6);
+  color: var(--bitig-text);
+  border: 1px solid var(--bitig-border);
+}
+
+.bilge-btn-secondary:hover {
+  background: hsla(220, 15%, 25%, 0.8);
+}
+
+.ai-test-result {
+  font-size: 12px;
+  margin-left: 10px;
+  display: inline-flex;
+  align-items: center;
+}
+
+.ai-test-result.loading { color: #fcd34d; }
+.ai-test-result.success { color: #86efac; font-weight: 600; }
+.ai-test-result.error   { color: #fca5a5; }

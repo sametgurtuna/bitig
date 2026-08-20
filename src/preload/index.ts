@@ -16,6 +16,12 @@ import { SNIPPET_CHANNELS, type BitigSnippet } from '../shared/snippetTypes';
 import { HISTORY_CHANNELS, type HistoryEntry } from '../shared/historyTypes';
 import { COCKPIT_CHANNELS } from '../shared/cockpitTypes';
 import { QUAKE_CHANNELS } from '../shared/quakeTypes';
+import {
+  AI_CHANNELS,
+  type AiPromptRequest,
+  type AiPromptResponse,
+  type AiExplainErrorRequest
+} from '../shared/aiTypes';
 
 // nodeIntegration kapali, contextIsolation acik: renderer'a sadece bu daralmis
 // API yuzeyi contextBridge ile sunulur, dogrudan Node/Electron erisimi verilmez.
@@ -148,6 +154,15 @@ const quakeApi = {
     ipcRenderer.invoke(QUAKE_CHANNELS.setHotkey, hotkey)
 };
 
+const aiApi = {
+  prompt: (request: AiPromptRequest): Promise<AiPromptResponse> =>
+    ipcRenderer.invoke(AI_CHANNELS.prompt, request),
+  explainError: (request: AiExplainErrorRequest): Promise<AiPromptResponse> =>
+    ipcRenderer.invoke(AI_CHANNELS.explainError, request),
+  testConnection: (): Promise<{ success: boolean; message: string }> =>
+    ipcRenderer.invoke(AI_CHANNELS.testConnection)
+};
+
 export type BitigApi = {
   pty: typeof ptyApi;
   windowControls: typeof windowApi;
@@ -158,6 +173,7 @@ export type BitigApi = {
   history: typeof historyApi;
   cockpit: typeof cockpitApi;
   quake: typeof quakeApi;
+  ai: typeof aiApi;
 };
 
 const bitigApi: BitigApi = {
@@ -169,7 +185,8 @@ const bitigApi: BitigApi = {
   snippets: snippetsApi,
   history: historyApi,
   cockpit: cockpitApi,
-  quake: quakeApi
+  quake: quakeApi,
+  ai: aiApi
 };
 
 contextBridge.exposeInMainWorld('bitig', bitigApi);

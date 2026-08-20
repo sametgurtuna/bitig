@@ -5,6 +5,19 @@ All notable changes to this project are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and versioning follows [Semantic Versioning](https://semver.org/).
 
+## [0.9.8] - 2026-08-20
+
+### Added
+
+- **"Bitig Bilge" — AI Terminal Companion (`Ctrl+I`):**
+  - `src/main/ai/aiService.ts`: Native fetch-based AI service supporting **Ollama** (`http://localhost:11434` %100 local), **OpenAI**, **Anthropic Claude**, **Google Gemini**, **DeepSeek**, and custom OpenAI-compatible endpoints.
+  - `src/renderer/src/bilgeModal.ts`: Glassmorphic interactive modal (`Ctrl+I`) for natural language to shell command generation and error explanation.
+  - Press `Enter` to inject & execute the generated command in active terminal, `Tab` to insert without execution for manual editing, `Esc` to close.
+  - Privacy-First & BYOK: All API keys stored locally in `%APPDATA%/Bitig/settings.json`, zero cloud telemetry.
+- **Settings Panel AI / Bilge Configuration Section:**
+  - Configurable provider selection, API endpoint URL, BYOK API key input with toggle masking, model selector, and live connection test button (`⚡ Bağlantıyı Test Et`).
+  - Command Palette integration: `Bitig Bilge (AI Asistan)` listed in universal palette actions.
+
 ## [0.9.5] - 2026-08-20
 
 ### Added

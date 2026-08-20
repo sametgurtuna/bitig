@@ -129,8 +129,17 @@ export class AppearanceController {
     );
     root.setProperty('--bitig-titlebar-bg', withAlpha(theme.ui.titlebarBackground, opacity));
     root.setProperty('--bitig-text-dim', theme.ui.titlebarText);
+    // The theme schema has no dedicated UI text color; the terminal's own
+    // foreground is the closest analog and, unlike a hardcoded light value,
+    // stays readable against a light theme's panel/titlebar background too.
+    root.setProperty('--bitig-text', theme.terminal.foreground);
     root.setProperty('--bitig-border', theme.ui.border);
     root.setProperty('--bitig-accent', theme.ui.accent);
+
+    // Native form controls (<select>, checkboxes, scrollbars) render with
+    // dark or light OS chrome based on color-scheme; without this a light
+    // theme like Bitig Light still gets dark-themed native widgets.
+    document.documentElement.style.colorScheme = isLightBackground(theme.ui.background) ? 'light' : 'dark';
   }
 
   private async applyBackgroundImage(settings: BitigSettings): Promise<void> {
@@ -181,7 +190,17 @@ export class AppearanceController {
  * proportional fonta dusmesin.
  */
 export function buildFontStack(family: string): string {
-  return `"${family.replace(/"/g, '\\"')}", 'Cascadia Mono', Consolas, monospace`;
+  return `"${family.replace(/"/g, '\\"')}", 'Symbols Nerd Font', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Cascadia Code', Consolas, monospace`;
+}
+
+/** Perceptual-luminance check used to pick the CSS `color-scheme` for native controls. */
+function isLightBackground(hex: string): boolean {
+  const normalized = hex.replace('#', '');
+  const r = parseInt(normalized.substring(0, 2), 16);
+  const g = parseInt(normalized.substring(2, 4), 16);
+  const b = parseInt(normalized.substring(4, 6), 16);
+  const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+  return luminance > 0.5;
 }
 
 function withAlpha(hex: string, alpha: number): string {
@@ -213,7 +232,7 @@ function downscaleImage(dataUrl: string, maxDimension: number): Promise<string> 
       ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
       resolve(canvas.toDataURL('image/png'));
     };
-    img.onerror = () => reject(new Error('Arkaplan gorseli yuklenemedi'));
+    img.onerror = () => reject(new Error('Failed to load background image'));
     img.src = dataUrl;
   });
 }

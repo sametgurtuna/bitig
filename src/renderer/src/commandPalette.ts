@@ -8,7 +8,7 @@ export interface PaletteItem {
   id: string;
   title: string;
   subtitle?: string;
-  category: 'Eylemler' | 'Sekmeler' | 'Profiller' | 'Temalar' | 'Betik';
+  category: 'Actions' | 'Tabs' | 'Profiles' | 'Themes' | 'Betik';
   shortcut?: string;
   icon?: string;
   action: () => void | Promise<void>;
@@ -35,7 +35,8 @@ export class CommandPalette {
     private readonly keybindings: KeybindingManager,
     private readonly onOpenSettings: () => void,
     private readonly onOpenBetik: () => void,
-    private readonly onOpenHistory: () => void
+    private readonly onOpenHistory: () => void,
+    private readonly onOpenBilge?: () => void
   ) {
     this.backdropEl = document.createElement('div');
     this.backdropEl.className = 'palette-backdrop hidden';
@@ -57,7 +58,7 @@ export class CommandPalette {
     this.inputEl = document.createElement('input');
     this.inputEl.type = 'text';
     this.inputEl.className = 'palette-input';
-    this.inputEl.placeholder = 'Komut, eylem, sekme veya tema arayin...';
+    this.inputEl.placeholder = 'Search commands, actions, tabs, or themes...';
     this.inputEl.spellcheck = false;
 
     header.append(searchIcon, this.inputEl);
@@ -121,58 +122,59 @@ export class CommandPalette {
       else if (def.id === 'theme.cycle') action = () => this.appearance.cycleTheme();
       else if (def.id === 'settings.toggle') action = () => this.onOpenSettings();
       else if (def.id === 'betik.toggle') action = () => this.onOpenBetik();
+      else if (def.id === 'ai.prompt') action = () => this.onOpenBilge?.();
 
       items.push({
         id: `action:${def.id}`,
         title: def.name,
         subtitle: def.description,
-        category: 'Eylemler',
+        category: 'Actions',
         shortcut: this.keybindings.getBinding(def.id) || def.defaultKeys,
         action
       });
     }
 
-    // 2. Acik Sekmeler
+    // 2. Open tabs
     const tabs = this.tabStore.getTabsInfo();
     for (const tab of tabs) {
       items.push({
         id: `tab:${tab.id}`,
-        title: `Sekmeye Gec: ${tab.title}`,
-        subtitle: tab.active ? 'Mevcut aktif sekme' : 'Sekmeye odaklan',
-        category: 'Sekmeler',
+        title: `Switch to Tab: ${tab.title}`,
+        subtitle: tab.active ? 'Currently active tab' : 'Focus this tab',
+        category: 'Tabs',
         action: () => this.tabStore.switchToTab(tab.id)
       });
     }
 
-    // 3. Kabuk Profilleri
+    // 3. Shell profiles
     const profiles = this.tabStore.getProfiles();
     for (const profile of profiles) {
       items.push({
         id: `profile:${profile.id}`,
-        title: `Yeni Sekme Ac: ${profile.name}`,
+        title: `Open New Tab: ${profile.name}`,
         subtitle: profile.command,
-        category: 'Profiller',
+        category: 'Profiles',
         action: () => this.tabStore.createTab(profile.id)
       });
     }
 
-    // 4. Temalar
+    // 4. Themes
     const themes = this.appearance.getState()?.themes || [];
     for (const theme of themes) {
       items.push({
         id: `theme:${theme.id}`,
-        title: `Tema: ${theme.name}`,
-        subtitle: theme.author ? `Yazar: ${theme.author}` : 'Terminal Temasi',
-        category: 'Temalar',
+        title: `Theme: ${theme.name}`,
+        subtitle: theme.author ? `Author: ${theme.author}` : 'Terminal Theme',
+        category: 'Themes',
         action: () => window.bitig.settings.set({ activeTheme: theme.id })
       });
     }
 
-    // 5. Hizli Betik Eylemi
+    // 5. Quick Betik action
     items.push({
       id: 'betik:open',
-      title: 'Bitig Betik Runbook Ac',
-      subtitle: 'Kayitli komut sablonlari ve parametrik calistirici',
+      title: 'Open Bitig Betik Runbook',
+      subtitle: 'Saved command templates and parametric runner',
       category: 'Betik',
       shortcut: this.keybindings.getBinding('betik.toggle'),
       action: () => this.onOpenBetik()
@@ -251,7 +253,7 @@ export class CommandPalette {
     if (this.filteredItems.length === 0) {
       const emptyEl = document.createElement('div');
       emptyEl.className = 'palette-empty';
-      emptyEl.textContent = 'Eslesen komut bulunamadi';
+      emptyEl.textContent = 'No matching command found';
       this.listEl.appendChild(emptyEl);
       return;
     }

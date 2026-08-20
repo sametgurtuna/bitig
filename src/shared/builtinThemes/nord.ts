@@ -6,7 +6,7 @@ export const nord: BitigTheme = {
   schemaVersion: 1,
   id: 'nord',
   name: 'Nord',
-  author: 'Bitig (Nord paletinden esinlenilmistir)',
+  author: 'Bitig (inspired by the Nord palette)',
   terminal: {
     background: '#2e3440',
     foreground: '#d8dee9',

@@ -63,7 +63,9 @@ export async function createPaneLeaf(
     cursorStyle: 'bar',
     fontFamily: font.fontFamily,
     fontSize: font.fontSize,
-    lineHeight: 1.25,
+    lineHeight: 1.2,
+    letterSpacing: 0,
+    rescaleOverlappingGlyphs: true,
     scrollback: 5000,
     allowTransparency: true,
     theme: terminalTheme

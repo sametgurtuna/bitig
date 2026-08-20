@@ -36,7 +36,13 @@ export function registerWindowHandlers(win: BrowserWindow): void {
   // Maximize durumu kullanici cift-tiklama ya da OS kisayoluyla da degisebilir;
   // renderer'daki buton ikonunu guncel tutmak icin degisikligi push ediyoruz.
   const notifyMaximizeChange = (): void => {
-    win.webContents.send(WINDOW_CHANNELS.maximizeChange, { isMaximized: win.isMaximized() });
+    if (!win.isDestroyed() && !win.webContents.isDestroyed()) {
+      try {
+        win.webContents.send(WINDOW_CHANNELS.maximizeChange, { isMaximized: win.isMaximized() });
+      } catch {
+        // Pencere kapaniyorsa sessizce gec
+      }
+    }
   };
   win.on('maximize', notifyMaximizeChange);
   win.on('unmaximize', notifyMaximizeChange);

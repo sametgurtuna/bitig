@@ -1,9 +1,9 @@
 # Bitig — Özellikler & Fark Yaratan Yetenekler (FEATURES.md)
 
-> **v0.9.5** — Quake / Dropdown HUD Modu ve Broadcast Input (Giriş Yayını)
-> dahil tüm temel kokpit yetenekleri tamamlandı. Bu doküman, **Bitig**'in
-> sıradan bir terminal öykünücüsünün ötesine geçerek modern bir **Geliştirici Kokpiti**
-> haline gelmesini sağlayan yeteneklerini detaylandırır.
+> **v0.9.8** — "Bitig Bilge" Yerel & BYOK AI Asistanı (`Ctrl+I`) dahil tüm
+> kokpit zekası tamamlandı. Bu doküman, **Bitig**'in sıradan bir terminal
+> öykünücüsünün ötesine geçerek modern bir **Geliştirici Kokpiti** haline
+> gelmesini sağlayan yeteneklerini detaylandırır.
 
 ---
 
@@ -29,7 +29,7 @@ Mevcut Windows ekosistemindeki terminaller iki uca savrulmuştur:
 | **Yerel Parametrik Runbook ("Bitig Betik")** | ❌ Yok | ⚠️ (Bulut/Hesaplı) | ❌ Yok | 🚀 **Dahili & Yerel JSON (`Ctrl+Shift+B`)** |
 | **Canlı Port & Servis Dinleyicisi (Port Sniffer)** | ❌ Yok | ❌ Yok | ❌ Yok | 🌐 **Dahili — Shipped v0.9.0 (ANSI-stripped, buffered, tıkla-aç)** |
 | **Secret Shield (Token/Şifre Sansürü)** | ❌ Yok | ❌ Yok | ❌ Yok | 🛡️ **Dahili (Otomatik Maskeleme)** |
-| **Yerel AI Asistanı (Ollama / BYOK)** | ⚠️ (Copilot Sidebar) | ⚠️ (Warp AI / Bulut) | ❌ Yok | 💡 **Dahili (Ollama + BYOK / Sıfır İz)** |
+| **Yerel AI Asistanı (Ollama / BYOK)** | ⚠️ (Copilot Sidebar) | ⚠️ (Warp AI / Bulut) | ❌ Yok | 💡 **Dahili — Shipped v0.9.8 (Ollama + BYOK / `Ctrl+I`)** |
 | **Quake / Dropdown HUD Modu** | ⚠️ (Ayrı mod/ayar) | ❌ Yok | ⚠️ (Eklentiyle) | 🪟 **Dahili — Shipped v0.9.5 (`Win+~` / `Ctrl+~`)** |
 | **Broadcast Input (Eşzamanlı Split Yayını)** | ❌ Yok | ❌ Yok | ⚠️ (Bazı sürümlerde) | 🔴 **Dahili — Shipped v0.9.5 (`Alt+Shift+I`)** |
 | **IDE Akıllı Linkleri (Dosya:Satır Açma)** | ❌ (Sadece URL) | ⚠️ (Kısmi) | ❌ (Sadece URL) | 🔗 **Dahili (`vscode://`, Cursor, vb.)** |
@@ -141,16 +141,16 @@ Canlı yayınlarda veya ekran paylaşımı yaparken `cat .env`, `echo $STRIPE_KE
 
 ---
 
-### 5. "Bitig Bilge" — Yerel & Gizlilik Odaklı AI Asistanı (`Ctrl+I`)
+### 5. "Bitig Bilge" — Yerel & Gizlilik Odaklı AI Asistanı (`Ctrl+I`) ✅ Shipped v0.9.8
 
 #### 🔴 Problem
 Komut satırında bilinmeyen bir hata alındığında (`exit code != 0`), terminalden kopyalayıp tarayıcıda aratmak geliştirici akışını böler. Şirket kodlarını veya loglarını bulut AI servislerine yapıştırmak ise veri güvenliği politikalarına aykırıdır.
 
-#### 🟢 Bitig Çözümü
+#### 🟢 Bitig Çözümü (v0.9.8'de tamamlandı)
 * **%100 Yerel (Ollama / LM Studio) veya BYOK (Bring Your Own Key):** Bitig hiçbir veriyi kendi sunucularına iletmez. Kullanıcı ister yerel `http://localhost:11434` (Ollama) bağlar, ister kendi OpenAI / Gemini / Claude / DeepSeek anahtarını girer.
-* **Akıllı Hata Çözücü:** Komut hata verdiğinde yanında beliren `💡 Hatayı Açıkla` butonuna basıldığında sadece son komut ve ilgili hata satırları modele gönderilerek anında çözüm önerisi sunulur.
-* **Doğal Dilden Komuta (Ghost Prompt - `Ctrl+I`):**
-  * `Ctrl+I` basıp *"100MB'tan büyük tüm .log dosyalarını bul ve sil"* yazıldığında, aktif shell'e uygun (PowerShell veya Bash) doğru komut üretilir ve `Tab` ile terminale aktarılır.
+* **Akıllı Hata Çözücü:** Komut hata verdiğinde veya `ai:explain-error` ile son komut ve ilgili hata satırları analiz edilerek Türkçe ve uygulanabilir çözüm üretilir.
+* **Doğal Dilden Komuta (Ctrl+I - Bitig Bilge Modalı):**
+  * `Ctrl+I` basıp *"100MB'tan büyük tüm .log dosyalarını bul ve sil"* yazıldığında, aktif shell'e uygun temiz komut üretilir; `Enter` ile anında çalıştırılır veya `Tab` ile terminale aktarılır.
 
 ---
 

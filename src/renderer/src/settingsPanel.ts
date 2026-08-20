@@ -8,27 +8,28 @@ import {
   type ActionCategory,
   type ActionId
 } from '../../shared/actionTypes';
+import { DEFAULT_AI_SETTINGS, type AiProviderType } from '../../shared/aiTypes';
 import type { KeybindingManager } from './keybindings';
 
 const FIT_LABELS: Record<BackgroundImageFit, string> = {
-  cover: 'Kapla (cover)',
-  contain: 'Sigdir (contain)',
-  center: 'Ortala (center)',
-  tile: 'Dosele (tile)'
+  cover: 'Cover',
+  contain: 'Contain',
+  center: 'Center',
+  tile: 'Tile'
 };
 
-/** Onizlemede gosterilen ornek Nerd Font ikonlari (Powerline + Devicons). */
+/** Sample Nerd Font icons shown in the preview (Powerline + Devicons). */
 const NERD_FONT_SAMPLE_ICONS = '\uE0B0  \uE706  \uF09B  \uF07B  \uE62B  \uF120';
 
 /**
- * Windows Terminal'deki ayarlar sekmesine benzer bir ayarlar paneli:
- * title bar'daki disli butonuyla acilir, #terminal-shell'in yerini
- * kaplar. Gorunum, Kabuk Profilleri, Font ve Klavye Kisayollari bolumlerini icerir.
+ * A settings panel similar to Windows Terminal's own: opened via the gear
+ * button in the title bar, replaces #terminal-shell in place. Covers
+ * Appearance, Shell Profiles, Font, and Keyboard Shortcuts sections.
  */
 export class SettingsPanel {
   private isOpen = false;
-  // Font listesi PowerShell spawn'i + yuzlerce canvas olcumu gerektiriyor;
-  // panel her acildiginda degil, ilk acilista bir kez yuklenir.
+  // The font list requires spawning PowerShell + hundreds of canvas
+  // measurements; it's loaded once on first open, not on every render.
   private fonts: FontInfo[] | null = null;
   private fontsLoading = false;
   private recordingActionId: ActionId | null = null;
@@ -62,7 +63,7 @@ export class SettingsPanel {
     void this.ensureFontsLoaded();
   }
 
-  /** Font listesini bir kez yukler; bittiginde paneli yeniden cizer. */
+  /** Loads the font list once; re-renders the panel when done. */
   private async ensureFontsLoaded(): Promise<void> {
     if (this.fonts || this.fontsLoading) return;
     this.fontsLoading = true;
@@ -70,7 +71,7 @@ export class SettingsPanel {
       const selected = this.appearance.getState()?.settings.terminal.fontFamily;
       this.fonts = await loadUsableFonts(selected);
     } catch (error) {
-      console.error(`[Bitig] Font listesi yuklenemedi: ${String(error)}`);
+      console.error(`[Bitig] Failed to load font list: ${String(error)}`);
       this.fonts = [];
     } finally {
       this.fontsLoading = false;
@@ -88,12 +89,12 @@ export class SettingsPanel {
   }
 
   private readonly handleKeydown = (event: KeyboardEvent): void => {
-    // Eger su anda bir kisayol tusu kaydediliyorsa
+    // If a shortcut key is currently being recorded
     if (this.recordingActionId) {
       event.preventDefault();
       event.stopPropagation();
 
-      // Sadece Escape tusu basilmissa kayittan vazgec
+      // Escape alone cancels the recording
       if (event.key === 'Escape' && !event.ctrlKey && !event.altKey && !event.shiftKey) {
         this.recordingActionId = null;
         this.render();
@@ -123,6 +124,7 @@ export class SettingsPanel {
       this.buildHeader(),
       this.buildProfileSection(settings),
       this.buildKeybindingsSection(settings),
+      this.buildBilgeAiSection(settings),
       this.buildCockpitSection(settings),
       this.buildTelemetrySection(settings),
       this.buildThemeSection(themes, settings),
@@ -138,12 +140,12 @@ export class SettingsPanel {
     header.className = 'settings-header';
 
     const title = document.createElement('h2');
-    title.textContent = 'Ayarlar';
+    title.textContent = 'Settings';
 
     const closeBtn = document.createElement('button');
     closeBtn.className = 'settings-close-btn';
-    closeBtn.title = 'Kapat (Esc)';
-    closeBtn.setAttribute('aria-label', 'Ayarlari kapat');
+    closeBtn.title = 'Close (Esc)';
+    closeBtn.setAttribute('aria-label', 'Close settings');
     closeBtn.innerHTML = '<svg viewBox="0 0 10 10"><path d="M0 0l10 10M10 0L0 10" /></svg>';
     closeBtn.addEventListener('click', () => this.close());
 
@@ -152,18 +154,18 @@ export class SettingsPanel {
   }
 
   private buildProfileSection(settings: BitigSettings): HTMLElement {
-    const section = this.buildSection('Kabuk Profilleri');
+    const section = this.buildSection('Shell Profiles');
 
     const desc = document.createElement('p');
     desc.className = 'settings-desc';
-    desc.textContent = 'Yeni sekmelerde ve pencerelerde baslatilacak varsayilan kabugu belirleyin:';
+    desc.textContent = 'Choose the default shell to launch in new tabs and windows:';
 
     const row = document.createElement('div');
     row.className = 'settings-row';
 
     const label = document.createElement('label');
     label.className = 'settings-label';
-    label.textContent = 'Varsayilan Profil';
+    label.textContent = 'Default Profile';
     label.htmlFor = 'settings-default-profile-select';
 
     const select = document.createElement('select');
@@ -205,16 +207,16 @@ export class SettingsPanel {
   }
 
   private buildKeybindingsSection(settings: BitigSettings): HTMLElement {
-    const section = this.buildSection('Klavye Kisayollari');
+    const section = this.buildSection('Keyboard Shortcuts');
 
     const desc = document.createElement('p');
     desc.className = 'settings-desc';
     desc.textContent =
-      'Terminal eylemleri icin klavye kisayollarini ozellestirin. Bir kisayola tiklayip yeni tus kombinasyonuna basarak aninda degistirebilirsiniz.';
+      'Customize keyboard shortcuts for terminal actions. Click a shortcut and press a new key combination to change it instantly.';
 
     section.appendChild(desc);
 
-    const categories: ActionCategory[] = ['Sekmeler', 'Paneller', 'Gorunum ve Arama', 'Uygulama'];
+    const categories: ActionCategory[] = ['Tabs', 'Panes', 'View & Search', 'Application'];
 
     for (const cat of categories) {
       const catActions = ACTION_DEFINITIONS.filter((a) => a.category === cat);
@@ -256,18 +258,18 @@ export class SettingsPanel {
         if (conflict) {
           const conflictBadge = document.createElement('span');
           conflictBadge.className = 'keybinding-conflict-badge';
-          conflictBadge.title = `Bu tus baska bir eylemle cakismakta: ${conflict.name}`;
-          conflictBadge.textContent = `⚠ Cakisiyor: ${conflict.name}`;
+          conflictBadge.title = `This shortcut conflicts with another action: ${conflict.name}`;
+          conflictBadge.textContent = `⚠ Conflicts with: ${conflict.name}`;
           controls.appendChild(conflictBadge);
         }
 
         const keyBtn = document.createElement('button');
         keyBtn.type = 'button';
         keyBtn.className = `keybinding-btn ${isRecording ? 'recording' : ''}`;
-        keyBtn.title = isRecording ? 'Iptal icin Esc tusuna basin' : 'Degistirmek icin tiklayin';
+        keyBtn.title = isRecording ? 'Press Esc to cancel' : 'Click to change';
 
         if (isRecording) {
-          keyBtn.innerHTML = '<span class="recording-pulse"></span> Tus bekleniyor...';
+          keyBtn.innerHTML = '<span class="recording-pulse"></span> Waiting for key...';
         } else {
           keyBtn.textContent = currentKey;
         }
@@ -280,12 +282,12 @@ export class SettingsPanel {
 
         controls.appendChild(keyBtn);
 
-        // Varsayilana don butonu
+        // Reset-to-default button
         if (currentKey !== def.defaultKeys) {
           const resetBtn = document.createElement('button');
           resetBtn.type = 'button';
           resetBtn.className = 'keybinding-reset-btn';
-          resetBtn.title = `Varsayilana don (${def.defaultKeys})`;
+          resetBtn.title = `Reset to default (${def.defaultKeys})`;
           resetBtn.innerHTML = '↺';
           resetBtn.addEventListener('click', (e) => {
             e.stopPropagation();
@@ -307,7 +309,7 @@ export class SettingsPanel {
   }
 
   private buildThemeSection(themes: BitigTheme[], settings: BitigSettings): HTMLElement {
-    const section = this.buildSection('Tema');
+    const section = this.buildSection('Theme');
 
     const grid = document.createElement('div');
     grid.className = 'theme-grid';
@@ -350,12 +352,12 @@ export class SettingsPanel {
     const familyRow = document.createElement('div');
     familyRow.className = 'settings-row';
     const familyLabel = document.createElement('label');
-    familyLabel.textContent = 'Aile';
+    familyLabel.textContent = 'Family';
 
     if (!this.fonts) {
       const loading = document.createElement('span');
       loading.className = 'settings-path-label';
-      loading.textContent = 'Fontlar yukleniyor...';
+      loading.textContent = 'Loading fonts...';
       familyRow.append(familyLabel, loading);
       section.appendChild(familyRow);
       return section;
@@ -365,15 +367,15 @@ export class SettingsPanel {
     select.className = 'settings-select';
     if (this.fonts.length === 0) {
       const option = document.createElement('option');
-      option.textContent = 'Font bulunamadi';
+      option.textContent = 'No fonts found';
       select.appendChild(option);
       select.disabled = true;
     }
     for (const font of this.fonts) {
       const option = document.createElement('option');
       option.value = font.family;
-      // Nerd Font olanlari listede de isaretle: kullanici acmadan once
-      // hangi secenegin ikon destekledigini gorebilsin.
+      // Flag Nerd Fonts right in the list, so the user can see which
+      // options support icons before picking one.
       option.textContent = font.hasNerdGlyphs ? `${font.family}  (Nerd Font)` : font.family;
       option.selected = font.family === fontFamily;
       select.appendChild(option);
@@ -390,14 +392,14 @@ export class SettingsPanel {
       step: 1,
       value: fontSize,
       formatValue: (v) => `${v}px`,
-      // Font boyutu, opaklik gibi ucuz bir CSS degisikligi degil - her
-      // adimda tum terminalleri yeniden olcup PTY'ye resize gonderirdi.
-      // Bu yuzden anlik onizleme yok, sadece surukleme bitince uygulanir.
+      // Font size isn't a cheap CSS change like opacity - every step would
+      // re-measure every terminal and send a PTY resize. So there's no
+      // live preview, only applied once the drag ends.
       onInput: () => undefined,
       onCommit: (value) => window.bitig.settings.set({ terminal: { fontSize: value } })
     });
     const sizeLabel = document.createElement('label');
-    sizeLabel.textContent = 'Boyut';
+    sizeLabel.textContent = 'Size';
     sizeRow.prepend(sizeLabel);
     section.appendChild(sizeRow);
 
@@ -406,9 +408,9 @@ export class SettingsPanel {
   }
 
   /**
-   * Canli onizleme: secili fontla ornek metin + yaygin Nerd Font ikonlari.
-   * Ikonlar tofu kutusu olarak cikiyorsa kullanici bunu ayarlar
-   * ekranindayken gorur - bozuk bir prompt'ta kesfetmesi gerekmez.
+   * Live preview: sample text plus common Nerd Font icons rendered in the
+   * selected font. If the icons render as tofu boxes, the user sees that
+   * right here in settings instead of discovering it in a broken prompt.
    */
   private buildFontPreview(family: string, size: number): HTMLElement {
     const preview = document.createElement('div');
@@ -430,16 +432,16 @@ export class SettingsPanel {
       const notice = document.createElement('p');
       notice.className = 'font-notice';
       notice.textContent =
-        'Bu font Nerd Font ikonlari icermiyor; yukaridaki ikon satiri bos kutular olarak gorunecek. Ikonlu bir prompt kullaniyorsan ';
+        "This font doesn't include Nerd Font icons; the icon row above will show empty boxes. If you use an icon-based prompt, you can install an icon-patched version from ";
       const link = document.createElement('a');
       link.href = 'https://www.nerdfonts.com/';
       link.textContent = 'nerdfonts.com';
-      // target="_blank" olmadan tiklama renderer'i uygulamadan disari
-      // yonlendirirdi; boylece main'deki setWindowOpenHandler devreye
-      // girip linki varsayilan tarayicida aciyor (bkz. main/index.ts).
+      // Without target="_blank" the click would navigate the renderer
+      // itself away from the app; this way main's setWindowOpenHandler
+      // kicks in and opens the link in the default browser (see main/index.ts).
       link.target = '_blank';
       link.rel = 'noreferrer';
-      notice.append(link, document.createTextNode(" adresinden ikonlu bir surum kurabilirsin."));
+      notice.append(link, document.createTextNode('.'));
       preview.appendChild(notice);
     }
 
@@ -447,14 +449,14 @@ export class SettingsPanel {
   }
 
   private buildOpacitySection(settings: BitigSettings): HTMLElement {
-    const section = this.buildSection('Opaklik');
+    const section = this.buildSection('Opacity');
 
     const { row } = this.buildSlider({
       min: 0.3,
       max: 1,
       step: 0.01,
       value: settings.appearance.opacity,
-      formatValue: (v) => `%${Math.round(v * 100)}`,
+      formatValue: (v) => `${Math.round(v * 100)}%`,
       onInput: (value) => this.appearance.previewOpacity(value),
       onCommit: (value) => window.bitig.settings.set({ appearance: { opacity: value } })
     });
@@ -464,7 +466,7 @@ export class SettingsPanel {
   }
 
   private buildBackgroundImageSection(settings: BitigSettings): HTMLElement {
-    const section = this.buildSection('Arkaplan Gorseli');
+    const section = this.buildSection('Background Image');
     const { backgroundImage, backgroundImageOpacity, backgroundImageFit } = settings.appearance;
 
     const pathRow = document.createElement('div');
@@ -472,17 +474,17 @@ export class SettingsPanel {
 
     const pathLabel = document.createElement('span');
     pathLabel.className = 'settings-path-label';
-    pathLabel.textContent = backgroundImage ?? 'Secilmedi';
+    pathLabel.textContent = backgroundImage ?? 'Not selected';
     pathLabel.title = backgroundImage ?? '';
 
     const browseBtn = document.createElement('button');
     browseBtn.className = 'settings-btn-secondary';
-    browseBtn.textContent = 'Gozat...';
+    browseBtn.textContent = 'Browse...';
     browseBtn.addEventListener('click', () => void this.browseBackgroundImage());
 
     const clearBtn = document.createElement('button');
     clearBtn.className = 'settings-btn-secondary';
-    clearBtn.textContent = 'Temizle';
+    clearBtn.textContent = 'Clear';
     clearBtn.disabled = !backgroundImage;
     clearBtn.addEventListener('click', () => {
       window.bitig.settings.set({ appearance: { backgroundImage: null } });
@@ -496,7 +498,7 @@ export class SettingsPanel {
       max: 1,
       step: 0.01,
       value: backgroundImageOpacity,
-      formatValue: (v) => `%${Math.round(v * 100)}`,
+      formatValue: (v) => `${Math.round(v * 100)}%`,
       onInput: (value) => this.appearance.previewBackgroundImageStyle(value, backgroundImageFit),
       onCommit: (value) => window.bitig.settings.set({ appearance: { backgroundImageOpacity: value } })
     });
@@ -505,7 +507,7 @@ export class SettingsPanel {
     const fitRow = document.createElement('div');
     fitRow.className = 'settings-row';
     const fitLabel = document.createElement('label');
-    fitLabel.textContent = 'Yerlesim';
+    fitLabel.textContent = 'Fit';
     const fitSelect = document.createElement('select');
     fitSelect.className = 'settings-select';
     for (const [value, label] of Object.entries(FIT_LABELS)) {
@@ -531,7 +533,7 @@ export class SettingsPanel {
 
     const resetBtn = document.createElement('button');
     resetBtn.className = 'settings-btn-secondary';
-    resetBtn.textContent = 'Varsayilanlara don';
+    resetBtn.textContent = 'Reset to Defaults';
     resetBtn.addEventListener('click', () => window.bitig.settings.reset());
 
     section.appendChild(resetBtn);
@@ -548,10 +550,10 @@ export class SettingsPanel {
   }
 
   /**
-   * min/max slider + canli deger etiketi. `onInput` her surukleme
-   * frame'inde (anlik onizleme icin), `onCommit` sadece surukleme
-   * bittiginde (diske yazmak icin) cagrilir - boylece bir slider
-   * surukleme her frame'de settings.json'a yazmiyor.
+   * A min/max slider plus a live value label. `onInput` fires on every
+   * drag frame (for live preview), `onCommit` only once the drag ends
+   * (to persist) - so dragging a slider doesn't write settings.json on
+   * every frame.
    */
   private buildSlider(options: {
     min: number;
@@ -591,12 +593,12 @@ export class SettingsPanel {
   }
 
   private buildTelemetrySection(settings: BitigSettings): HTMLElement {
-    const section = this.buildSection('Bildirimler ve Gorev Telemetrisi');
+    const section = this.buildSection('Notifications & Task Telemetry');
 
     const desc = document.createElement('p');
     desc.className = 'settings-desc';
     desc.textContent =
-      'Uzun suren komutlar (derleme, test vb.) tamamlandiginda ve Bitig arka plandayken Windows masaustu bildirimi alin.';
+      'Get a Windows desktop notification when a long-running command (build, test, etc.) finishes while Bitig is in the background.';
 
     const enableRow = document.createElement('div');
     enableRow.className = 'settings-row';
@@ -611,7 +613,7 @@ export class SettingsPanel {
         telemetry: { enableNotifications: enableCheckbox.checked }
       });
     });
-    enableLabel.append(enableCheckbox, document.createTextNode(' Uzun suren gorev bildirimlerini etkinlestir'));
+    enableLabel.append(enableCheckbox, document.createTextNode(' Enable notifications for long-running tasks'));
     enableRow.appendChild(enableLabel);
 
     const thresholdRow = document.createElement('div');
@@ -619,17 +621,17 @@ export class SettingsPanel {
 
     const thresholdLabel = document.createElement('label');
     thresholdLabel.className = 'settings-label';
-    thresholdLabel.textContent = 'Bildirim Esik Suresi:';
+    thresholdLabel.textContent = 'Notification Threshold:';
 
     const thresholdSelect = document.createElement('select');
     thresholdSelect.className = 'settings-select';
 
     const thresholds = [
-      { ms: 3000, label: '3 saniye' },
-      { ms: 5000, label: '5 saniye (Varsayilan)' },
-      { ms: 10000, label: '10 saniye' },
-      { ms: 30000, label: '30 saniye' },
-      { ms: 60000, label: '1 dakika' }
+      { ms: 3000, label: '3 seconds' },
+      { ms: 5000, label: '5 seconds (Default)' },
+      { ms: 10000, label: '10 seconds' },
+      { ms: 30000, label: '30 seconds' },
+      { ms: 60000, label: '1 minute' }
     ];
 
     const currentThreshold = settings.telemetry?.notificationThresholdMs ?? 5000;
@@ -653,14 +655,14 @@ export class SettingsPanel {
   }
 
   private buildCockpitSection(settings: BitigSettings): HTMLElement {
-    const section = this.buildSection('Gelistirici Kokpiti (Developer Cockpit)');
+    const section = this.buildSection('Developer Cockpit');
 
     const desc = document.createElement('p');
     desc.className = 'settings-desc';
     desc.textContent =
-      'Canli sunucu portlarini sekme basliginda yakalayin, dosya/satir baglantilarini editorde acin ve gizli anahtar sizintilarini engelleyin.';
+      'Catch live server ports in the tab title, open file/line links in your editor, and block accidental secret-key leaks.';
 
-    // 1. Canli Port Dinleyicisi
+    // 1. Live Port Sniffer
     const portRow = document.createElement('div');
     portRow.className = 'settings-row';
     const portLabel = document.createElement('label');
@@ -673,10 +675,10 @@ export class SettingsPanel {
         cockpit: { enablePortSniffer: portCheckbox.checked }
       });
     });
-    portLabel.append(portCheckbox, document.createTextNode(' Canli Port Dinleyicisi (Live Port Sniffer)'));
+    portLabel.append(portCheckbox, document.createTextNode(' Live Port Sniffer'));
     portRow.appendChild(portLabel);
 
-    // 2. Gizli Anahtar Kalkani
+    // 2. Secret Shield
     const shieldRow = document.createElement('div');
     shieldRow.className = 'settings-row';
     const shieldLabel = document.createElement('label');
@@ -689,10 +691,10 @@ export class SettingsPanel {
         cockpit: { enableSecretShield: shieldCheckbox.checked }
       });
     });
-    shieldLabel.append(shieldCheckbox, document.createTextNode(' Gizli Anahtar Kalkani (Secret Shield Token Masking)'));
+    shieldLabel.append(shieldCheckbox, document.createTextNode(' Secret Shield (Token Masking)'));
     shieldRow.appendChild(shieldLabel);
 
-    // 3. Editorde Ac
+    // 3. Open in Editor
     const editorRow = document.createElement('div');
     editorRow.className = 'settings-row';
     const editorLabel = document.createElement('label');
@@ -705,10 +707,189 @@ export class SettingsPanel {
         cockpit: { openLinksInEditor: editorCheckbox.checked }
       });
     });
-    editorLabel.append(editorCheckbox, document.createTextNode(' Dosya/Satir Baglantilarini Kod Editorunde Ac'));
+    editorLabel.append(editorCheckbox, document.createTextNode(' Open File/Line Links in Code Editor'));
     editorRow.appendChild(editorLabel);
 
     section.append(desc, portRow, shieldRow, editorRow);
+    return section;
+  }
+
+  private buildBilgeAiSection(settings: BitigSettings): HTMLElement {
+    const section = this.buildSection('Bitig Bilge (AI Assistant - Ctrl+I)');
+
+    const desc = document.createElement('p');
+    desc.className = 'settings-desc';
+    desc.textContent =
+      'Configure a local model (Ollama) or your own API key (OpenAI, Claude, Gemini, DeepSeek) for natural-language command generation and error analysis.';
+
+    const ai = settings.ai || DEFAULT_AI_SETTINGS;
+
+    // 1. Enable
+    const enableRow = document.createElement('div');
+    enableRow.className = 'settings-row';
+    const enableLabel = document.createElement('label');
+    enableLabel.className = 'settings-checkbox-label';
+    const enableCheckbox = document.createElement('input');
+    enableCheckbox.type = 'checkbox';
+    enableCheckbox.checked = ai.enabled;
+    enableCheckbox.addEventListener('change', () => {
+      window.bitig.settings.set({ ai: { enabled: enableCheckbox.checked } });
+    });
+    enableLabel.append(enableCheckbox, document.createTextNode(' Enable Bitig Bilge AI assistant'));
+    enableRow.appendChild(enableLabel);
+
+    // 2. Provider selection
+    const providerRow = document.createElement('div');
+    providerRow.className = 'settings-row';
+    const providerLabel = document.createElement('label');
+    providerLabel.className = 'settings-label';
+    providerLabel.textContent = 'AI Provider:';
+
+    const providerSelect = document.createElement('select');
+    providerSelect.className = 'settings-select';
+
+    const providers: { id: AiProviderType; name: string }[] = [
+      { id: 'ollama', name: 'Ollama (100% Local / Private)' },
+      { id: 'openai', name: 'OpenAI (GPT-4o / GPT-4o-mini)' },
+      { id: 'anthropic', name: 'Anthropic (Claude 3.5 Haiku / Sonnet)' },
+      { id: 'gemini', name: 'Google Gemini (Gemini 1.5 Flash)' },
+      { id: 'deepseek', name: 'DeepSeek (DeepSeek Coder / Chat)' },
+      { id: 'custom', name: 'Custom (OpenAI-Compatible Server)' }
+    ];
+
+    for (const p of providers) {
+      const opt = document.createElement('option');
+      opt.value = p.id;
+      opt.textContent = p.name;
+      if (p.id === ai.provider) opt.selected = true;
+      providerSelect.appendChild(opt);
+    }
+
+    providerSelect.addEventListener('change', () => {
+      const provider = providerSelect.value as AiProviderType;
+      let defaultEndpoint = ai.endpoint;
+      let defaultModel = ai.model;
+
+      if (provider === 'ollama') {
+        defaultEndpoint = 'http://localhost:11434';
+        defaultModel = 'llama3.2';
+      } else if (provider === 'openai') {
+        defaultEndpoint = 'https://api.openai.com/v1';
+        defaultModel = 'gpt-4o-mini';
+      } else if (provider === 'anthropic') {
+        defaultEndpoint = 'https://api.anthropic.com/v1';
+        defaultModel = 'claude-3-5-haiku-20241022';
+      } else if (provider === 'gemini') {
+        defaultEndpoint = 'https://generativelanguage.googleapis.com/v1beta';
+        defaultModel = 'gemini-1.5-flash';
+      } else if (provider === 'deepseek') {
+        defaultEndpoint = 'https://api.deepseek.com/v1';
+        defaultModel = 'deepseek-chat';
+      }
+
+      window.bitig.settings.set({
+        ai: { provider, endpoint: defaultEndpoint, model: defaultModel }
+      });
+    });
+
+    providerRow.append(providerLabel, providerSelect);
+
+    // 3. Endpoint
+    const endpointRow = document.createElement('div');
+    endpointRow.className = 'settings-row';
+    const endpointLabel = document.createElement('label');
+    endpointLabel.className = 'settings-label';
+    endpointLabel.textContent = 'API Endpoint URL:';
+    const endpointInput = document.createElement('input');
+    endpointInput.type = 'text';
+    endpointInput.className = 'settings-input';
+    endpointInput.value = ai.endpoint;
+    endpointInput.placeholder = 'http://localhost:11434 or https://api.openai.com/v1';
+    endpointInput.addEventListener('change', () => {
+      window.bitig.settings.set({ ai: { endpoint: endpointInput.value.trim() } });
+    });
+    endpointRow.append(endpointLabel, endpointInput);
+
+    // 4. API Key (BYOK)
+    const keyRow = document.createElement('div');
+    keyRow.className = 'settings-row';
+    const keyLabel = document.createElement('label');
+    keyLabel.className = 'settings-label';
+    keyLabel.textContent = 'API Key (BYOK):';
+    const keyInput = document.createElement('input');
+    keyInput.type = 'password';
+    keyInput.className = 'settings-input';
+    keyInput.value = ai.apiKey;
+    keyInput.placeholder = ai.provider === 'ollama' ? 'No API key required for Ollama' : 'sk-...';
+    keyInput.disabled = ai.provider === 'ollama';
+    keyInput.addEventListener('change', () => {
+      window.bitig.settings.set({ ai: { apiKey: keyInput.value.trim() } });
+    });
+    keyRow.append(keyLabel, keyInput);
+    const keyHint = document.createElement('p');
+    keyHint.className = 'settings-desc settings-hint-tight';
+    keyHint.textContent = 'Stored encrypted on disk via Windows (safeStorage/DPAPI), never as plaintext.';
+
+    // 5. Model name
+    const modelRow = document.createElement('div');
+    modelRow.className = 'settings-row';
+    const modelLabel = document.createElement('label');
+    modelLabel.className = 'settings-label';
+    modelLabel.textContent = 'Model Name:';
+    const modelInput = document.createElement('input');
+    modelInput.type = 'text';
+    modelInput.className = 'settings-input';
+    modelInput.value = ai.model;
+    modelInput.placeholder = 'llama3.2, gpt-4o-mini, gemini-1.5-flash...';
+    modelInput.addEventListener('change', () => {
+      window.bitig.settings.set({ ai: { model: modelInput.value.trim() } });
+    });
+    modelRow.append(modelLabel, modelInput);
+
+    // 6. Temperature
+    const { row: temperatureRow } = this.buildSlider({
+      min: 0,
+      max: 1,
+      step: 0.05,
+      value: ai.temperature ?? DEFAULT_AI_SETTINGS.temperature,
+      formatValue: (v) => v.toFixed(2),
+      onInput: () => undefined,
+      onCommit: (value) => window.bitig.settings.set({ ai: { temperature: value } })
+    });
+    const temperatureLabel = document.createElement('label');
+    temperatureLabel.textContent = 'Temperature:';
+    temperatureRow.prepend(temperatureLabel);
+
+    // 7. Test button
+    const testRow = document.createElement('div');
+    testRow.className = 'settings-row';
+    const testBtn = document.createElement('button');
+    testBtn.type = 'button';
+    testBtn.className = 'settings-btn-secondary';
+    testBtn.textContent = '⚡ Test Connection';
+
+    const testResult = document.createElement('span');
+    testResult.className = 'ai-test-result';
+
+    testBtn.addEventListener('click', async () => {
+      testBtn.disabled = true;
+      testResult.textContent = 'Testing...';
+      testResult.className = 'ai-test-result loading';
+      try {
+        const res = await window.bitig.ai.testConnection();
+        testBtn.disabled = false;
+        testResult.textContent = res.message;
+        testResult.className = `ai-test-result ${res.success ? 'success' : 'error'}`;
+      } catch (err) {
+        testBtn.disabled = false;
+        testResult.textContent = `Error: ${(err as Error).message}`;
+        testResult.className = 'ai-test-result error';
+      }
+    });
+
+    testRow.append(testBtn, testResult);
+
+    section.append(desc, enableRow, providerRow, endpointRow, keyRow, keyHint, modelRow, temperatureRow, testRow);
     return section;
   }
 

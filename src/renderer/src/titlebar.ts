@@ -18,7 +18,7 @@ export function initTitleBar(): void {
   const applyMaximizedState = (isMaximized: boolean): void => {
     if (!maximizeBtn) return;
     maximizeBtn.innerHTML = isMaximized ? restoreIcon : maximizeIcon;
-    maximizeBtn.title = isMaximized ? 'Geri yukle' : 'Buyut';
+    maximizeBtn.title = isMaximized ? 'Restore' : 'Maximize';
   };
 
   void window.bitig.windowControls.isMaximized().then(applyMaximizedState);

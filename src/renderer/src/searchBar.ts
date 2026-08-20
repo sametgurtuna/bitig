@@ -31,27 +31,27 @@ export class SearchBar {
 
     this.input = document.createElement('input');
     this.input.type = 'text';
-    this.input.placeholder = 'Terminalde ara...';
+    this.input.placeholder = 'Search terminal...';
     this.input.className = 'search-input';
 
     this.matchCountEl = document.createElement('span');
     this.matchCountEl.className = 'search-match-count';
 
-    this.caseSensitiveBtn = this.createToggleBtn('Aa', 'Buyuk/Kucuk Harfe Duyarli');
-    this.regexBtn = this.createToggleBtn('.*', 'Duzenli Ifade (Regex)');
-    this.wholeWordBtn = this.createToggleBtn('\\b', 'Tam Kelime');
+    this.caseSensitiveBtn = this.createToggleBtn('Aa', 'Case Sensitive');
+    this.regexBtn = this.createToggleBtn('.*', 'Regular Expression');
+    this.wholeWordBtn = this.createToggleBtn('\\b', 'Whole Word');
 
     this.prevBtn = this.createIconButton(
       '<svg viewBox="0 0 10 10"><path d="M5 2L1 7h8z" fill="currentColor"/></svg>',
-      'Onceki (Shift+Enter)'
+      'Previous (Shift+Enter)'
     );
     this.nextBtn = this.createIconButton(
       '<svg viewBox="0 0 10 10"><path d="M5 8L1 3h8z" fill="currentColor"/></svg>',
-      'Sonraki (Enter)'
+      'Next (Enter)'
     );
     this.closeBtn = this.createIconButton(
       '<svg viewBox="0 0 10 10"><path d="M1 1l8 8M9 1L1 9" stroke="currentColor" stroke-width="1.5"/></svg>',
-      'Kapat (Escape)'
+      'Close (Escape)'
     );
 
     const controls = document.createElement('div');
@@ -190,7 +190,7 @@ export class SearchBar {
       ...this.getOptions(),
       incremental
     });
-    this.matchCountEl.textContent = found ? '' : 'Sonuç yok';
+    this.matchCountEl.textContent = found ? '' : 'No results';
   }
 
   findPrevious(): void {
@@ -200,6 +200,6 @@ export class SearchBar {
       return;
     }
     const found = this.currentAddon.findPrevious(query, this.getOptions());
-    this.matchCountEl.textContent = found ? '' : 'Sonuç yok';
+    this.matchCountEl.textContent = found ? '' : 'No results';
   }
 }

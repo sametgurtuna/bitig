@@ -1,11 +1,12 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { app } from 'electron';
+import { app, safeStorage } from 'electron';
 import type { BitigSettings, BitigSettingsPatch } from '../../shared/settingsTypes';
 import { DEFAULT_PROFILES } from '../../shared/profileTypes';
 import { DEFAULT_KEYBINDINGS } from '../../shared/actionTypes';
 import { DEFAULT_COCKPIT_SETTINGS } from '../../shared/cockpitTypes';
 import { DEFAULT_QUAKE_SETTINGS } from '../../shared/quakeTypes';
+import { DEFAULT_AI_SETTINGS } from '../../shared/aiTypes';
 import { discoverProfiles } from '../pty/profileDiscovery';
 
 const DEFAULT_SETTINGS: BitigSettings = {
@@ -29,8 +30,40 @@ const DEFAULT_SETTINGS: BitigSettings = {
     notificationThresholdMs: 5000
   },
   cockpit: DEFAULT_COCKPIT_SETTINGS,
-  quake: DEFAULT_QUAKE_SETTINGS
+  quake: DEFAULT_QUAKE_SETTINGS,
+  ai: DEFAULT_AI_SETTINGS
 };
+
+// AI API key is stored on disk encrypted via Electron's OS-backed safeStorage
+// (DPAPI on Windows), never as plaintext. The in-memory `this.settings.ai.apiKey`
+// always holds the plaintext value; only persist()/parseOrFallback() cross the
+// encrypted<->plaintext boundary, at the disk edge.
+const API_KEY_ENC_PREFIX = 'enc:v1:';
+
+function encryptApiKeyForStorage(plain: string): string {
+  if (!plain) return '';
+  if (!safeStorage.isEncryptionAvailable()) {
+    console.error('[Bitig] safeStorage encryption unavailable; API key will be written in plaintext.');
+    return plain;
+  }
+  return API_KEY_ENC_PREFIX + safeStorage.encryptString(plain).toString('base64');
+}
+
+function decryptStoredApiKey(raw: string | undefined): string {
+  if (!raw) return '';
+  if (!raw.startsWith(API_KEY_ENC_PREFIX)) return raw; // legacy plaintext value, read as-is
+  if (!safeStorage.isEncryptionAvailable()) {
+    console.error('[Bitig] safeStorage decryption unavailable; stored API key could not be read.');
+    return '';
+  }
+  try {
+    const buf = Buffer.from(raw.slice(API_KEY_ENC_PREFIX.length), 'base64');
+    return safeStorage.decryptString(buf);
+  } catch (err) {
+    console.error('[Bitig] Failed to decrypt stored API key:', err);
+    return '';
+  }
+}
 
 const MIN_OPACITY = 0.3;
 const MAX_OPACITY = 1;
@@ -95,7 +128,8 @@ export class SettingsStore {
       keybindings: { ...DEFAULT_SETTINGS.keybindings },
       telemetry: { ...DEFAULT_SETTINGS.telemetry },
       cockpit: { ...DEFAULT_SETTINGS.cockpit },
-      quake: { ...DEFAULT_SETTINGS.quake }
+      quake: { ...DEFAULT_SETTINGS.quake },
+      ai: { ...DEFAULT_SETTINGS.ai }
     };
     this.persist();
     this.notify();
@@ -131,6 +165,9 @@ export class SettingsStore {
   private parseOrFallback(raw: string): BitigSettings {
     try {
       const parsed = JSON.parse(raw) as BitigSettingsPatch;
+      if (parsed.ai?.apiKey) {
+        parsed.ai = { ...parsed.ai, apiKey: decryptStoredApiKey(parsed.ai.apiKey) };
+      }
       return this.mergeAndClamp(DEFAULT_SETTINGS, parsed);
     } catch (error) {
       console.error(
@@ -151,7 +188,8 @@ export class SettingsStore {
       keybindings: { ...base.keybindings, ...patch.keybindings },
       telemetry: { ...base.telemetry, ...patch.telemetry },
       cockpit: { ...base.cockpit, ...patch.cockpit },
-      quake: { ...base.quake, ...patch.quake }
+      quake: { ...base.quake, ...patch.quake },
+      ai: { ...base.ai, ...patch.ai }
     };
     merged.appearance.opacity = clamp(
       merged.appearance.opacity,
@@ -183,7 +221,11 @@ export class SettingsStore {
 
   private persist(): void {
     fs.mkdirSync(path.dirname(this.filePath), { recursive: true });
-    this.lastWrittenJson = JSON.stringify(this.settings, null, 2);
+    const toWrite: BitigSettings = {
+      ...this.settings,
+      ai: { ...this.settings.ai, apiKey: encryptApiKeyForStorage(this.settings.ai.apiKey) }
+    };
+    this.lastWrittenJson = JSON.stringify(toWrite, null, 2);
     fs.writeFileSync(this.filePath, this.lastWrittenJson, 'utf-8');
   }
 
