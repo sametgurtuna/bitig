@@ -1,26 +1,17 @@
 import type { PaneLeaf, InlineSuggestionHost } from './panes';
-import type { CompletionContext } from '../../shared/completionTypes';
+import type { CompletionContext, DirEntriesResult } from '../../shared/completionTypes';
 import type { HistoryEntry } from '../../shared/historyTypes';
 
 /**
- * Akilli komut tamamlama (inline ghost text).
+ * Akilli komut ve dosya/dizin tamamlama (inline ghost text).
  *
- * Fish/Warp tarzi: kullanici yazdikca gecmis + proje baglamindan en olasi tam
- * komut seffaf bir "hayalet" metin olarak imlecin devaminda gosterilir, `Tab`
- * (ya da satir sonunda `ArrowRight`/`End`) ile kabul edilir.
- *
- * Neden DOM overlay: xterm.js'in yerlesik ghost-text destegi yok ve oneriyi
- * terminal tamponuna yazmak kabugun kendi echo'suyla catisir (satir bozulur,
- * geri alinamaz). Bu yuzden oneri, pane konteynerinin uzerinde konumlanan
- * mutlak bir <span> ile cizilir; terminal tamponuna HICBIR SEY yazilmaz.
- * Kabul edildiginde ise sadece "kalan ek" PTY'ye yazilir ve kabuk kendi
- * dogal echo'suyla satiri tamamlar.
- *
- * ONEMLI: Bir aday yalnizca yazilan satirin GERCEK bir oneki ise onerilebilir.
- * Ghost text "kalanin eklenmesi" demektir; fuzzy (araya serpistirilmis harf)
- * eslesmeleri burada anlamsizdir - eski surumde fuzzy adaylar da kabul edilip
- * `aday.slice(buffer.length)` ile kesiliyordu, ortaya yazilan metinle alakasiz
- * bir ek cikiyordu.
+ * Fish / Warp / Fig benzeri akilli tamamlama:
+ * - Kullanici yazdikca gecmis + proje baglami + gercek dosya sistemi taranir.
+ * - `cd Desktop/` sonrasinda `Tab` veya harf yazildiginda hedef dizinin altindaki
+ *   klasor ve dosyalar dinamik olarak listelenir (tab-tab ile derin klasor gezintisi).
+ * - Imlecin devaminda seffaf bir "hayalet" (ghost) metin gosterilir.
+ * - `Tab`, `ArrowRight` veya `End` ile kabul edilir.
+ * - `Ctrl+ArrowRight` / `Alt+ArrowRight` ile parca/kelime bazinda kabul edilir.
  */
 
 /** Kabuk gecmisi bos oldugunda bile ise yarayan kucuk bir yerlesik sozluk. */
@@ -49,44 +40,105 @@ const BUILTIN_COMMANDS = [
 /** Son argumani bir yol olarak tamamlanabilen komutlar. */
 const PATH_COMMANDS = new Set([
   'cd',
+  'chdir',
+  'pushd',
   'ls',
   'dir',
   'cat',
   'type',
   'code',
+  'cursor',
   'vim',
   'nvim',
   'nano',
+  'notepad',
   'rm',
   'del',
+  'erase',
   'mv',
   'move',
+  'ren',
+  'rename',
   'cp',
   'copy',
+  'xcopy',
+  'robocopy',
   'mkdir',
+  'md',
+  'rmdir',
+  'rd',
   'touch',
+  'ni',
+  'new-item',
   'less',
   'head',
   'tail',
+  'more',
   'node',
+  'deno',
+  'bun',
   'python',
+  'python3',
   'py',
+  'ruby',
+  'perl',
+  'php',
   'source',
-  'pushd'
+  'exec',
+  'sh',
+  'bash',
+  'zsh',
+  'pwsh',
+  'powershell',
+  'cmd',
+  'open',
+  'start',
+  'explorer',
+  'explorer.exe',
+  'tar',
+  'zip',
+  'unzip',
+  '7z'
 ]);
 
 /** Yalniz dizin bekleyen komutlar (dosya onerilmez). */
-const DIR_ONLY_COMMANDS = new Set(['cd', 'pushd', 'mkdir']);
+const DIR_ONLY_COMMANDS = new Set(['cd', 'chdir', 'pushd', 'mkdir', 'md', 'rmdir', 'rd']);
 
-/** Girdi tamponunu guvenilmez kilan kontrol dizileri (ok tuslari, gecmis gezinme). */
+/** Git alt komutlarindan yol alanlar. */
+const GIT_PATH_SUBCOMMANDS = new Set([
+  'add',
+  'diff',
+  'checkout',
+  'restore',
+  'rm',
+  'log',
+  'mv',
+  'status',
+  'reset'
+]);
+
+/** Girdi tamponunu guvenilmez kilan kontrol dizileri (Ctrl+C, Ctrl+U, Ctrl+L, Esc). */
 const RESET_SEQUENCES = ['\x03', '\x15', '\x0c', '\x1b'];
 
 /** Proje baglaminin (dosya listesi vb.) yeniden okunma araligi. */
 const CONTEXT_TTL_MS = 5_000;
+/** Dizin ici tarama sonuclarinin onbellekte kalma suresi. */
+const DIR_CACHE_TTL_MS = 3_000;
 
 export interface InlineSuggestionsOptions {
   /** Pane'in guncel calisma dizinini doner (proje baglami icin). */
   getCwd: () => string | undefined;
+}
+
+interface ParsedPathToken {
+  command: string;
+  isDirOnly: boolean;
+  rawArg: string;
+  quoteChar: string; // '"' | "'" | ""
+  dirPart: string; // e.g. "Desktop/" or "src/renderer/" or ""
+  basePart: string; // e.g. "b" or "main" or ""
+  sep: '/' | '\\';
+  head: string; // line prefix up to the start of base completion
 }
 
 export class InlineSuggestions implements InlineSuggestionHost {
@@ -96,12 +148,6 @@ export class InlineSuggestions implements InlineSuggestionHost {
   private buffer = '';
   private suggestion = '';
   private enabled = true;
-  /**
-   * Ok tusu/gecmis gezintisi ya da kabugun kendi Tab tamamlamasi sonrasi tampon
-   * ekrandaki satiri temsil etmez. Bu bayrak yalnizca satir gercekten sifirlanan
-   * bir noktada (Enter, Ctrl+C, Ctrl+U, Ctrl+L, Esc) temizlenir - aksi halde
-   * yazilan bir sonraki harf, yarim bir tamponla alakasiz oneriler uretir.
-   */
   private muted = false;
   private history: HistoryEntry[] = [];
   /** Bu oturumda calistirilanlar - gecmis dosyasina yazilmadan da bilinir. */
@@ -109,6 +155,14 @@ export class InlineSuggestions implements InlineSuggestionHost {
   private context: CompletionContext | null = null;
   private contextCwd = '';
   private contextFetchedAt = 0;
+
+  /** Dinamik alt dizin onbellek haritasi: key -> { timestamp, result } */
+  private readonly dirEntriesCache = new Map<
+    string,
+    { timestamp: number; result: DirEntriesResult }
+  >();
+  private readonly pendingFetches = new Set<string>();
+
   private readonly disposers: Array<() => void> = [];
 
   constructor(private readonly options: InlineSuggestionsOptions) {}
@@ -141,7 +195,6 @@ export class InlineSuggestions implements InlineSuggestionHost {
 
   /**
    * Kullanici girdisini karakter karakter izler (telemetry.ts ile ayni desen).
-   * Terminal tamponunu okumaya calismak prompt'a bagimli ve kirilgan olurdu.
    */
   handleInput(data: string): void {
     if (!this.enabled) return;
@@ -162,6 +215,7 @@ export class InlineSuggestions implements InlineSuggestionHost {
       }
       if (char === '\x7f' || char === '\b') {
         this.buffer = this.buffer.slice(0, -1);
+        this.muted = false;
         continue;
       }
       if (RESET_SEQUENCES.includes(char)) {
@@ -171,14 +225,16 @@ export class InlineSuggestions implements InlineSuggestionHost {
         continue;
       }
       if (char === '\t') {
-        // Tab bize ulasmadiysa kabugun kendi tamamlamasi calisti: satir bizim
-        // haberimiz olmadan degisti, tampon artik guvenilir degil.
-        this.muted = true;
+        // Tab bize ulasmadiysa kabugun kendi tamamlamasi calisti: tampon guvenilir
+        // degil ama sonraki yazimlarda kilitlenmesin diye sadece o anlik tamponu bosaltiyoruz.
         this.buffer = '';
         this.clearSuggestion();
         continue;
       }
       if (char < ' ') continue; // diger kontrol karakterlerini yok say
+
+      // Normal yazilabilir karakter geldiginde susturma bayragini kaldir
+      this.muted = false;
       this.buffer += char;
     }
 
@@ -229,6 +285,8 @@ export class InlineSuggestions implements InlineSuggestionHost {
       }
     }
     this.disposers.length = 0;
+    this.dirEntriesCache.clear();
+    this.pendingFetches.clear();
     this.ghostEl?.remove();
     this.ghostEl = null;
     this.leaf = null;
@@ -242,7 +300,7 @@ export class InlineSuggestions implements InlineSuggestionHost {
     this.buffer += remainder;
     this.clearSuggestion();
     window.bitig.pty.write(leaf.id, remainder);
-    // Kalan satir icin (or. `cd src/` sonrasi) yeni bir oneri uret.
+    // Kalan satir icin (or. `cd Desktop/` sonrasi `Desktop` icerigi) yeni bir oneri uret.
     this.update();
   }
 
@@ -270,8 +328,9 @@ export class InlineSuggestions implements InlineSuggestionHost {
       ].slice(0, 100);
       void this.refreshHistory();
     }
-    // Komut dosya sistemini degistirmis olabilir (mkdir, git checkout, ...).
+    // Komut dosya sistemini degistirmis olabilir (mkdir, git checkout, cd ...).
     this.contextFetchedAt = 0;
+    this.dirEntriesCache.clear();
     void this.refreshContext();
   }
 
@@ -301,22 +360,27 @@ export class InlineSuggestions implements InlineSuggestionHost {
     const lower = line.toLowerCase();
     const scores = new Map<string, number>();
 
-    /** Yalniz gercek onek eslesmeleri aday olabilir (bkz. dosya basi notu). */
+    /** Yalniz gercek onek eslesmeleri aday olabilir. */
     const add = (text: string, weight: number): void => {
       if (text.length <= line.length) return;
       if (!text.toLowerCase().startsWith(lower)) return;
       // Yazimi birebir koruyan aday, buyuk/kucuk harf degistirene tercih edilir.
-      const caseBonus = text.startsWith(line) ? 25 : 0;
-      // Kisa tamamlamalar daha guvenli: uzayan ek kadar ceza.
+      const caseBonus = text.startsWith(line) ? 30 : 0;
+      // Kisa tamamlamalar daha guvenli: uzayan ek kadar kucuk ceza.
       const score = weight + caseBonus - Math.min(60, (text.length - line.length) * 0.5);
       const previous = scores.get(text);
       if (previous === undefined || score > previous) scores.set(text, score);
     };
 
-    const token = lastToken(line);
     const cwd = this.options.getCwd();
 
-    // 1. Komut gecmisi - frecency (siklik + tazelik + ayni dizin) ile puanlanir.
+    // 1. Dinamik Yol Tamamlama (cd, ls, code, git add, ./, ../, alt dizinler...)
+    const pathToken = this.parsePathToken(line);
+    if (pathToken) {
+      this.addPathCompletions(pathToken, cwd, add);
+    }
+
+    // 2. Komut gecmisi - frecency (siklik + tazelik + ayni dizin) ile puanlanir.
     const now = Date.now();
     for (const entry of this.history) {
       const ageHours = Math.max(0, now - entry.timestamp) / 3_600_000;
@@ -328,43 +392,22 @@ export class InlineSuggestions implements InlineSuggestionHost {
       add(entry.command, 500 + recency + frequency + sameCwd + failed);
     }
 
-    // Bu oturumda calistirilanlar her zaman en tazedir.
+    // Bu oturumda calistirilanlar her zaman cok tazedir.
     this.sessionHistory.forEach((command, index) => add(command, 820 - index * 4));
 
-    // 2. Proje baglami
+    // 3. Proje baglami (package scripts & make targets)
     if (this.context) {
-      // Paket yoneticisi varyantlari: `pnpm dev`, `yarn run build`, `bun dev`...
       const runMatch = /^(npm|pnpm|yarn|bun)\s+(run\s+)?\S*$/i.exec(line);
       if (runMatch) {
         const manager = runMatch[1];
         const runWord = runMatch[2] ? 'run ' : manager.toLowerCase() === 'npm' ? 'run ' : '';
         for (const script of this.context.scripts) {
           const name = script.replace(/^npm\s+run\s+/i, '');
-          add(`${manager} ${runWord}${name}`, 1000);
+          add(`${manager} ${runWord}${name}`, 1050);
         }
       }
       for (const script of this.context.scripts) add(script, 950);
       for (const target of this.context.makeTargets) add(target, 900);
-
-      // 3. Yol tamamlama: son argumani dizin/dosya adlariyla tamamla.
-      if (token && PATH_COMMANDS.has(token.command.toLowerCase())) {
-        const typed = token.value;
-        // Ayirac iceren yollarda alt dizinin icerigi elimizde yok.
-        if (!/[\\/]/.test(typed) && !typed.startsWith('-')) {
-          const dirOnly = DIR_ONLY_COMMANDS.has(token.command.toLowerCase());
-          const head = line.slice(0, line.length - typed.length);
-          for (const dir of this.context.directories) {
-            if (dir.includes(' ')) continue; // tirnak gerektirir, ghost text bozulur
-            add(`${head}${dir}/`, 980);
-          }
-          if (!dirOnly) {
-            for (const file of this.context.files) {
-              if (file.includes(' ')) continue;
-              add(`${head}${file}`, 940);
-            }
-          }
-        }
-      }
     }
 
     // 4. Yerlesik sozluk
@@ -379,6 +422,173 @@ export class InlineSuggestions implements InlineSuggestionHost {
       }
     }
     return bestText;
+  }
+
+  /**
+   * Satirdan yol tamamlama argumanini ve dizin/dosya parcalarini cikarir.
+   */
+  private parsePathToken(line: string): ParsedPathToken | null {
+    const trimmedStart = line.replace(/^\s+/, '');
+    if (!trimmedStart) return null;
+
+    const words = trimmedStart.split(/\s+/);
+    const mainCommand = (words[0] || '').toLowerCase();
+    if (!mainCommand) return null;
+
+    let isPathEligible = PATH_COMMANDS.has(mainCommand);
+    let isDirOnly = DIR_ONLY_COMMANDS.has(mainCommand);
+
+    // Git alt komut kontrolu (git add <yol>, git diff <yol>...)
+    if (mainCommand === 'git' && words.length >= 2) {
+      const subCommand = (words[1] || '').toLowerCase();
+      if (GIT_PATH_SUBCOMMANDS.has(subCommand)) {
+        isPathEligible = true;
+        isDirOnly = false;
+      }
+    }
+
+    // ./ veya .\ veya ../ ile baslayan komut/calistirma
+    if (/^(\.|\.\.|\~|[A-Za-z]:)[\\/]/.test(trimmedStart) || trimmedStart.startsWith('/')) {
+      isPathEligible = true;
+    }
+
+    if (!isPathEligible) return null;
+
+    // Satirin son argumanini bul (tirnaklari da hesaba katarak)
+    let rawArg = '';
+    let quoteChar = '';
+
+    // Eger satir boslukla bitiyorsa (or. `cd ` veya `cd Desktop/ `)
+    if (/\s$/.test(line)) {
+      rawArg = '';
+      quoteChar = '';
+    } else {
+      // Satirin son kelimesini/tirnakli obegini yakala
+      const matchQuote = /(?:^|\s)(["'])([^"']*)$/.exec(line);
+      if (matchQuote) {
+        quoteChar = matchQuote[1];
+        rawArg = matchQuote[2];
+      } else {
+        const lastWord = words[words.length - 1] || '';
+        rawArg = lastWord;
+      }
+    }
+
+    // Arguman '-' ile basliyorsa bayraktir, yol degildir (or. `ls -la`)
+    if (rawArg.startsWith('-')) return null;
+
+    const lastSlashPos = Math.max(rawArg.lastIndexOf('/'), rawArg.lastIndexOf('\\'));
+    let dirPart = '';
+    let basePart = '';
+    let sep: '/' | '\\' = rawArg.includes('\\') ? '\\' : '/';
+
+    if (lastSlashPos === -1) {
+      dirPart = '';
+      basePart = rawArg;
+    } else {
+      sep = rawArg[lastSlashPos] === '\\' ? '\\' : '/';
+      dirPart = rawArg.slice(0, lastSlashPos + 1);
+      basePart = rawArg.slice(lastSlashPos + 1);
+    }
+
+    const head = line.slice(0, line.length - basePart.length);
+
+    return {
+      command: mainCommand,
+      isDirOnly,
+      rawArg,
+      quoteChar,
+      dirPart,
+      basePart,
+      sep,
+      head
+    };
+  }
+
+  /**
+   * Hedef dizini tarayip adaylari ekler.
+   */
+  private addPathCompletions(
+    token: ParsedPathToken,
+    cwd: string | undefined,
+    add: (text: string, weight: number) => void
+  ): void {
+    const { head, dirPart, basePart, sep, isDirOnly } = token;
+    const cacheKey = `${cwd || ''}:::${dirPart}`;
+
+    const cached = this.dirEntriesCache.get(cacheKey);
+    const isFresh = cached && Date.now() - cached.timestamp < DIR_CACHE_TTL_MS;
+
+    if (isFresh && cached) {
+      const baseLower = basePart.toLowerCase();
+
+      // 1. Dizinler (her zaman sep ile biter, boylece Tab-Tab aninda sonrakini acar)
+      for (const dir of cached.result.directories) {
+        if (!dir.toLowerCase().startsWith(baseLower)) continue;
+
+        // Dizin adinda bosluk varsa ve kullanici tirnak acmadiysa tirnakla sar
+        let candidate: string;
+        if (dir.includes(' ') && !token.quoteChar) {
+          // or. `cd "Program Files/"`
+          const prefixBeforeToken = head.slice(0, head.length - dirPart.length);
+          candidate = `${prefixBeforeToken}"${dirPart}${dir}${sep}"`;
+        } else {
+          candidate = `${head}${dir}${sep}`;
+        }
+        // Dizinler derin gezinti icin en yuksek agirlikla onerilir
+        add(candidate, 1100);
+      }
+
+      // 2. Dosyalar (dizin-yalniz komutlar haric)
+      if (!isDirOnly) {
+        for (const file of cached.result.files) {
+          if (!file.toLowerCase().startsWith(baseLower)) continue;
+
+          let candidate: string;
+          if (file.includes(' ') && !token.quoteChar) {
+            const prefixBeforeToken = head.slice(0, head.length - dirPart.length);
+            candidate = `${prefixBeforeToken}"${dirPart}${file}"`;
+          } else {
+            candidate = `${head}${file}${token.quoteChar ? token.quoteChar : ''}`;
+          }
+          add(candidate, 1000);
+        }
+      }
+    } else {
+      // Onbellekte yoksa ya da eskidiyse arka planda getir
+      void this.fetchDirEntries(cwd, dirPart);
+    }
+  }
+
+  /**
+   * Belirtilen dizini arka planda asenkron tarar ve geldikten sonra oneriyi gunceller.
+   */
+  private async fetchDirEntries(cwd: string | undefined, dirPart: string): Promise<void> {
+    const cacheKey = `${cwd || ''}:::${dirPart}`;
+    if (this.pendingFetches.has(cacheKey)) return;
+
+    this.pendingFetches.add(cacheKey);
+    try {
+      const result = await window.bitig.completion.dirEntries(cwd, dirPart);
+      this.dirEntriesCache.set(cacheKey, {
+        timestamp: Date.now(),
+        result
+      });
+
+      // Eger kullanici hala ayni dizini yaziyorsa aninda ekrana yansit
+      const currentToken = this.parsePathToken(this.buffer);
+      if (currentToken && `${cwd || ''}:::${currentToken.dirPart}` === cacheKey) {
+        const best = this.findBest(this.buffer);
+        if (best && best.length > this.buffer.length) {
+          this.suggestion = best.slice(this.buffer.length);
+          this.render();
+        }
+      }
+    } catch {
+      // Hata durumunda sessizce gec
+    } finally {
+      this.pendingFetches.delete(cacheKey);
+    }
   }
 
   private async refreshHistory(): Promise<void> {
@@ -398,6 +608,17 @@ export class InlineSuggestions implements InlineSuggestionHost {
     this.contextFetchedAt = Date.now();
     try {
       this.context = await window.bitig.completion.context(cwd);
+      // Calisma dizininin kokunu dirEntries onbelleklerine de hemen ekle
+      if (this.context) {
+        this.dirEntriesCache.set(`${cwd}:::`, {
+          timestamp: Date.now(),
+          result: {
+            resolvedDir: cwd,
+            directories: this.context.directories,
+            files: this.context.files
+          }
+        });
+      }
     } catch {
       this.context = null;
     }
@@ -460,25 +681,13 @@ export class InlineSuggestions implements InlineSuggestionHost {
     // Hayalet metnin dogal harf genisligi terminalin hucre genisligiyle birebir
     // ayni degil (font yedegi, alt piksel yuvarlama). Farki letter-spacing ile
     // kapatmazsak oneri terminal izgarasindan kayar ve yazilan metnin uzerine
-    // biner - canli testte tam olarak bu goruldu.
+    // biner.
     ghost.style.letterSpacing = '0px';
     const naturalAdvance = ghost.getBoundingClientRect().width / this.suggestion.length;
     if (naturalAdvance > 0) {
       ghost.style.letterSpacing = `${cellWidth - naturalAdvance}px`;
     }
   }
-}
-
-/** Satirin ilk kelimesi ve imlecin uzerinde bulundugu son (yarim) argumani. */
-function lastToken(line: string): { command: string; value: string } | null {
-  const trimmedStart = line.replace(/^\s+/, '');
-  if (!trimmedStart) return null;
-  const command = trimmedStart.split(/\s+/)[0] ?? '';
-  if (!command) return null;
-  if (/\s$/.test(line)) return { command, value: '' };
-  const parts = trimmedStart.split(/\s+/);
-  if (parts.length < 2) return null;
-  return { command, value: parts[parts.length - 1] };
 }
 
 /** Windows yollari buyuk/kucuk harf ve ayirac farkina duyarsiz karsilastirilir. */

@@ -1,19 +1,24 @@
 import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import { ipcMain } from 'electron';
 import {
   COMPLETION_CHANNELS,
   EMPTY_COMPLETION_CONTEXT,
-  type CompletionContext
+  EMPTY_DIR_ENTRIES,
+  type CompletionContext,
+  type DirEntriesResult
 } from '../../shared/completionTypes';
 
 /**
  * completion:context - verilen calisma dizini icin "proje farkindaligi" uretir:
  * package.json script'leri, Makefile hedefleri ve dizin/dosya adlari.
- * Renderer'daki inline oneri motoru (src/renderer/src/autocomplete.ts) bunu
- * komut gecmisiyle birlestirir.
  *
- * Sonuc dizin mtime'i ile onbelleklenir; her tus vurusunda diske gidilmez.
+ * completion:dirEntries - verilen calisma dizini ve goreli/mutlak hedef yol icin
+ * alt klasor ve dosya listesini dondurur. Cok kademeli (cd dir/subdir/) tamamlama
+ * icin kullanilir.
+ *
+ * Sonuclar dizin mtime'i ile onbelleklenir; her tus vurusunda diske gereksiz gidilmez.
  */
 
 interface CacheEntry {
@@ -21,7 +26,13 @@ interface CacheEntry {
   value: CompletionContext;
 }
 
-const cache = new Map<string, CacheEntry>();
+interface DirCacheEntry {
+  signature: number;
+  value: DirEntriesResult;
+}
+
+const contextCache = new Map<string, CacheEntry>();
+const dirCache = new Map<string, DirCacheEntry>();
 const MAX_ENTRIES = 400;
 
 function safeMtime(target: string): number {
@@ -29,6 +40,28 @@ function safeMtime(target: string): number {
     return fs.statSync(target).mtimeMs;
   } catch {
     return 0;
+  }
+}
+
+function resolvePathSafely(cwd: string | undefined, targetPath: string): string | null {
+  if (!targetPath && !cwd) return null;
+  const raw = (targetPath || '').trim();
+
+  let resolved: string;
+  if (raw === '~' || raw.startsWith('~/') || raw.startsWith('~\\')) {
+    resolved = path.join(os.homedir(), raw.slice(1));
+  } else if (path.isAbsolute(raw)) {
+    resolved = path.resolve(raw);
+  } else {
+    resolved = path.resolve(cwd && cwd.trim() ? cwd : os.homedir(), raw);
+  }
+
+  try {
+    const stat = fs.statSync(resolved);
+    if (!stat.isDirectory()) return null;
+    return resolved;
+  } catch {
+    return null;
   }
 }
 
@@ -99,12 +132,37 @@ export function registerCompletionHandlers(): void {
     }
 
     const signature = `${safeMtime(resolved)}:${safeMtime(path.join(resolved, 'package.json'))}`;
-    const cached = cache.get(resolved);
+    const cached = contextCache.get(resolved);
     if (cached && cached.signature === signature) return cached.value;
 
     const value = buildContext(resolved);
-    if (cache.size >= MAX_ENTRIES) cache.clear();
-    cache.set(resolved, { signature, value });
+    if (contextCache.size >= MAX_ENTRIES) contextCache.clear();
+    contextCache.set(resolved, { signature, value });
     return value;
   });
+
+  ipcMain.handle(
+    COMPLETION_CHANNELS.dirEntries,
+    (_event, payload: { cwd?: string; targetPath: string }): DirEntriesResult => {
+      if (!payload || typeof payload.targetPath !== 'string') return EMPTY_DIR_ENTRIES;
+
+      const resolved = resolvePathSafely(payload.cwd, payload.targetPath);
+      if (!resolved) return EMPTY_DIR_ENTRIES;
+
+      const mtime = safeMtime(resolved);
+      const cached = dirCache.get(resolved);
+      if (cached && cached.signature === mtime) return cached.value;
+
+      const { directories, files } = readEntries(resolved);
+      const value: DirEntriesResult = {
+        resolvedDir: resolved,
+        directories,
+        files
+      };
+
+      if (dirCache.size >= MAX_ENTRIES) dirCache.clear();
+      dirCache.set(resolved, { signature: mtime, value });
+      return value;
+    }
+  );
 }

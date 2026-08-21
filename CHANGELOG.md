@@ -12,10 +12,38 @@
 
 | Version | Date | Headline |
 |---|---|---|
-| [**1.0.3**](#103---2026-08-20) | 2026-08-20 | Full English localization, modern animated toggle switches, deduplication |
+| [**1.0.4**](#104---2026-08-21) | 2026-08-21 | Intelligent multi-level path completion & Tab-Tab directory traversal |
+| [1.0.3](#103---2026-08-20) | 2026-08-20 | Full English localization, modern animated toggle switches, deduplication |
 | [1.0.2](#102---2026-08-20) | 2026-08-20 | Smarter inline suggestions, Tab no longer steals focus |
 | [1.0.1](#101---2026-08-20) | 2026-08-20 | Inline command suggestions, true multi-window, live working-directory tab titles |
 | [1.0.0](#100---2026-08-20) | 2026-08-20 | Stable release: plugin runtime, Windows installer, compact icon-driven UI |
+| [0.9.8](#098---2026-08-20) | 2026-08-20 | Bitig Bilge, the local and BYOK AI companion |
+| [0.9.5](#095---2026-08-20) | 2026-08-20 | Quake HUD mode and Broadcast Input |
+| [0.9.0](#090---2026-08-19) | 2026-08-19 | Developer Cockpit: port sniffer, smart links, secret shield |
+| [0.8.5](#085---2026-08-19) | 2026-08-19 | Command history, fuzzy search, execution telemetry |
+| [0.8.0](#080---2026-08-19) | 2026-08-19 | Command palette and Bitig Betik runbooks |
+| [0.7.5](#075---2026-08-19) | 2026-08-19 | Rebindable shortcuts and the central action registry |
+| [0.7.0](#070---2026-08-19) | 2026-08-19 | Shell profiles, auto-discovery, in-terminal search |
+| [0.6.x](#06x---2026-08-19) | 2026-08-19 | Settings panel, font picker, Nerd Font detection |
+| [0.1.0](#010---2026-08-19) | 2026-08-19 | First working terminal: window, PTY, xterm.js |
+
+---
+
+## [1.0.4] - 2026-08-21
+
+### Added
+
+- **Intelligent Multi-Level Directory Traversal & Tab-Tab Autocompletion (`src/renderer/src/autocomplete.ts`, `src/main/ipc/completionHandlers.ts`):**
+  - Dynamic subdirectory and file scanning over IPC (`completion:dir-entries`) with `mtimeMs`-based instant caching.
+  - Smooth multi-level `Tab-Tab` directory traversal (`cd Desktop/` -> `Tab` -> `cd Desktop/Bitig/` -> `Tab` -> `cd Desktop/Bitig/src/`).
+  - Live filtering as you type (`cd Desktop/B` -> `itig/`).
+  - Automatic quotation and space handling in paths (`cd "Program Files/"`).
+  - Extended path command recognition (`cd`, `chdir`, `pushd`, `ls`, `dir`, `code`, `vim`, `nvim`, `nano`, `cat`, `rm`, `del`, `git add`, `git diff`, `git checkout`, `./`, `.\`, etc.).
+
+### Fixed
+
+- **Autocomplete Lockup on Tab Pass-through:**
+  - Resolved an issue where pressing Tab when no ghost suggestion was present permanently muted autocomplete until Enter was pressed; typing printable characters now immediately resumes live suggestions.
 
 ---
 
@@ -43,15 +71,6 @@
 - **Command Palette Deduplication:**
   - Removed duplicate Betik Runbook action entry in the command palette (`collectItems`).
   - Standardized plugin action fallbacks and categories.
-| [0.9.8](#098---2026-08-20) | 2026-08-20 | Bitig Bilge, the local and BYOK AI companion |
-| [0.9.5](#095---2026-08-20) | 2026-08-20 | Quake HUD mode and Broadcast Input |
-| [0.9.0](#090---2026-08-19) | 2026-08-19 | Developer Cockpit: port sniffer, smart links, secret shield |
-| [0.8.5](#085---2026-08-19) | 2026-08-19 | Command history, fuzzy search, execution telemetry |
-| [0.8.0](#080---2026-08-19) | 2026-08-19 | Command palette and Bitig Betik runbooks |
-| [0.7.5](#075---2026-08-19) | 2026-08-19 | Rebindable shortcuts and the central action registry |
-| [0.7.0](#070---2026-08-19) | 2026-08-19 | Shell profiles, auto-discovery, in-terminal search |
-| [0.6.x](#06x---2026-08-19) | 2026-08-19 | Settings panel, font picker, Nerd Font detection |
-| [0.1.0](#010---2026-08-19) | 2026-08-19 | First working terminal: window, PTY, xterm.js |
 
 ---
 

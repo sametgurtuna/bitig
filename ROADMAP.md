@@ -2,7 +2,7 @@
 
 # Bitig Roadmap
 
-<sub>Every milestone through <b>1.0.3</b> is shipped. This document is the design record behind them, and the plan for what comes next.</sub>
+<sub>Every milestone through <b>1.0.4</b> is shipped. This document is the design record behind them, and the plan for what comes next.</sub>
 
 <sub><a href="README.md">README</a> · <a href="FEATURES.md">Features</a> · <a href="CHANGELOG.md">Changelog</a></sub>
 
@@ -18,7 +18,7 @@ decisions are made and revisited once real usage exposes wrong assumptions.
 
 **Status legend:** `[ ]` not started · `[~]` in progress · `[x]` done.
 
-**Current state:** version 1.0.3 is released. Milestones 1 through 19 are
+**Current state:** version 1.0.4 is released. Milestones 1 through 20 are
 complete and shipped as an NSIS installer and a portable executable for
 Windows 11 x64. Work beyond this point is tracked under
 [Post-1.0 Direction](#post-10-direction).
@@ -71,6 +71,7 @@ design decision is not obvious:
 | 17 | Inline suggestions, multi-window, shell integration | 16 | `1.0.1` (done) |
 | 18 | Suggestion quality & terminal key ownership | 17 | `1.0.2` (done) |
 | 19 | English localization, modern switches & deduplication | 18 | `1.0.3` (done) |
+| 20 | Multi-level path completion & Tab-Tab directory traversal | 18 | `1.0.4` (done) |
 
 Milestones can be built iteratively; each milestone represents a self-contained, tested, and deliverable capability.
 
@@ -1150,6 +1151,26 @@ mute until the line is genuinely reset (`Enter`, `Ctrl+C`, `Ctrl+U`, `Ctrl+L`,
 - [x] Replace native checkboxes with animated `.bitig-switch` sliders in `settingsPanel.ts` and `style.css`.
 - [x] Fix missing `type="checkbox"` attributes on session restore and close confirmation options.
 - [x] Deduplicate palette actions and verify keyboard navigation.
+
+---
+
+## Milestone 20 - Multi-Level Path Completion & Tab-Tab Directory Traversal (`1.0.4`, done)
+
+**Goal:** Provide fast, intelligent directory/file path autocompletion for arbitrary relative/absolute paths and enable seamless, multi-level directory traversal using consecutive `Tab` keystrokes.
+
+### Technical approach
+
+1. **Subdirectory IPC handler (`completion:dir-entries`):** Safely resolve paths relative to working directory or absolute locations and return directory/file lists cached by folder `mtimeMs`.
+2. **Deep Tab-Tab navigation (`autocomplete.ts`):** Automatically parse command path tokens into `dirPart` and `basePart`, prefetch directory contents, and show immediate child suggestions upon accepting a folder.
+3. **Quotation & space handling:** Auto-quote folder and file names containing spaces (`cd "Program Files/"`).
+4. **Fix Tab muting lockup:** Ensure autocomplete immediately resumes on regular keystrokes even after shell-side Tab pass-through.
+
+### Sub-tasks
+
+- [x] Implement `completion:dir-entries` IPC channel in `completionHandlers.ts` and `preload/index.ts`.
+- [x] Update `autocomplete.ts` with `parsePathToken`, dynamic directory entry caching, and live ghost text updates.
+- [x] Extend path command detection to `cd`, `ls`, `dir`, `code`, `vim`, `cat`, `rm`, `git add`, `git diff`, `git checkout`, `./`, `.\`, etc.
+- [x] Fix autocomplete muting lockup after Tab pass-through.
 
 ---
 

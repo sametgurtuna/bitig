@@ -2,7 +2,7 @@
 
 # Bitig · Features & Differentiators
 
-<sub>Version <b>1.0.3</b> · Complete English localization, modern animated toggle switches, smarter inline suggestions</sub>
+<sub>Version <b>1.0.4</b> · Intelligent multi-level path completion, Tab-Tab directory traversal, complete English localization</sub>
 
 <sub><a href="README.md">README</a> · <a href="CHANGELOG.md">Changelog</a> · <a href="ROADMAP.md">Roadmap</a></sub>
 
@@ -34,7 +34,7 @@ Bitig aims to close the gap between the two. Four core principles:
 
 Legend: `+` built in and complete, `~` partial or via plugin, `-` absent.
 
-| Feature | Windows Terminal | Warp | Hyper / Tabby | Bitig 1.0.3 |
+| Feature | Windows Terminal | Warp | Hyper / Tabby | Bitig 1.0.4 |
 |---|:---:|:---:|:---:|:---|
 | ConPTY integration | `+` native | `-` custom engine | `~` node-pty | `+` **ConPTY + xterm.js** |
 | Inline (ghost) command suggestions | `-` | `+` cloud-assisted | `-` | `+` **Local history + project aware, `Tab` to accept** |

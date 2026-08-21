@@ -9,7 +9,7 @@
 <sub>Sifirdan yazilan, Windows icin bir terminal emulatoru.</sub>
 </p>
 
-[![Version](https://img.shields.io/badge/version-1.0.3-7dd3fc?style=for-the-badge&labelColor=0f1117)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-1.0.4-7dd3fc?style=for-the-badge&labelColor=0f1117)](CHANGELOG.md)
 [![Platform](https://img.shields.io/badge/Windows%2011-x64-0f1117?style=for-the-badge&logo=windows&logoColor=7dd3fc&labelColor=0f1117)](#installation)
 [![Electron](https://img.shields.io/badge/Electron-43-47848F?style=for-the-badge&logo=electron&logoColor=white&labelColor=0f1117)](https://www.electronjs.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178C6?style=for-the-badge&logo=typescript&logoColor=white&labelColor=0f1117)](tsconfig.json)
@@ -50,7 +50,7 @@
 |---|---|
 | [About](#about) | What Bitig is and is not |
 | [Installation](#installation) | Setup installer and portable build |
-| [Feature Overview](#feature-overview) | Everything shipped in 1.0.3 |
+| [Feature Overview](#feature-overview) | Everything shipped in 1.0.4 |
 | [Tech Stack](#tech-stack) | Layers and why each was chosen |
 | [Architecture](#architecture) | Process boundaries and data flow |
 | [IPC Channel Reference](#ipc-channel-reference) | The full typed contract |
@@ -107,8 +107,8 @@ The latest release for Windows 11 x64 is on the
 
 | Build | File | Notes |
 |---|---|---|
-| **Setup** | `Bitig-Setup-1.0.3.exe` | NSIS installer. Choose install directory, creates Start Menu and desktop shortcuts. |
-| **Portable** | `Bitig-Portable-1.0.3.exe` | Single self contained executable. No installation, no registry writes. |
+| **Setup** | `Bitig-Setup-1.0.4.exe` | NSIS installer. Choose install directory, creates Start Menu and desktop shortcuts. |
+| **Portable** | `Bitig-Portable-1.0.4.exe` | Single self contained executable. No installation, no registry writes. |
 
 Both builds are x64 only and require Windows 11. No runtime prerequisites:
 Node.js, Electron and the native ConPTY bindings are bundled.
@@ -453,7 +453,7 @@ Node `vm` context with no filesystem or process globals; only the declared
 {
   "id": "git-status",
   "name": "Git Branch Sentinel",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "Shows the active Git branch in the status bar.",
   "author": "Bitig Team",
   "main": "main.js",
@@ -619,7 +619,7 @@ Turkic mythology and Old Turkic vocabulary.
 |---|---|
 | [Proje Hakkinda](#proje-hakkinda) | Bitig ne, ne degil |
 | [Kurulum](#kurulum) | Setup ve portable dagitimlari |
-| [Ozellikler](#ozellikler) | 1.0.3 ile gelen her sey |
+| [Ozellikler](#ozellikler) | 1.0.4 ile gelen her sey |
 | [Teknik Yigin](#teknik-yigin) | Katmanlar ve tercih gerekceleri |
 | [Klavye Kisayollari](#klavye-kisayollari-1) | Varsayilan kisayollar |
 | [Ozellestirme](#ozellestirme) | Ayarlar, temalar, betikler, eklentiler |
@@ -672,8 +672,8 @@ Windows 11 x64 icin son surum
 
 | Dagitim | Dosya | Not |
 |---|---|---|
-| **Setup** | `Bitig-Setup-1.0.3.exe` | NSIS kurulum sihirbazi. Kurulum dizini secilebilir, Baslat menusu ve masaustu kisayolu olusturur. |
-| **Portable** | `Bitig-Portable-1.0.3.exe` | Tek dosyalik bagimsiz calistirilabilir. Kurulum yok, kayit defterine yazmaz. |
+| **Setup** | `Bitig-Setup-1.0.4.exe` | NSIS kurulum sihirbazi. Kurulum dizini secilebilir, Baslat menusu ve masaustu kisayolu olusturur. |
+| **Portable** | `Bitig-Portable-1.0.4.exe` | Tek dosyalik bagimsiz calistirilabilir. Kurulum yok, kayit defterine yazmaz. |
 
 Iki dagitim da yalnizca x64 ve Windows 11 icindir. On kosul yoktur: Node.js,
 Electron ve native ConPTY baglayicilari paketin icinde gelir.

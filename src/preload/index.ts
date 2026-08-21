@@ -15,7 +15,7 @@ import { FONT_CHANNELS } from '../shared/fontTypes';
 import { SNIPPET_CHANNELS, type BitigSnippet } from '../shared/snippetTypes';
 import { HISTORY_CHANNELS, type HistoryEntry } from '../shared/historyTypes';
 import { COCKPIT_CHANNELS } from '../shared/cockpitTypes';
-import { COMPLETION_CHANNELS, type CompletionContext } from '../shared/completionTypes';
+import { COMPLETION_CHANNELS, type CompletionContext, type DirEntriesResult } from '../shared/completionTypes';
 import { QUAKE_CHANNELS } from '../shared/quakeTypes';
 import {
   AI_CHANNELS,
@@ -161,7 +161,10 @@ const cockpitApi = {
 const completionApi = {
   /** Verilen calisma dizini icin proje farkindalikli tamamlama baglami. */
   context: (cwd: string): Promise<CompletionContext> =>
-    ipcRenderer.invoke(COMPLETION_CHANNELS.context, cwd)
+    ipcRenderer.invoke(COMPLETION_CHANNELS.context, cwd),
+  /** Verilen calisma dizini ve hedef yol icin alt dizin ve dosya listesi. */
+  dirEntries: (cwd: string | undefined, targetPath: string): Promise<DirEntriesResult> =>
+    ipcRenderer.invoke(COMPLETION_CHANNELS.dirEntries, { cwd, targetPath })
 };
 
 const quakeApi = {

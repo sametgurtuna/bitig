@@ -1,8 +1,21 @@
 // Akilli komut tamamlama (inline ghost text) icin paylasilan IPC sozlesmesi.
 
 export const COMPLETION_CHANNELS = {
-  context: 'completion:context'
+  context: 'completion:context',
+  dirEntries: 'completion:dir-entries'
 } as const;
+
+export interface DirEntriesResult {
+  resolvedDir: string;
+  directories: string[];
+  files: string[];
+}
+
+export const EMPTY_DIR_ENTRIES: DirEntriesResult = {
+  resolvedDir: '',
+  directories: [],
+  files: []
+};
 
 export interface CompletionContext {
   /** Baglamin uretildigi calisma dizini. */
