@@ -1,0 +1,63 @@
+<svg width="1000" height="560" viewBox="0 0 1000 560" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Bitig Betik parametric runbook form with live preview">
+  <defs>
+    <clipPath id="clip-bt"><rect x="0.5" y="0.5" width="999" height="559" rx="12" ry="12" /></clipPath>
+  </defs>
+  <title>Bitig Betik parametric runbook form with live preview</title>
+  <rect x="0.5" y="0.5" width="999" height="559" fill="#0f1117" rx="12" ry="12" stroke="#22252f" stroke-width="1" />
+  <g clip-path="url(#clip-bt)">
+  <rect x="0" y="0" width="1000" height="38" fill="#14161e" />
+  <line x1="0" y1="38.5" x2="1000" y2="38.5" stroke="#22252f" stroke-width="1" />
+  <rect x="12" y="6" width="112" height="26" fill="#0f1117" rx="7" ry="7" stroke="#22252f" stroke-width="1" />
+  <rect x="22" y="8" width="92" height="2" fill="#7dd3fc" rx="1" ry="1" />
+  <text x="25" y="23.5" font-family="'JetBrains Mono','Cascadia Code',Consolas,Menlo,monospace" font-size="10" fill="#7dd3fc" xml:space="preserve">❯</text>
+  <text x="40" y="23.5" font-family="'Segoe UI',Inter,system-ui,sans-serif" font-size="12" fill="#d8dee9" xml:space="preserve">bitig</text>
+  <text x="109" y="23.5" font-family="'Segoe UI',Inter,system-ui,sans-serif" font-size="13" fill="#8b93a7" text-anchor="middle" xml:space="preserve">×</text>
+  <text x="142" y="24.5" font-family="'Segoe UI',Inter,system-ui,sans-serif" font-size="17" fill="#8b93a7" text-anchor="middle" xml:space="preserve">+</text>
+  <line x1="916" y1="19" x2="928" y2="19" stroke="#8b93a7" stroke-width="1.3" />
+  <rect x="946" y="14" width="10" height="10" fill="none" stroke="#8b93a7" stroke-width="1.3" />
+  <line x1="974" y1="14" x2="984" y2="24" stroke="#8b93a7" stroke-width="1.3" />
+  <line x1="984" y1="14" x2="974" y2="24" stroke="#8b93a7" stroke-width="1.3" />
+  <text x="24" y="78" font-family="'JetBrains Mono','Cascadia Code',Consolas,Menlo,monospace" font-size="14" fill="#d8dee9" opacity="0.5" xml:space="preserve"><tspan fill="#d2a8ff">PS </tspan><tspan fill="#79c0ff">C:\dev\bitig</tspan><tspan fill="#7dd3fc">&gt; </tspan></text>
+  <rect x="0" y="39" width="1000" height="521" fill="#05070c" opacity="0.55" />
+  <rect x="170" y="86" width="660" height="420" fill="#171a22" rx="12" ry="12" stroke="#2a2f3c" stroke-width="1" />
+  <rect x="170" y="86" width="660" height="52" fill="#1e222c" rx="12" ry="12" />
+  <rect x="170" y="126" width="660" height="12" fill="#1e222c" />
+  <line x1="170" y1="138" x2="830" y2="138" stroke="#2a2f3c" stroke-width="1" />
+  <text x="190" y="118" font-family="'Segoe UI',Inter,system-ui,sans-serif" font-size="14" fill="#d8dee9" font-weight="700" xml:space="preserve">Bitig Betik</text>
+  <text x="288" y="118" font-family="'Segoe UI',Inter,system-ui,sans-serif" font-size="13" fill="#8b93a7" xml:space="preserve">Deploy release tag</text>
+  <text x="810" y="118" font-family="'Segoe UI',Inter,system-ui,sans-serif" font-size="11" fill="#4b5263" font-weight="600" text-anchor="end" xml:space="preserve">Ctrl+Shift+B</text>
+  <text x="194" y="170" font-family="'JetBrains Mono','Cascadia Code',Consolas,Menlo,monospace" font-size="12" fill="#d2a8ff" xml:space="preserve">{{environment}}</text>
+  <rect x="194" y="180" width="612" height="34" fill="#0f1117" rx="7" ry="7" stroke="#2a2f3c" stroke-width="1" />
+  <text x="208" y="202" font-family="'JetBrains Mono','Cascadia Code',Consolas,Menlo,monospace" font-size="13" fill="#8b93a7" xml:space="preserve">production</text>
+  <text x="788" y="202" font-family="'JetBrains Mono','Cascadia Code',Consolas,Menlo,monospace" font-size="11" fill="#4b5263" xml:space="preserve">▾</text>
+  <text x="194" y="236" font-family="'JetBrains Mono','Cascadia Code',Consolas,Menlo,monospace" font-size="12" fill="#d2a8ff" xml:space="preserve">{{version}}</text>
+  <rect x="194" y="246" width="612" height="34" fill="#0f1117" rx="7" ry="7" stroke="#7dd3fc" stroke-width="1" />
+  <text x="208" y="268" font-family="'JetBrains Mono','Cascadia Code',Consolas,Menlo,monospace" font-size="13" fill="#d8dee9" xml:space="preserve">v1.0.4</text>
+  <rect x="260.4" y="255" width="8" height="16" fill="#7dd3fc" opacity="0.85" />
+  <text x="194" y="302" font-family="'JetBrains Mono','Cascadia Code',Consolas,Menlo,monospace" font-size="12" fill="#d2a8ff" xml:space="preserve">{{dry_run}}</text>
+  <rect x="194" y="312" width="612" height="34" fill="#0f1117" rx="7" ry="7" stroke="#2a2f3c" stroke-width="1" />
+  <text x="208" y="334" font-family="'JetBrains Mono','Cascadia Code',Consolas,Menlo,monospace" font-size="13" fill="#8b93a7" xml:space="preserve">false</text>
+  <rect x="754" y="320" width="34" height="18" fill="#22252f" rx="9" ry="9" />
+  <circle cx="763" cy="329" r="6" fill="#4b5263" />
+  <text x="194" y="376" font-family="'Segoe UI',Inter,system-ui,sans-serif" font-size="10.5" fill="#4b5263" font-weight="700" xml:space="preserve">LIVE PREVIEW</text>
+  <rect x="194" y="388" width="612" height="56" fill="#0f1117" rx="8" ry="8" stroke="#2a2f3c" stroke-width="1" />
+  <text x="208" y="410" font-family="'JetBrains Mono','Cascadia Code',Consolas,Menlo,monospace" font-size="13" fill="#d8dee9" xml:space="preserve"><tspan fill="#7ee787">$ </tspan><tspan fill="#d8dee9">./deploy.sh --env </tspan><tspan fill="#d2a8ff">production</tspan><tspan fill="#d8dee9"> --tag </tspan><tspan fill="#d2a8ff">v1.0.4</tspan></text>
+  <text x="208" y="432" font-family="'JetBrains Mono','Cascadia Code',Consolas,Menlo,monospace" font-size="13" fill="#d8dee9" xml:space="preserve"><tspan fill="#d8dee9">  --confirm</tspan></text>
+  <line x1="170" y1="462" x2="830" y2="462" stroke="#2a2f3c" stroke-width="1" />
+  <rect x="190" y="473" width="46.800000000000004" height="20" fill="#1e222c" rx="5" ry="5" stroke="#22252f" stroke-width="1" />
+  <text x="213.4" y="487" font-family="'Segoe UI',Inter,system-ui,sans-serif" font-size="11" fill="#8b93a7" font-weight="600" text-anchor="middle" xml:space="preserve">Enter</text>
+  <text x="248.8" y="487" font-family="'Segoe UI',Inter,system-ui,sans-serif" font-size="12" fill="#8b93a7" xml:space="preserve">run in the focused pane</text>
+  <rect x="430" y="473" width="40.64" height="20" fill="#1e222c" rx="5" ry="5" stroke="#22252f" stroke-width="1" />
+  <text x="450.32" y="487" font-family="'Segoe UI',Inter,system-ui,sans-serif" font-size="11" fill="#8b93a7" font-weight="600" text-anchor="middle" xml:space="preserve">Ctrl</text>
+  <text x="477.64" y="487" font-family="'Segoe UI',Inter,system-ui,sans-serif" font-size="11" fill="#4b5263" xml:space="preserve">+</text>
+  <rect x="487.64" y="473" width="46.800000000000004" height="20" fill="#1e222c" rx="5" ry="5" stroke="#22252f" stroke-width="1" />
+  <text x="511.03999999999996" y="487" font-family="'Segoe UI',Inter,system-ui,sans-serif" font-size="11" fill="#8b93a7" font-weight="600" text-anchor="middle" xml:space="preserve">Enter</text>
+  <text x="546.4399999999999" y="487" font-family="'Segoe UI',Inter,system-ui,sans-serif" font-size="12" fill="#8b93a7" xml:space="preserve">copy without running</text>
+  <text x="810" y="487" font-family="'Segoe UI',Inter,system-ui,sans-serif" font-size="11" fill="#4b5263" text-anchor="end" xml:space="preserve">snippets.json</text>
+  <rect x="0" y="534" width="1000" height="26" fill="#14161e" />
+  <line x1="0" y1="534.5" x2="1000" y2="534.5" stroke="#22252f" stroke-width="1" />
+  <text x="14" y="551" font-family="'Segoe UI',Inter,system-ui,sans-serif" font-size="11" fill="#8b93a7" xml:space="preserve">PowerShell 7</text>
+  <text x="109.92" y="551" font-family="'Segoe UI',Inter,system-ui,sans-serif" font-size="11" fill="#8b93a7" xml:space="preserve">12 runbooks</text>
+  <text x="199.68" y="551" font-family="'Segoe UI',Inter,system-ui,sans-serif" font-size="11" fill="#8b93a7" xml:space="preserve">UTF-8</text>
+  </g>
+</svg>

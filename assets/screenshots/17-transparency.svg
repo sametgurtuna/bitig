@@ -1,0 +1,35 @@
+<svg width="1000" height="460" viewBox="0 0 1000 460" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Window transparency and background image">
+  <defs>
+    <clipPath id="clip-tr"><rect x="0.5" y="0.5" width="999" height="459" rx="12" ry="12" /></clipPath>
+  </defs>
+  <title>Window transparency and background image</title>
+  <defs>
+    <linearGradient id="wall" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#243b55"/><stop offset="0.5" stop-color="#3d2b56"/><stop offset="1" stop-color="#141e30"/>
+    </linearGradient>
+  </defs>
+  <rect x="0.5" y="0.5" width="999" height="459" fill="url(#wall)" rx="12" ry="12" stroke="#22252f" stroke-width="1" />
+  <g clip-path="url(#clip-tr)">
+  <path d="M0 460 L200 280 L340 400 L520 220 L700 370 L860 260 L1000 460 Z" fill="#0b1220" opacity="0.55" />
+  <circle cx="820" cy="90" r="46" fill="#ffffff" opacity="0.12" />
+  <rect x="70" y="46" width="860" height="350" fill="#0f1117" rx="12" ry="12" opacity="0.82" />
+  <rect x="70.5" y="46.5" width="859" height="349" fill="none" rx="12" ry="12" stroke="#22252f" stroke-width="1" />
+  <rect x="70" y="46" width="860" height="38" fill="#14161e" rx="12" ry="12" opacity="0.9" />
+  <rect x="70" y="72" width="860" height="12" fill="#14161e" opacity="0.9" />
+  <line x1="70" y1="84.5" x2="930" y2="84.5" stroke="#22252f" stroke-width="1" />
+  <rect x="82" y="52" width="130" height="26" fill="#0f1117" rx="7" ry="7" stroke="#22252f" stroke-width="1" opacity="0.6" />
+  <rect x="92" y="54" width="110" height="2" fill="#7dd3fc" rx="1" ry="1" />
+  <text x="110" y="69.5" font-family="'Segoe UI',Inter,system-ui,sans-serif" font-size="12" fill="#d8dee9" xml:space="preserve">bitig</text>
+  <text x="96" y="69.5" font-family="'JetBrains Mono','Cascadia Code',Consolas,Menlo,monospace" font-size="10" fill="#7dd3fc" xml:space="preserve">❯</text>
+  <text x="92" y="120" font-family="'JetBrains Mono','Cascadia Code',Consolas,Menlo,monospace" font-size="14" fill="#d8dee9" xml:space="preserve"><tspan fill="#d2a8ff">PS </tspan><tspan fill="#79c0ff">C:\dev\bitig</tspan><tspan fill="#7dd3fc">&gt; </tspan><tspan fill="#d8dee9">bitig --version</tspan></text>
+  <text x="92" y="142" font-family="'JetBrains Mono','Cascadia Code',Consolas,Menlo,monospace" font-size="14" fill="#d8dee9" xml:space="preserve"><tspan fill="#8b93a7">  Bitig 1.0.4  ·  Electron 43  ·  Windows 11 x64</tspan></text>
+  
+  <text x="92" y="186" font-family="'JetBrains Mono','Cascadia Code',Consolas,Menlo,monospace" font-size="14" fill="#d8dee9" xml:space="preserve"><tspan fill="#4b5263">  appearance.opacity            </tspan><tspan fill="#7dd3fc">0.82</tspan></text>
+  <text x="92" y="208" font-family="'JetBrains Mono','Cascadia Code',Consolas,Menlo,monospace" font-size="14" fill="#d8dee9" xml:space="preserve"><tspan fill="#4b5263">  appearance.backgroundImage    </tspan><tspan fill="#7dd3fc">ridge.png</tspan></text>
+  <text x="92" y="230" font-family="'JetBrains Mono','Cascadia Code',Consolas,Menlo,monospace" font-size="14" fill="#d8dee9" xml:space="preserve"><tspan fill="#4b5263">  appearance.backgroundImageFit </tspan><tspan fill="#7dd3fc">cover</tspan></text>
+  
+  <text x="92" y="274" font-family="'JetBrains Mono','Cascadia Code',Consolas,Menlo,monospace" font-size="14" fill="#d8dee9" xml:space="preserve"><tspan fill="#d2a8ff">PS </tspan><tspan fill="#79c0ff">C:\dev\bitig</tspan><tspan fill="#7dd3fc">&gt; </tspan></text>
+  <rect x="234.8" y="262" width="8" height="16" fill="#7dd3fc" opacity="0.85" />
+  <text x="500" y="434" font-family="'Segoe UI',Inter,system-ui,sans-serif" font-size="11.5" fill="#8b93a7" text-anchor="middle" xml:space="preserve">window transparency and the background image are independent — either one alone, or both together</text>
+  </g>
+</svg>

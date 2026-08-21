@@ -1,0 +1,59 @@
+<svg width="1000" height="520" viewBox="0 0 1000 520" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Nested split panes with a draggable divider">
+  <defs>
+    <clipPath id="clip-pn"><rect x="0.5" y="0.5" width="999" height="519" rx="12" ry="12" /></clipPath>
+  </defs>
+  <title>Nested split panes with a draggable divider</title>
+  <rect x="0.5" y="0.5" width="999" height="519" fill="#0f1117" rx="12" ry="12" stroke="#22252f" stroke-width="1" />
+  <g clip-path="url(#clip-pn)">
+  <rect x="0" y="0" width="1000" height="38" fill="#14161e" />
+  <line x1="0" y1="38.5" x2="1000" y2="38.5" stroke="#22252f" stroke-width="1" />
+  <rect x="12" y="6" width="112" height="26" fill="#0f1117" rx="7" ry="7" stroke="#22252f" stroke-width="1" />
+  <rect x="22" y="8" width="92" height="2" fill="#7dd3fc" rx="1" ry="1" />
+  <text x="25" y="23.5" font-family="'JetBrains Mono','Cascadia Code',Consolas,Menlo,monospace" font-size="10" fill="#7dd3fc" xml:space="preserve">❯</text>
+  <text x="40" y="23.5" font-family="'Segoe UI',Inter,system-ui,sans-serif" font-size="12" fill="#d8dee9" xml:space="preserve">bitig</text>
+  <text x="109" y="23.5" font-family="'Segoe UI',Inter,system-ui,sans-serif" font-size="13" fill="#8b93a7" text-anchor="middle" xml:space="preserve">×</text>
+  <text x="141" y="23.5" font-family="'JetBrains Mono','Cascadia Code',Consolas,Menlo,monospace" font-size="10" fill="#4b5263" xml:space="preserve">❯</text>
+  <text x="156" y="23.5" font-family="'Segoe UI',Inter,system-ui,sans-serif" font-size="12" fill="#8b93a7" xml:space="preserve">api</text>
+  <text x="225" y="23.5" font-family="'Segoe UI',Inter,system-ui,sans-serif" font-size="13" fill="#4b5263" text-anchor="middle" xml:space="preserve">×</text>
+  <text x="257" y="23.5" font-family="'JetBrains Mono','Cascadia Code',Consolas,Menlo,monospace" font-size="10" fill="#4b5263" xml:space="preserve">▸</text>
+  <text x="272" y="23.5" font-family="'Segoe UI',Inter,system-ui,sans-serif" font-size="12" fill="#8b93a7" xml:space="preserve">logs</text>
+  <text x="341" y="23.5" font-family="'Segoe UI',Inter,system-ui,sans-serif" font-size="13" fill="#4b5263" text-anchor="middle" xml:space="preserve">×</text>
+  <text x="373" y="23.5" font-family="'JetBrains Mono','Cascadia Code',Consolas,Menlo,monospace" font-size="10" fill="#4b5263" xml:space="preserve">▸</text>
+  <text x="388" y="23.5" font-family="'Segoe UI',Inter,system-ui,sans-serif" font-size="12" fill="#8b93a7" xml:space="preserve">wsl: ubuntu</text>
+  <text x="480.92" y="23.5" font-family="'Segoe UI',Inter,system-ui,sans-serif" font-size="13" fill="#4b5263" text-anchor="middle" xml:space="preserve">×</text>
+  <text x="513.9200000000001" y="24.5" font-family="'Segoe UI',Inter,system-ui,sans-serif" font-size="17" fill="#8b93a7" text-anchor="middle" xml:space="preserve">+</text>
+  <line x1="916" y1="19" x2="928" y2="19" stroke="#8b93a7" stroke-width="1.3" />
+  <rect x="946" y="14" width="10" height="10" fill="none" stroke="#8b93a7" stroke-width="1.3" />
+  <line x1="974" y1="14" x2="984" y2="24" stroke="#8b93a7" stroke-width="1.3" />
+  <line x1="984" y1="14" x2="974" y2="24" stroke="#8b93a7" stroke-width="1.3" />
+  <line x1="520" y1="39" x2="520" y2="494" stroke="#22252f" stroke-width="1" />
+  <line x1="520" y1="300" x2="1000" y2="300" stroke="#22252f" stroke-width="1" />
+  <rect x="518.5" y="219" width="3" height="44" fill="#7dd3fc" rx="2" ry="2" opacity="0.45" />
+  <rect x="2" y="41" width="516" height="451" fill="#7dd3fc" rx="6" ry="6" opacity="0.06" />
+  <rect x="2.5" y="41.5" width="515" height="450" fill="none" rx="6" ry="6" stroke="#7dd3fc" stroke-width="1" opacity="0.35" />
+  <text x="22" y="73" font-family="'JetBrains Mono','Cascadia Code',Consolas,Menlo,monospace" font-size="14" fill="#d8dee9" xml:space="preserve"><tspan fill="#d2a8ff">PS </tspan><tspan fill="#79c0ff">C:\dev\bitig</tspan><tspan fill="#7dd3fc">&gt; </tspan><tspan fill="#d8dee9">npm run dev</tspan></text>
+  <text x="22" y="95" font-family="'JetBrains Mono','Cascadia Code',Consolas,Menlo,monospace" font-size="14" fill="#d8dee9" xml:space="preserve"><tspan fill="#8b93a7">  ➜ Local: </tspan><tspan fill="#7dd3fc">http://localhost:5173/</tspan></text>
+  <text x="22" y="117" font-family="'JetBrains Mono','Cascadia Code',Consolas,Menlo,monospace" font-size="14" fill="#d8dee9" xml:space="preserve"><tspan fill="#4b5263">  ready in 1.2 s</tspan></text>
+  
+  <text x="22" y="161" font-family="'JetBrains Mono','Cascadia Code',Consolas,Menlo,monospace" font-size="14" fill="#d8dee9" xml:space="preserve"><tspan fill="#d2a8ff">PS </tspan><tspan fill="#79c0ff">C:\dev\bitig</tspan><tspan fill="#7dd3fc">&gt; </tspan></text>
+  <text x="22" y="474" font-family="'Segoe UI',Inter,system-ui,sans-serif" font-size="11" fill="#7dd3fc" font-weight="600" xml:space="preserve">pane 1 · focused</text>
+  <text x="542" y="73" font-family="'JetBrains Mono','Cascadia Code',Consolas,Menlo,monospace" font-size="14" fill="#d8dee9" xml:space="preserve"><tspan fill="#7ee787">PS </tspan><tspan fill="#56d4dd">~/api</tspan><tspan fill="#7ee787">&gt; </tspan><tspan fill="#d8dee9">tail -f app.log</tspan></text>
+  <text x="542" y="95" font-family="'JetBrains Mono','Cascadia Code',Consolas,Menlo,monospace" font-size="14" fill="#d8dee9" xml:space="preserve"><tspan fill="#8b93a7">  200 GET  /health   3 ms</tspan></text>
+  <text x="542" y="117" font-family="'JetBrains Mono','Cascadia Code',Consolas,Menlo,monospace" font-size="14" fill="#d8dee9" xml:space="preserve"><tspan fill="#8b93a7">  201 POST /sessions 41 ms</tspan></text>
+  <text x="542" y="139" font-family="'JetBrains Mono','Cascadia Code',Consolas,Menlo,monospace" font-size="14" fill="#d8dee9" xml:space="preserve"><tspan fill="#f47067">  500 GET  /billing  12 ms</tspan></text>
+  <text x="542" y="284" font-family="'Segoe UI',Inter,system-ui,sans-serif" font-size="11" fill="#8b93a7" xml:space="preserve">pane 2</text>
+  <text x="542" y="334" font-family="'JetBrains Mono','Cascadia Code',Consolas,Menlo,monospace" font-size="14" fill="#d8dee9" xml:space="preserve"><tspan fill="#7ee787">❯ </tspan><tspan fill="#d8dee9">btop</tspan></text>
+  <text x="542" y="356" font-family="'JetBrains Mono','Cascadia Code',Consolas,Menlo,monospace" font-size="14" fill="#d8dee9" xml:space="preserve"><tspan fill="#8b93a7">  cpu </tspan><tspan fill="#7ee787">██████░░░░</tspan><tspan fill="#8b93a7">  61%</tspan></text>
+  <text x="542" y="378" font-family="'JetBrains Mono','Cascadia Code',Consolas,Menlo,monospace" font-size="14" fill="#d8dee9" xml:space="preserve"><tspan fill="#8b93a7">  mem </tspan><tspan fill="#56d4dd">████░░░░░░</tspan><tspan fill="#8b93a7">  42%</tspan></text>
+  <text x="542" y="474" font-family="'Segoe UI',Inter,system-ui,sans-serif" font-size="11" fill="#8b93a7" xml:space="preserve">pane 3</text>
+  <rect x="0" y="494" width="1000" height="26" fill="#14161e" />
+  <line x1="0" y1="494.5" x2="1000" y2="494.5" stroke="#22252f" stroke-width="1" />
+  <text x="14" y="511" font-family="'Segoe UI',Inter,system-ui,sans-serif" font-size="11" fill="#8b93a7" xml:space="preserve">PowerShell 7</text>
+  <text x="109.92" y="511" font-family="'Segoe UI',Inter,system-ui,sans-serif" font-size="11" fill="#8b93a7" xml:space="preserve">pane 1 / 3</text>
+  <rect x="193.52" y="495" width="50.800000000000004" height="20" fill="#7ee787" rx="10" ry="10" opacity="0.16" />
+  <rect x="193.52" y="495" width="50.800000000000004" height="20" fill="none" rx="10" ry="10" stroke="#7ee787" stroke-width="1" opacity="0.55" />
+  <text x="218.92000000000002" y="509" font-family="'Segoe UI',Inter,system-ui,sans-serif" font-size="11" fill="#7ee787" font-weight="600" text-anchor="middle" xml:space="preserve">:5173</text>
+  <text x="254.32000000000002" y="511" font-family="'Segoe UI',Inter,system-ui,sans-serif" font-size="11" fill="#8b93a7" xml:space="preserve">UTF-8</text>
+  <text x="307.12" y="511" font-family="'Segoe UI',Inter,system-ui,sans-serif" font-size="11" fill="#8b93a7" xml:space="preserve">Ln 8, Col 22</text>
+  </g>
+</svg>

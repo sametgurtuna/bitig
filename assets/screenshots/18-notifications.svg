@@ -1,0 +1,45 @@
+<svg width="1000" height="400" viewBox="0 0 1000 400" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Execution telemetry and desktop notifications">
+  <defs>
+    <clipPath id="clip-nt"><rect x="0.5" y="0.5" width="999" height="399" rx="12" ry="12" /></clipPath>
+  </defs>
+  <title>Execution telemetry and desktop notifications</title>
+  <rect x="0.5" y="0.5" width="999" height="399" fill="#0f1117" rx="12" ry="12" stroke="#22252f" stroke-width="1" />
+  <g clip-path="url(#clip-nt)">
+  <rect x="0" y="0" width="1000" height="38" fill="#14161e" />
+  <line x1="0" y1="38.5" x2="1000" y2="38.5" stroke="#22252f" stroke-width="1" />
+  <rect x="12" y="6" width="112" height="26" fill="#0f1117" rx="7" ry="7" stroke="#22252f" stroke-width="1" />
+  <rect x="22" y="8" width="92" height="2" fill="#7dd3fc" rx="1" ry="1" />
+  <text x="25" y="23.5" font-family="'JetBrains Mono','Cascadia Code',Consolas,Menlo,monospace" font-size="10" fill="#7dd3fc" xml:space="preserve">❯</text>
+  <text x="40" y="23.5" font-family="'Segoe UI',Inter,system-ui,sans-serif" font-size="12" fill="#d8dee9" xml:space="preserve">bitig</text>
+  <text x="109" y="23.5" font-family="'Segoe UI',Inter,system-ui,sans-serif" font-size="13" fill="#8b93a7" text-anchor="middle" xml:space="preserve">×</text>
+  <text x="141" y="23.5" font-family="'JetBrains Mono','Cascadia Code',Consolas,Menlo,monospace" font-size="10" fill="#4b5263" xml:space="preserve">❯</text>
+  <text x="156" y="23.5" font-family="'Segoe UI',Inter,system-ui,sans-serif" font-size="12" fill="#8b93a7" xml:space="preserve">api</text>
+  <text x="225" y="23.5" font-family="'Segoe UI',Inter,system-ui,sans-serif" font-size="13" fill="#4b5263" text-anchor="middle" xml:space="preserve">×</text>
+  <text x="258" y="24.5" font-family="'Segoe UI',Inter,system-ui,sans-serif" font-size="17" fill="#8b93a7" text-anchor="middle" xml:space="preserve">+</text>
+  <line x1="916" y1="19" x2="928" y2="19" stroke="#8b93a7" stroke-width="1.3" />
+  <rect x="946" y="14" width="10" height="10" fill="none" stroke="#8b93a7" stroke-width="1.3" />
+  <line x1="974" y1="14" x2="984" y2="24" stroke="#8b93a7" stroke-width="1.3" />
+  <line x1="984" y1="14" x2="974" y2="24" stroke="#8b93a7" stroke-width="1.3" />
+  <text x="24" y="77" font-family="'JetBrains Mono','Cascadia Code',Consolas,Menlo,monospace" font-size="14" fill="#d8dee9" xml:space="preserve"><tspan fill="#d2a8ff">PS </tspan><tspan fill="#79c0ff">C:\dev\bitig</tspan><tspan fill="#7dd3fc">&gt; </tspan><tspan fill="#d8dee9">npm run dist</tspan></text>
+  <text x="24" y="99" font-family="'JetBrains Mono','Cascadia Code',Consolas,Menlo,monospace" font-size="14" fill="#d8dee9" xml:space="preserve"><tspan fill="#7ee787">  ✓ packaging NSIS target</tspan></text>
+  <text x="24" y="121" font-family="'JetBrains Mono','Cascadia Code',Consolas,Menlo,monospace" font-size="14" fill="#d8dee9" xml:space="preserve"><tspan fill="#7ee787">  ✓ packaging portable target</tspan></text>
+  <text x="24" y="143" font-family="'JetBrains Mono','Cascadia Code',Consolas,Menlo,monospace" font-size="14" fill="#d8dee9" xml:space="preserve"><tspan fill="#8b93a7">  built 2 targets in </tspan><tspan fill="#e3b341">3 m 41 s</tspan></text>
+  
+  <text x="24" y="187" font-family="'JetBrains Mono','Cascadia Code',Consolas,Menlo,monospace" font-size="14" fill="#d8dee9" xml:space="preserve"><tspan fill="#d2a8ff">PS </tspan><tspan fill="#79c0ff">C:\dev\bitig</tspan><tspan fill="#7dd3fc">&gt; </tspan></text>
+  <rect x="283.6" y="126" width="106.24000000000001" height="20" fill="#7ee787" rx="10" ry="10" opacity="0.16" />
+  <rect x="283.6" y="126" width="106.24000000000001" height="20" fill="none" rx="10" ry="10" stroke="#7ee787" stroke-width="1" opacity="0.55" />
+  <text x="336.72" y="140" font-family="'Segoe UI',Inter,system-ui,sans-serif" font-size="11" fill="#7ee787" font-weight="600" text-anchor="middle" xml:space="preserve">exit 0 · 3m41s</text>
+  <rect x="600" y="69" width="366" height="92" fill="#1e222c" rx="10" ry="10" stroke="#2a2f3c" stroke-width="1" />
+  <rect x="600" y="69" width="4" height="92" fill="#7ee787" rx="2" ry="2" />
+  <text x="622" y="99" font-family="'Segoe UI',Inter,system-ui,sans-serif" font-size="11" fill="#8b93a7" font-weight="700" xml:space="preserve">Bitig</text>
+  <text x="622" y="123" font-family="'Segoe UI',Inter,system-ui,sans-serif" font-size="13" fill="#d8dee9" font-weight="600" xml:space="preserve">npm run dist finished</text>
+  <text x="622" y="143" font-family="'Segoe UI',Inter,system-ui,sans-serif" font-size="11.5" fill="#8b93a7" xml:space="preserve">exit code 0 · 3 m 41 s · tab "bitig"</text>
+  <text x="944" y="93" font-family="'JetBrains Mono','Cascadia Code',Consolas,Menlo,monospace" font-size="13" fill="#4b5263" text-anchor="end" xml:space="preserve">×</text>
+  <text x="24" y="350" font-family="'Segoe UI',Inter,system-ui,sans-serif" font-size="11" fill="#4b5263" xml:space="preserve">native Windows notification when a command that ran longer than the threshold finishes in an unfocused tab</text>
+  <rect x="0" y="374" width="1000" height="26" fill="#14161e" />
+  <line x1="0" y1="374.5" x2="1000" y2="374.5" stroke="#22252f" stroke-width="1" />
+  <text x="14" y="391" font-family="'Segoe UI',Inter,system-ui,sans-serif" font-size="11" fill="#8b93a7" xml:space="preserve">PowerShell 7</text>
+  <text x="109.92" y="391" font-family="'Segoe UI',Inter,system-ui,sans-serif" font-size="11" fill="#e3b341" xml:space="preserve">last command 3m41s</text>
+  <text x="242.8" y="391" font-family="'Segoe UI',Inter,system-ui,sans-serif" font-size="11" fill="#8b93a7" xml:space="preserve">notifications: &gt; 5 s</text>
+  </g>
+</svg>

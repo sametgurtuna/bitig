@@ -1,0 +1,54 @@
+<svg width="1000" height="470" viewBox="0 0 1000 470" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Developer Cockpit: port sniffer, smart links, secret shield">
+  <defs>
+    <clipPath id="clip-ck"><rect x="0.5" y="0.5" width="999" height="469" rx="12" ry="12" /></clipPath>
+  </defs>
+  <title>Developer Cockpit: port sniffer, smart links, secret shield</title>
+  <rect x="0.5" y="0.5" width="999" height="469" fill="#0f1117" rx="12" ry="12" stroke="#22252f" stroke-width="1" />
+  <g clip-path="url(#clip-ck)">
+  <rect x="0" y="0" width="1000" height="38" fill="#14161e" />
+  <line x1="0" y1="38.5" x2="1000" y2="38.5" stroke="#22252f" stroke-width="1" />
+  <rect x="12" y="6" width="112" height="26" fill="#0f1117" rx="7" ry="7" stroke="#22252f" stroke-width="1" />
+  <rect x="22" y="8" width="92" height="2" fill="#7dd3fc" rx="1" ry="1" />
+  <text x="25" y="23.5" font-family="'JetBrains Mono','Cascadia Code',Consolas,Menlo,monospace" font-size="10" fill="#7dd3fc" xml:space="preserve">❯</text>
+  <text x="40" y="23.5" font-family="'Segoe UI',Inter,system-ui,sans-serif" font-size="12" fill="#d8dee9" xml:space="preserve">bitig</text>
+  <text x="109" y="23.5" font-family="'Segoe UI',Inter,system-ui,sans-serif" font-size="13" fill="#8b93a7" text-anchor="middle" xml:space="preserve">×</text>
+  <text x="142" y="24.5" font-family="'Segoe UI',Inter,system-ui,sans-serif" font-size="17" fill="#8b93a7" text-anchor="middle" xml:space="preserve">+</text>
+  <line x1="916" y1="19" x2="928" y2="19" stroke="#8b93a7" stroke-width="1.3" />
+  <rect x="946" y="14" width="10" height="10" fill="none" stroke="#8b93a7" stroke-width="1.3" />
+  <line x1="974" y1="14" x2="984" y2="24" stroke="#8b93a7" stroke-width="1.3" />
+  <line x1="984" y1="14" x2="974" y2="24" stroke="#8b93a7" stroke-width="1.3" />
+  <text x="24" y="77" font-family="'JetBrains Mono','Cascadia Code',Consolas,Menlo,monospace" font-size="14" fill="#d8dee9" xml:space="preserve"><tspan fill="#4b5263">—— </tspan><tspan fill="#7ee787">LIVE PORT SNIFFER</tspan><tspan fill="#4b5263">  ———————————————————————————————————————————————————</tspan></text>
+  <text x="24" y="99" font-family="'JetBrains Mono','Cascadia Code',Consolas,Menlo,monospace" font-size="14" fill="#d8dee9" xml:space="preserve"><tspan fill="#d2a8ff">PS </tspan><tspan fill="#79c0ff">C:\dev\bitig</tspan><tspan fill="#7dd3fc">&gt; </tspan><tspan fill="#d8dee9">npm run dev</tspan></text>
+  <text x="24" y="121" font-family="'JetBrains Mono','Cascadia Code',Consolas,Menlo,monospace" font-size="14" fill="#d8dee9" xml:space="preserve"><tspan fill="#8b93a7">  ➜  Local:   </tspan><tspan fill="#7dd3fc" text-decoration="underline">http://localhost:5173/</tspan></text>
+  <text x="24" y="143" font-family="'JetBrains Mono','Cascadia Code',Consolas,Menlo,monospace" font-size="14" fill="#d8dee9" xml:space="preserve"><tspan fill="#8b93a7">  ➜  API:     </tspan><tspan fill="#8b93a7">listening on 0.0.0.0:8080</tspan></text>
+  
+  <text x="24" y="187" font-family="'JetBrains Mono','Cascadia Code',Consolas,Menlo,monospace" font-size="14" fill="#d8dee9" xml:space="preserve"><tspan fill="#4b5263">—— </tspan><tspan fill="#79c0ff">SMART LINKS</tspan><tspan fill="#4b5263">  ———————————————————————————————————————————————————————</tspan></text>
+  <text x="24" y="209" font-family="'JetBrains Mono','Cascadia Code',Consolas,Menlo,monospace" font-size="14" fill="#d8dee9" xml:space="preserve"><tspan fill="#f47067">  ERROR in </tspan><tspan fill="#79c0ff" text-decoration="underline">src/renderer/src/panes.ts:214:9</tspan></text>
+  <text x="24" y="231" font-family="'JetBrains Mono','Cascadia Code',Consolas,Menlo,monospace" font-size="14" fill="#d8dee9" xml:space="preserve"><tspan fill="#f47067">  ERROR in </tspan><tspan fill="#79c0ff" text-decoration="underline">src/main/pty/ptyManager.ts:88:3</tspan></text>
+  
+  <text x="24" y="275" font-family="'JetBrains Mono','Cascadia Code',Consolas,Menlo,monospace" font-size="14" fill="#d8dee9" xml:space="preserve"><tspan fill="#4b5263">—— </tspan><tspan fill="#e3b341">SECRET SHIELD</tspan><tspan fill="#4b5263">  ——————————————————————————————————————————————————</tspan></text>
+  <text x="24" y="297" font-family="'JetBrains Mono','Cascadia Code',Consolas,Menlo,monospace" font-size="14" fill="#d8dee9" xml:space="preserve"><tspan fill="#d2a8ff">PS </tspan><tspan fill="#79c0ff">C:\dev\bitig</tspan><tspan fill="#7dd3fc">&gt; </tspan><tspan fill="#d8dee9">cat .env</tspan></text>
+  <text x="24" y="319" font-family="'JetBrains Mono','Cascadia Code',Consolas,Menlo,monospace" font-size="14" fill="#d8dee9" xml:space="preserve"><tspan fill="#8b93a7">  OPENAI_API_KEY=</tspan><tspan fill="#e3b341">sk-••••••••••••••••••••••••</tspan></text>
+  <text x="24" y="341" font-family="'JetBrains Mono','Cascadia Code',Consolas,Menlo,monospace" font-size="14" fill="#d8dee9" xml:space="preserve"><tspan fill="#8b93a7">  AWS_ACCESS_KEY_ID=</tspan><tspan fill="#e3b341">AKIA••••••••••••••••</tspan></text>
+  <text x="24" y="363" font-family="'JetBrains Mono','Cascadia Code',Consolas,Menlo,monospace" font-size="14" fill="#d8dee9" xml:space="preserve"><tspan fill="#8b93a7">  GITHUB_TOKEN=</tspan><tspan fill="#e3b341">ghp_••••••••••••••••••••</tspan></text>
+  <rect x="340.40000000000003" y="104" width="93.92" height="20" fill="#7ee787" rx="10" ry="10" opacity="0.16" />
+  <rect x="340.40000000000003" y="104" width="93.92" height="20" fill="none" rx="10" ry="10" stroke="#7ee787" stroke-width="1" opacity="0.55" />
+  <text x="387.36" y="118" font-family="'Segoe UI',Inter,system-ui,sans-serif" font-size="11" fill="#7ee787" font-weight="600" text-anchor="middle" xml:space="preserve">:5173 open ↗</text>
+  <rect x="365.6" y="126" width="93.92" height="20" fill="#56d4dd" rx="10" ry="10" opacity="0.16" />
+  <rect x="365.6" y="126" width="93.92" height="20" fill="none" rx="10" ry="10" stroke="#56d4dd" stroke-width="1" opacity="0.55" />
+  <text x="412.56" y="140" font-family="'Segoe UI',Inter,system-ui,sans-serif" font-size="11" fill="#56d4dd" font-weight="600" text-anchor="middle" xml:space="preserve">:8080 open ↗</text>
+  <text x="394.8" y="209" font-family="'Segoe UI',Inter,system-ui,sans-serif" font-size="11" fill="#4b5263" xml:space="preserve">click → VS Code at line 214, column 9</text>
+  <text x="369.6" y="363" font-family="'Segoe UI',Inter,system-ui,sans-serif" font-size="11" fill="#4b5263" xml:space="preserve">masked before it can reach history.json</text>
+  <rect x="0" y="444" width="1000" height="26" fill="#14161e" />
+  <line x1="0" y1="444.5" x2="1000" y2="444.5" stroke="#22252f" stroke-width="1" />
+  <text x="14" y="461" font-family="'Segoe UI',Inter,system-ui,sans-serif" font-size="11" fill="#8b93a7" xml:space="preserve">PowerShell 7</text>
+  <rect x="109.92" y="445" width="50.800000000000004" height="20" fill="#7ee787" rx="10" ry="10" opacity="0.16" />
+  <rect x="109.92" y="445" width="50.800000000000004" height="20" fill="none" rx="10" ry="10" stroke="#7ee787" stroke-width="1" opacity="0.55" />
+  <text x="135.32" y="459" font-family="'Segoe UI',Inter,system-ui,sans-serif" font-size="11" fill="#7ee787" font-weight="600" text-anchor="middle" xml:space="preserve">:5173</text>
+  <rect x="170.72" y="445" width="50.800000000000004" height="20" fill="#56d4dd" rx="10" ry="10" opacity="0.16" />
+  <rect x="170.72" y="445" width="50.800000000000004" height="20" fill="none" rx="10" ry="10" stroke="#56d4dd" stroke-width="1" opacity="0.55" />
+  <text x="196.12" y="459" font-family="'Segoe UI',Inter,system-ui,sans-serif" font-size="11" fill="#56d4dd" font-weight="600" text-anchor="middle" xml:space="preserve">:8080</text>
+  <text x="231.52" y="461" font-family="'Segoe UI',Inter,system-ui,sans-serif" font-size="11" fill="#e3b341" xml:space="preserve">Secret Shield: on</text>
+  <text x="358.24" y="461" font-family="'Segoe UI',Inter,system-ui,sans-serif" font-size="11" fill="#8b93a7" xml:space="preserve">UTF-8</text>
+  </g>
+</svg>

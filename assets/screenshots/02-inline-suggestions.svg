@@ -1,0 +1,51 @@
+<svg width="1000" height="400" viewBox="0 0 1000 400" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Inline ghost text suggestions">
+  <defs>
+    <clipPath id="clip-gt"><rect x="0.5" y="0.5" width="999" height="399" rx="12" ry="12" /></clipPath>
+  </defs>
+  <title>Inline ghost text suggestions</title>
+  <rect x="0.5" y="0.5" width="999" height="399" fill="#0f1117" rx="12" ry="12" stroke="#22252f" stroke-width="1" />
+  <g clip-path="url(#clip-gt)">
+  <rect x="0" y="0" width="1000" height="38" fill="#14161e" />
+  <line x1="0" y1="38.5" x2="1000" y2="38.5" stroke="#22252f" stroke-width="1" />
+  <rect x="12" y="6" width="112" height="26" fill="#0f1117" rx="7" ry="7" stroke="#22252f" stroke-width="1" />
+  <rect x="22" y="8" width="92" height="2" fill="#7dd3fc" rx="1" ry="1" />
+  <text x="25" y="23.5" font-family="'JetBrains Mono','Cascadia Code',Consolas,Menlo,monospace" font-size="10" fill="#7dd3fc" xml:space="preserve">❯</text>
+  <text x="40" y="23.5" font-family="'Segoe UI',Inter,system-ui,sans-serif" font-size="12" fill="#d8dee9" xml:space="preserve">bitig</text>
+  <text x="109" y="23.5" font-family="'Segoe UI',Inter,system-ui,sans-serif" font-size="13" fill="#8b93a7" text-anchor="middle" xml:space="preserve">×</text>
+  <text x="142" y="24.5" font-family="'Segoe UI',Inter,system-ui,sans-serif" font-size="17" fill="#8b93a7" text-anchor="middle" xml:space="preserve">+</text>
+  <line x1="916" y1="19" x2="928" y2="19" stroke="#8b93a7" stroke-width="1.3" />
+  <rect x="946" y="14" width="10" height="10" fill="none" stroke="#8b93a7" stroke-width="1.3" />
+  <line x1="974" y1="14" x2="984" y2="24" stroke="#8b93a7" stroke-width="1.3" />
+  <line x1="984" y1="14" x2="974" y2="24" stroke="#8b93a7" stroke-width="1.3" />
+  <text x="24" y="79" font-family="'JetBrains Mono','Cascadia Code',Consolas,Menlo,monospace" font-size="14" fill="#d8dee9" xml:space="preserve"><tspan fill="#d2a8ff">PS </tspan><tspan fill="#79c0ff">C:\dev\bitig</tspan><tspan fill="#7dd3fc">&gt; </tspan><tspan fill="#d8dee9">npm run </tspan><tspan fill="#4b5263">dev</tspan></text>
+  
+  <text x="24" y="123" font-family="'JetBrains Mono','Cascadia Code',Consolas,Menlo,monospace" font-size="14" fill="#d8dee9" xml:space="preserve"><tspan fill="#4b5263">ranked from</tspan><tspan fill="#7ee787"> frecency history </tspan><tspan fill="#4b5263"> + </tspan><tspan fill="#d2a8ff"> package.json scripts </tspan><tspan fill="#4b5263"> + </tspan><tspan fill="#56d4dd"> path entries </tspan></text>
+  
+  <text x="24" y="167" font-family="'JetBrains Mono','Cascadia Code',Consolas,Menlo,monospace" font-size="14" fill="#d8dee9" xml:space="preserve"><tspan fill="#d2a8ff">PS </tspan><tspan fill="#79c0ff">C:\dev\bitig</tspan><tspan fill="#7dd3fc">&gt; </tspan><tspan fill="#d8dee9">git ch</tspan><tspan fill="#4b5263">eckout feature/panes</tspan></text>
+  
+  <text x="24" y="211" font-family="'JetBrains Mono','Cascadia Code',Consolas,Menlo,monospace" font-size="14" fill="#d8dee9" xml:space="preserve"><tspan fill="#d2a8ff">PS </tspan><tspan fill="#79c0ff">C:\dev\bitig</tspan><tspan fill="#7dd3fc">&gt; </tspan><tspan fill="#d8dee9">cd src/ren</tspan><tspan fill="#4b5263">derer/src/</tspan></text>
+  
+  <text x="24" y="255" font-family="'JetBrains Mono','Cascadia Code',Consolas,Menlo,monospace" font-size="14" fill="#d8dee9" xml:space="preserve"><tspan fill="#d2a8ff">PS </tspan><tspan fill="#79c0ff">C:\dev\bitig</tspan><tspan fill="#7dd3fc">&gt; </tspan><tspan fill="#d8dee9">docker compose </tspan><tspan fill="#4b5263">up -d --build</tspan></text>
+  <text x="283.20000000000005" y="79" font-family="'Segoe UI',Inter,system-ui,sans-serif" font-size="11" fill="#4b5263" xml:space="preserve">ghost text — never written to the terminal buffer</text>
+  <text x="409.2" y="167" font-family="'Segoe UI',Inter,system-ui,sans-serif" font-size="11" fill="#4b5263" xml:space="preserve">true prefix matches only, no fuzzy noise</text>
+  <text x="358.8" y="211" font-family="'Segoe UI',Inter,system-ui,sans-serif" font-size="11" fill="#4b5263" xml:space="preserve">directory completion for cd / code / cat</text>
+  <rect x="24" y="335" width="34.480000000000004" height="20" fill="#1e222c" rx="5" ry="5" stroke="#22252f" stroke-width="1" />
+  <text x="41.24" y="349" font-family="'Segoe UI',Inter,system-ui,sans-serif" font-size="11" fill="#8b93a7" font-weight="600" text-anchor="middle" xml:space="preserve">Tab</text>
+  <text x="70.48" y="349" font-family="'Segoe UI',Inter,system-ui,sans-serif" font-size="12" fill="#8b93a7" xml:space="preserve">accept the whole suggestion</text>
+  <rect x="300" y="335" width="40.64" height="20" fill="#1e222c" rx="5" ry="5" stroke="#22252f" stroke-width="1" />
+  <text x="320.32" y="349" font-family="'Segoe UI',Inter,system-ui,sans-serif" font-size="11" fill="#8b93a7" font-weight="600" text-anchor="middle" xml:space="preserve">Ctrl</text>
+  <text x="347.64" y="349" font-family="'Segoe UI',Inter,system-ui,sans-serif" font-size="11" fill="#4b5263" xml:space="preserve">+</text>
+  <rect x="357.64" y="335" width="22.16" height="20" fill="#1e222c" rx="5" ry="5" stroke="#22252f" stroke-width="1" />
+  <text x="368.71999999999997" y="349" font-family="'Segoe UI',Inter,system-ui,sans-serif" font-size="11" fill="#8b93a7" font-weight="600" text-anchor="middle" xml:space="preserve">→</text>
+  <text x="391.8" y="349" font-family="'Segoe UI',Inter,system-ui,sans-serif" font-size="12" fill="#8b93a7" xml:space="preserve">accept one word</text>
+  <rect x="540" y="335" width="34.480000000000004" height="20" fill="#1e222c" rx="5" ry="5" stroke="#22252f" stroke-width="1" />
+  <text x="557.24" y="349" font-family="'Segoe UI',Inter,system-ui,sans-serif" font-size="11" fill="#8b93a7" font-weight="600" text-anchor="middle" xml:space="preserve">Esc</text>
+  <text x="586.48" y="349" font-family="'Segoe UI',Inter,system-ui,sans-serif" font-size="12" fill="#8b93a7" xml:space="preserve">dismiss</text>
+  <text x="700" y="349" font-family="'Segoe UI',Inter,system-ui,sans-serif" font-size="11" fill="#4b5263" xml:space="preserve">no suggestion → Tab falls through to the shell</text>
+  <rect x="0" y="374" width="1000" height="26" fill="#14161e" />
+  <line x1="0" y1="374.5" x2="1000" y2="374.5" stroke="#22252f" stroke-width="1" />
+  <text x="14" y="391" font-family="'Segoe UI',Inter,system-ui,sans-serif" font-size="11" fill="#8b93a7" xml:space="preserve">PowerShell 7</text>
+  <text x="109.92" y="391" font-family="'Segoe UI',Inter,system-ui,sans-serif" font-size="11" fill="#7ee787" xml:space="preserve">inline suggestions: on</text>
+  <text x="267.44" y="391" font-family="'Segoe UI',Inter,system-ui,sans-serif" font-size="11" fill="#8b93a7" xml:space="preserve">UTF-8</text>
+  </g>
+</svg>

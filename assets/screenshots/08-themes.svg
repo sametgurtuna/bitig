@@ -1,0 +1,96 @@
+<svg width="1000" height="430" viewBox="0 0 1000 430" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Built in themes: Bitig Dark, Bitig Light, Dracula, Nord">
+  <defs>
+    <clipPath id="clip-th"><rect x="0.5" y="0.5" width="999" height="429" rx="12" ry="12" /></clipPath>
+  </defs>
+  <title>Built in themes: Bitig Dark, Bitig Light, Dracula, Nord</title>
+  <rect x="0" y="0" width="1000" height="430" fill="#0f1117" rx="12" ry="12" />
+  <text x="26" y="34" font-family="'Segoe UI',Inter,system-ui,sans-serif" font-size="13" fill="#8b93a7" xml:space="preserve">Four built in themes · hot reloaded user themes from %APPDATA%/Bitig/themes/</text>
+  <rect x="24" y="58" width="222" height="288" fill="#0f1117" rx="10" ry="10" stroke="#7dd3fc" stroke-width="1.6" />
+  <rect x="24.5" y="58.5" width="221" height="30" fill="#14161e" rx="10" ry="10" />
+  <rect x="24.5" y="78" width="221" height="11" fill="#14161e" />
+  <line x1="24" y1="89" x2="246" y2="89" stroke="#22252f" stroke-width="1" />
+  <text x="36" y="78" font-family="'Segoe UI',Inter,system-ui,sans-serif" font-size="10.5" fill="#8b93a7" font-weight="600" xml:space="preserve">●  Bitig Dark</text>
+  <text x="234" y="78" font-family="'Segoe UI',Inter,system-ui,sans-serif" font-size="8" fill="#8b93a7" text-anchor="end" xml:space="preserve">—  □  ×</text>
+  <text x="36" y="116" font-family="'JetBrains Mono','Cascadia Code',Consolas,Menlo,monospace" font-size="11" fill="#d8dee9" xml:space="preserve"><tspan fill="#d2a8ff">PS </tspan><tspan fill="#79c0ff">~\bitig</tspan><tspan fill="#7dd3fc">&gt; </tspan><tspan fill="#d8dee9">git status</tspan></text>
+  <text x="36" y="136" font-family="'JetBrains Mono','Cascadia Code',Consolas,Menlo,monospace" font-size="11" fill="#d8dee9" xml:space="preserve"><tspan fill="#e3b341">  M </tspan><tspan fill="#d8dee9">src/panes.ts</tspan></text>
+  <text x="36" y="156" font-family="'JetBrains Mono','Cascadia Code',Consolas,Menlo,monospace" font-size="11" fill="#d8dee9" xml:space="preserve"><tspan fill="#7ee787">  A </tspan><tspan fill="#d8dee9">src/fuzzy.ts</tspan></text>
+  <text x="36" y="176" font-family="'JetBrains Mono','Cascadia Code',Consolas,Menlo,monospace" font-size="11" fill="#d8dee9" xml:space="preserve"><tspan fill="#f47067">  D </tspan><tspan fill="#d8dee9">old/legacy.ts</tspan></text>
+  
+  <text x="36" y="216" font-family="'JetBrains Mono','Cascadia Code',Consolas,Menlo,monospace" font-size="11" fill="#d8dee9" xml:space="preserve"><tspan fill="#d2a8ff">PS </tspan><tspan fill="#79c0ff">~\bitig</tspan><tspan fill="#7dd3fc">&gt; </tspan><tspan fill="#d8dee9">npm </tspan><tspan fill="#8b93a7">run dev</tspan></text>
+  <rect x="36" y="280" width="18" height="18" fill="#f47067" rx="4" ry="4" />
+  <rect x="60" y="280" width="18" height="18" fill="#7ee787" rx="4" ry="4" />
+  <rect x="84" y="280" width="18" height="18" fill="#e3b341" rx="4" ry="4" />
+  <rect x="108" y="280" width="18" height="18" fill="#79c0ff" rx="4" ry="4" />
+  <rect x="132" y="280" width="18" height="18" fill="#d2a8ff" rx="4" ry="4" />
+  <rect x="156" y="280" width="18" height="18" fill="#56d4dd" rx="4" ry="4" />
+  <text x="36" y="322" font-family="'Segoe UI',Inter,system-ui,sans-serif" font-size="10.5" fill="#8b93a7" xml:space="preserve">bitig-dark</text>
+  <rect x="170.88" y="313" width="63.120000000000005" height="20" fill="#7dd3fc" rx="10" ry="10" opacity="0.16" />
+  <rect x="170.88" y="313" width="63.120000000000005" height="20" fill="none" rx="10" ry="10" stroke="#7dd3fc" stroke-width="1" opacity="0.55" />
+  <text x="202.44" y="327" font-family="'Segoe UI',Inter,system-ui,sans-serif" font-size="11" fill="#7dd3fc" font-weight="600" text-anchor="middle" xml:space="preserve">default</text>
+  <rect x="264" y="58" width="222" height="288" fill="#f6f7f9" rx="10" ry="10" stroke="#d8dce4" stroke-width="1" />
+  <rect x="264.5" y="58.5" width="221" height="30" fill="#eceef2" rx="10" ry="10" />
+  <rect x="264.5" y="78" width="221" height="11" fill="#eceef2" />
+  <line x1="264" y1="89" x2="486" y2="89" stroke="#d8dce4" stroke-width="1" />
+  <text x="276" y="78" font-family="'Segoe UI',Inter,system-ui,sans-serif" font-size="10.5" fill="#5b6376" font-weight="600" xml:space="preserve">●  Bitig Light</text>
+  <text x="474" y="78" font-family="'Segoe UI',Inter,system-ui,sans-serif" font-size="8" fill="#5b6376" text-anchor="end" xml:space="preserve">—  □  ×</text>
+  <text x="276" y="116" font-family="'JetBrains Mono','Cascadia Code',Consolas,Menlo,monospace" font-size="11" fill="#2b3040" xml:space="preserve"><tspan fill="#8250df">PS </tspan><tspan fill="#0969da">~\bitig</tspan><tspan fill="#1f6feb">&gt; </tspan><tspan fill="#2b3040">git status</tspan></text>
+  <text x="276" y="136" font-family="'JetBrains Mono','Cascadia Code',Consolas,Menlo,monospace" font-size="11" fill="#2b3040" xml:space="preserve"><tspan fill="#9a6700">  M </tspan><tspan fill="#2b3040">src/panes.ts</tspan></text>
+  <text x="276" y="156" font-family="'JetBrains Mono','Cascadia Code',Consolas,Menlo,monospace" font-size="11" fill="#2b3040" xml:space="preserve"><tspan fill="#1a7f37">  A </tspan><tspan fill="#2b3040">src/fuzzy.ts</tspan></text>
+  <text x="276" y="176" font-family="'JetBrains Mono','Cascadia Code',Consolas,Menlo,monospace" font-size="11" fill="#2b3040" xml:space="preserve"><tspan fill="#d1242f">  D </tspan><tspan fill="#2b3040">old/legacy.ts</tspan></text>
+  
+  <text x="276" y="216" font-family="'JetBrains Mono','Cascadia Code',Consolas,Menlo,monospace" font-size="11" fill="#2b3040" xml:space="preserve"><tspan fill="#8250df">PS </tspan><tspan fill="#0969da">~\bitig</tspan><tspan fill="#1f6feb">&gt; </tspan><tspan fill="#2b3040">npm </tspan><tspan fill="#5b6376">run dev</tspan></text>
+  <rect x="276" y="280" width="18" height="18" fill="#d1242f" rx="4" ry="4" />
+  <rect x="300" y="280" width="18" height="18" fill="#1a7f37" rx="4" ry="4" />
+  <rect x="324" y="280" width="18" height="18" fill="#9a6700" rx="4" ry="4" />
+  <rect x="348" y="280" width="18" height="18" fill="#0969da" rx="4" ry="4" />
+  <rect x="372" y="280" width="18" height="18" fill="#8250df" rx="4" ry="4" />
+  <rect x="396" y="280" width="18" height="18" fill="#1b7c83" rx="4" ry="4" />
+  <text x="276" y="322" font-family="'Segoe UI',Inter,system-ui,sans-serif" font-size="10.5" fill="#5b6376" xml:space="preserve">bitig-light</text>
+  <rect x="504" y="58" width="222" height="288" fill="#282a36" rx="10" ry="10" stroke="#44475a" stroke-width="1" />
+  <rect x="504.5" y="58.5" width="221" height="30" fill="#21222c" rx="10" ry="10" />
+  <rect x="504.5" y="78" width="221" height="11" fill="#21222c" />
+  <line x1="504" y1="89" x2="726" y2="89" stroke="#44475a" stroke-width="1" />
+  <text x="516" y="78" font-family="'Segoe UI',Inter,system-ui,sans-serif" font-size="10.5" fill="#6272a4" font-weight="600" xml:space="preserve">●  Dracula</text>
+  <text x="714" y="78" font-family="'Segoe UI',Inter,system-ui,sans-serif" font-size="8" fill="#6272a4" text-anchor="end" xml:space="preserve">—  □  ×</text>
+  <text x="516" y="116" font-family="'JetBrains Mono','Cascadia Code',Consolas,Menlo,monospace" font-size="11" fill="#f8f8f2" xml:space="preserve"><tspan fill="#ff79c6">PS </tspan><tspan fill="#8be9fd">~\bitig</tspan><tspan fill="#bd93f9">&gt; </tspan><tspan fill="#f8f8f2">git status</tspan></text>
+  <text x="516" y="136" font-family="'JetBrains Mono','Cascadia Code',Consolas,Menlo,monospace" font-size="11" fill="#f8f8f2" xml:space="preserve"><tspan fill="#f1fa8c">  M </tspan><tspan fill="#f8f8f2">src/panes.ts</tspan></text>
+  <text x="516" y="156" font-family="'JetBrains Mono','Cascadia Code',Consolas,Menlo,monospace" font-size="11" fill="#f8f8f2" xml:space="preserve"><tspan fill="#50fa7b">  A </tspan><tspan fill="#f8f8f2">src/fuzzy.ts</tspan></text>
+  <text x="516" y="176" font-family="'JetBrains Mono','Cascadia Code',Consolas,Menlo,monospace" font-size="11" fill="#f8f8f2" xml:space="preserve"><tspan fill="#ff5555">  D </tspan><tspan fill="#f8f8f2">old/legacy.ts</tspan></text>
+  
+  <text x="516" y="216" font-family="'JetBrains Mono','Cascadia Code',Consolas,Menlo,monospace" font-size="11" fill="#f8f8f2" xml:space="preserve"><tspan fill="#ff79c6">PS </tspan><tspan fill="#8be9fd">~\bitig</tspan><tspan fill="#bd93f9">&gt; </tspan><tspan fill="#f8f8f2">npm </tspan><tspan fill="#6272a4">run dev</tspan></text>
+  <rect x="516" y="280" width="18" height="18" fill="#ff5555" rx="4" ry="4" />
+  <rect x="540" y="280" width="18" height="18" fill="#50fa7b" rx="4" ry="4" />
+  <rect x="564" y="280" width="18" height="18" fill="#f1fa8c" rx="4" ry="4" />
+  <rect x="588" y="280" width="18" height="18" fill="#8be9fd" rx="4" ry="4" />
+  <rect x="612" y="280" width="18" height="18" fill="#ff79c6" rx="4" ry="4" />
+  <rect x="636" y="280" width="18" height="18" fill="#bd93f9" rx="4" ry="4" />
+  <text x="516" y="322" font-family="'Segoe UI',Inter,system-ui,sans-serif" font-size="10.5" fill="#6272a4" xml:space="preserve">dracula</text>
+  <rect x="744" y="58" width="222" height="288" fill="#2e3440" rx="10" ry="10" stroke="#434c5e" stroke-width="1" />
+  <rect x="744.5" y="58.5" width="221" height="30" fill="#272c36" rx="10" ry="10" />
+  <rect x="744.5" y="78" width="221" height="11" fill="#272c36" />
+  <line x1="744" y1="89" x2="966" y2="89" stroke="#434c5e" stroke-width="1" />
+  <text x="756" y="78" font-family="'Segoe UI',Inter,system-ui,sans-serif" font-size="10.5" fill="#7b88a1" font-weight="600" xml:space="preserve">●  Nord</text>
+  <text x="954" y="78" font-family="'Segoe UI',Inter,system-ui,sans-serif" font-size="8" fill="#7b88a1" text-anchor="end" xml:space="preserve">—  □  ×</text>
+  <text x="756" y="116" font-family="'JetBrains Mono','Cascadia Code',Consolas,Menlo,monospace" font-size="11" fill="#d8dee9" xml:space="preserve"><tspan fill="#b48ead">PS </tspan><tspan fill="#81a1c1">~\bitig</tspan><tspan fill="#88c0d0">&gt; </tspan><tspan fill="#d8dee9">git status</tspan></text>
+  <text x="756" y="136" font-family="'JetBrains Mono','Cascadia Code',Consolas,Menlo,monospace" font-size="11" fill="#d8dee9" xml:space="preserve"><tspan fill="#ebcb8b">  M </tspan><tspan fill="#d8dee9">src/panes.ts</tspan></text>
+  <text x="756" y="156" font-family="'JetBrains Mono','Cascadia Code',Consolas,Menlo,monospace" font-size="11" fill="#d8dee9" xml:space="preserve"><tspan fill="#a3be8c">  A </tspan><tspan fill="#d8dee9">src/fuzzy.ts</tspan></text>
+  <text x="756" y="176" font-family="'JetBrains Mono','Cascadia Code',Consolas,Menlo,monospace" font-size="11" fill="#d8dee9" xml:space="preserve"><tspan fill="#bf616a">  D </tspan><tspan fill="#d8dee9">old/legacy.ts</tspan></text>
+  
+  <text x="756" y="216" font-family="'JetBrains Mono','Cascadia Code',Consolas,Menlo,monospace" font-size="11" fill="#d8dee9" xml:space="preserve"><tspan fill="#b48ead">PS </tspan><tspan fill="#81a1c1">~\bitig</tspan><tspan fill="#88c0d0">&gt; </tspan><tspan fill="#d8dee9">npm </tspan><tspan fill="#7b88a1">run dev</tspan></text>
+  <rect x="756" y="280" width="18" height="18" fill="#bf616a" rx="4" ry="4" />
+  <rect x="780" y="280" width="18" height="18" fill="#a3be8c" rx="4" ry="4" />
+  <rect x="804" y="280" width="18" height="18" fill="#ebcb8b" rx="4" ry="4" />
+  <rect x="828" y="280" width="18" height="18" fill="#81a1c1" rx="4" ry="4" />
+  <rect x="852" y="280" width="18" height="18" fill="#b48ead" rx="4" ry="4" />
+  <rect x="876" y="280" width="18" height="18" fill="#8fbcbb" rx="4" ry="4" />
+  <text x="756" y="322" font-family="'Segoe UI',Inter,system-ui,sans-serif" font-size="10.5" fill="#7b88a1" xml:space="preserve">nord</text>
+  <rect x="26" y="395" width="34.480000000000004" height="20" fill="#1e222c" rx="5" ry="5" stroke="#22252f" stroke-width="1" />
+  <text x="43.24" y="409" font-family="'Segoe UI',Inter,system-ui,sans-serif" font-size="11" fill="#8b93a7" font-weight="600" text-anchor="middle" xml:space="preserve">Alt</text>
+  <text x="67.48" y="409" font-family="'Segoe UI',Inter,system-ui,sans-serif" font-size="11" fill="#4b5263" xml:space="preserve">+</text>
+  <rect x="77.48" y="395" width="46.800000000000004" height="20" fill="#1e222c" rx="5" ry="5" stroke="#22252f" stroke-width="1" />
+  <text x="100.88000000000001" y="409" font-family="'Segoe UI',Inter,system-ui,sans-serif" font-size="11" fill="#8b93a7" font-weight="600" text-anchor="middle" xml:space="preserve">Shift</text>
+  <text x="131.28" y="409" font-family="'Segoe UI',Inter,system-ui,sans-serif" font-size="11" fill="#4b5263" xml:space="preserve">+</text>
+  <rect x="141.28" y="395" width="22.16" height="20" fill="#1e222c" rx="5" ry="5" stroke="#22252f" stroke-width="1" />
+  <text x="152.36" y="409" font-family="'Segoe UI',Inter,system-ui,sans-serif" font-size="11" fill="#8b93a7" font-weight="600" text-anchor="middle" xml:space="preserve">T</text>
+  <text x="175.44" y="409" font-family="'Segoe UI',Inter,system-ui,sans-serif" font-size="12" fill="#8b93a7" xml:space="preserve">cycle themes  ·  drop a JSON file into themes/ and it appears without a restart</text>
+</svg>

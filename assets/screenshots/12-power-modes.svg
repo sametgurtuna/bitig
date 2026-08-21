@@ -1,0 +1,44 @@
+<svg width="1000" height="520" viewBox="0 0 1000 520" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Quake HUD window and broadcast input mode">
+  <defs>
+    <clipPath id="clip-qk"><rect x="0.5" y="0.5" width="999" height="519" rx="12" ry="12" /></clipPath>
+  </defs>
+  <title>Quake HUD window and broadcast input mode</title>
+  <defs><linearGradient id="desk" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#101826"/><stop offset="1" stop-color="#1b1030"/></linearGradient></defs>
+  <rect x="0.5" y="0.5" width="999" height="519" fill="url(#desk)" rx="12" ry="12" stroke="#22252f" stroke-width="1" />
+  <g clip-path="url(#clip-qk)">
+  <rect x="28" y="28" width="44" height="44" fill="#ffffff" rx="9" ry="9" opacity="0.06" />
+  <rect x="24" y="80" width="52" height="6" fill="#ffffff" rx="3" ry="3" opacity="0.05" />
+  <rect x="28" y="102" width="44" height="44" fill="#ffffff" rx="9" ry="9" opacity="0.06" />
+  <rect x="24" y="154" width="52" height="6" fill="#ffffff" rx="3" ry="3" opacity="0.05" />
+  <rect x="28" y="176" width="44" height="44" fill="#ffffff" rx="9" ry="9" opacity="0.06" />
+  <rect x="24" y="228" width="52" height="6" fill="#ffffff" rx="3" ry="3" opacity="0.05" />
+  <rect x="100" y="-12" width="800" height="312" fill="#0f1117" rx="14" ry="14" opacity="0.97" />
+  <rect x="100.5" y="-12" width="799" height="312" fill="none" rx="14" ry="14" stroke="#7dd3fc" stroke-width="1" opacity="0.35" />
+  <rect x="100" y="0" width="800" height="38" fill="#14161e" />
+  <line x1="100" y1="38.5" x2="900" y2="38.5" stroke="#22252f" stroke-width="1" />
+  <text x="118" y="24" font-family="'Segoe UI',Inter,system-ui,sans-serif" font-size="12" fill="#7dd3fc" font-weight="600" xml:space="preserve">▼  Quake HUD</text>
+  <text x="882" y="24" font-family="'Segoe UI',Inter,system-ui,sans-serif" font-size="11" fill="#4b5263" font-weight="600" text-anchor="end" xml:space="preserve">Win + ~</text>
+  <text x="120" y="76" font-family="'JetBrains Mono','Cascadia Code',Consolas,Menlo,monospace" font-size="14" fill="#d8dee9" xml:space="preserve"><tspan fill="#d2a8ff">PS </tspan><tspan fill="#79c0ff">C:\dev</tspan><tspan fill="#7dd3fc">&gt; </tspan><tspan fill="#d8dee9">scoop update *</tspan></text>
+  <text x="120" y="98" font-family="'JetBrains Mono','Cascadia Code',Consolas,Menlo,monospace" font-size="14" fill="#d8dee9" xml:space="preserve"><tspan fill="#8b93a7">  Updating </tspan><tspan fill="#7ee787">bitig</tspan><tspan fill="#8b93a7"> (1.0.3 -&gt; 1.0.4)</tspan></text>
+  <text x="120" y="120" font-family="'JetBrains Mono','Cascadia Code',Consolas,Menlo,monospace" font-size="14" fill="#d8dee9" xml:space="preserve"><tspan fill="#4b5263">  Done. 1 app updated.</tspan></text>
+  
+  <text x="120" y="164" font-family="'JetBrains Mono','Cascadia Code',Consolas,Menlo,monospace" font-size="14" fill="#d8dee9" xml:space="preserve"><tspan fill="#d2a8ff">PS </tspan><tspan fill="#79c0ff">C:\dev</tspan><tspan fill="#7dd3fc">&gt; </tspan></text>
+  <rect x="212.4" y="152" width="8" height="16" fill="#7dd3fc" opacity="0.85" />
+  <text x="120" y="276" font-family="'Segoe UI',Inter,system-ui,sans-serif" font-size="11" fill="#4b5263" xml:space="preserve">a global OS shortcut drops a scratch terminal over any window and hides it again</text>
+  <rect x="60" y="336" width="880" height="150" fill="#0f1117" rx="12" ry="12" stroke="#22252f" stroke-width="1" />
+  <rect x="60" y="336" width="880" height="28" fill="#e3b341" rx="12" ry="12" opacity="0.16" />
+  <rect x="60" y="352" width="880" height="12" fill="#e3b341" opacity="0.16" />
+  <text x="500" y="355" font-family="'Segoe UI',Inter,system-ui,sans-serif" font-size="11.5" fill="#e3b341" font-weight="700" text-anchor="middle" xml:space="preserve">⚠  BROADCAST INPUT — every keystroke is mirrored into all 3 panes  ·  Alt+Shift+I</text>
+  <text x="76" y="394" font-family="'JetBrains Mono','Cascadia Code',Consolas,Menlo,monospace" font-size="12.5" fill="#d8dee9" xml:space="preserve"><tspan fill="#7ee787">❯ </tspan><tspan fill="#d8dee9">sudo apt update</tspan></text>
+  <text x="76" y="416" font-family="'Segoe UI',Inter,system-ui,sans-serif" font-size="11" fill="#4b5263" xml:space="preserve">web-01</text>
+  <rect x="218.8" y="382" width="7" height="15" fill="#e3b341" opacity="0.85" />
+  <line x1="353.3333333333333" y1="364" x2="353.3333333333333" y2="486" stroke="#22252f" stroke-width="1" />
+  <text x="369.3333333333333" y="394" font-family="'JetBrains Mono','Cascadia Code',Consolas,Menlo,monospace" font-size="12.5" fill="#d8dee9" xml:space="preserve"><tspan fill="#7ee787">❯ </tspan><tspan fill="#d8dee9">sudo apt update</tspan></text>
+  <text x="369.3333333333333" y="416" font-family="'Segoe UI',Inter,system-ui,sans-serif" font-size="11" fill="#4b5263" xml:space="preserve">web-02</text>
+  <rect x="512.1333333333333" y="382" width="7" height="15" fill="#e3b341" opacity="0.85" />
+  <line x1="646.6666666666666" y1="364" x2="646.6666666666666" y2="486" stroke="#22252f" stroke-width="1" />
+  <text x="662.6666666666666" y="394" font-family="'JetBrains Mono','Cascadia Code',Consolas,Menlo,monospace" font-size="12.5" fill="#d8dee9" xml:space="preserve"><tspan fill="#7ee787">❯ </tspan><tspan fill="#d8dee9">sudo apt update</tspan></text>
+  <text x="662.6666666666666" y="416" font-family="'Segoe UI',Inter,system-ui,sans-serif" font-size="11" fill="#4b5263" xml:space="preserve">db-01</text>
+  <rect x="805.4666666666667" y="382" width="7" height="15" fill="#e3b341" opacity="0.85" />
+  </g>
+</svg>
